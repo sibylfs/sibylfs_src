@@ -38,8 +38,12 @@ in stdenv.mkDerivation {
   
     installPhase = ''
 mkdir -p $out/bin
-cp *.native fs_test.sh fs_test run_trace tgen $out/bin
+cp *.native fs_test.sh fs_test run_trace tgen lib/fs_test_version.ml $out/bin
 # paths/testpath.native testall.sh 
 ''; 
+
+
+#  dontPatchELF = true;
+  dontPatchShebangs = true;
 
 }
