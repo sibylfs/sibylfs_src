@@ -29,9 +29,11 @@ in stdenv.mkDerivation {
     export BUILD=${fs_spec}/build
     make
     mkdir -p $out
-    cp -RL ${fs_spec}/build $out
-    mkdir -p $out/fs_test
-    cp -RL . $out/fs_test
+
+# commenting so that the closure is not too large
+#    cp -RL ${fs_spec}/build $out
+#    mkdir -p $out/fs_test
+#    cp -RL . $out/fs_test
     '';
   
     installPhase = ''
