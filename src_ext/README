@@ -1,0 +1,6 @@
+This directory should contain links to external repositories that we
+use. For example, one external repository is Lem. 
+
+For Lem: we need Thomas' repo from bitbucket: git@bitbucket.org:thtuerk/lem.git (branch fs!)
+
+We build Lem using: make && make ocaml-libs

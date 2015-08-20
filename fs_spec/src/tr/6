@@ -1,0 +1,8 @@
+rename /tmp_dir_234/d1/nonempty_dir1/f1.txt /tmp_dir_234/d1/nonempty_dir1
+[ENOTEMPTY]
+
+posix says:
+
+    [EEXIST] or [ENOTEMPTY]
+    [CX] 
+    The link named by new is a directory that is not an empty directory. 

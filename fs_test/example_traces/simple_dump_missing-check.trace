@@ -1,0 +1,4 @@
+# processing file 'example_traces/simple_dump-int.trace' ...
+@type trace
+dump-result /
+end dump-result

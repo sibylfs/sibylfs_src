@@ -1,0 +1,6 @@
+
+Error:      2: open "/foo" [O_RDONLY;O_EXCL]
+   special states found:
+     - OS_special (Undefined, "open: O_EXCL, no O_CREAT, posix/open.md D:1")
+   continuing with normal result states
+Warning: trace caused problems

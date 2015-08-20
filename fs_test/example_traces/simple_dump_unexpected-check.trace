@@ -1,0 +1,6 @@
+# processing file 'example_traces/simple_dump-int.trace' ...
+        @type trace
+     2: dump-result /
+           "/"|D|0
+           "/oooOOOOOoooo"|D|1
+        end dump-result

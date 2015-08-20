@@ -1,0 +1,150 @@
+# Tests for open and close with multiple
+# file descriptors opened by multiple processes
+# essentially just check we get the right ids back
+
+# WARNING: these tests won't work with posix,
+# because its implementation maps everything to
+# just one process
+
+create Pid 2 User_id 0 Group_id 0
+
+##############################################
+# basic cases that should work
+##############################################
+
+# create a file 
+Pid 1 -> open f1.txt [O_WRONLY;O_CREAT] 0o644
+Tau
+Pid 1 <- RV_num(3)
+
+Pid 1 -> close (FD 3)
+Tau
+Pid 1 <- RV_none
+
+# and another file
+Pid 1 -> open f2.txt [O_WRONLY;O_CREAT] 0o644
+Tau
+Pid 1 <- RV_num(3)
+
+Pid 1 -> close (FD 3)
+Tau
+Pid 1 <- RV_none
+
+
+# open both files in the same process
+Pid 1 -> open f1.txt []
+Tau
+Pid 1 <- RV_num(3)
+
+Pid 1 -> open f2.txt []
+Tau
+Pid 1 <- RV_num(4)
+
+Pid 1 -> close (FD 3)
+Tau
+Pid 1 <- RV_none
+
+Pid 1 -> close (FD 4)
+Tau
+Pid 1 <- RV_none
+
+
+# open both files in the same process 
+# and close and open again
+Pid 1 -> open f1.txt []
+Tau
+Pid 1 <- RV_num(3)
+
+Pid 1 -> open f2.txt []
+Tau
+Pid 1 <- RV_num(4)
+
+Pid 1 -> close (FD 4)
+Tau
+Pid 1 <- RV_none
+
+Pid 1 -> open f2.txt []
+Tau
+Pid 1 <- RV_num(4)
+
+Pid 1 -> close (FD 3)
+Tau
+Pid 1 <- RV_none
+
+Pid 1 -> close (FD 4)
+Tau
+Pid 1 <- RV_none
+
+
+# open both files in the same process 
+# and close and open again
+Pid 1 -> open f1.txt []
+Tau
+Pid 1 <- RV_num(3)
+
+Pid 1 -> open f2.txt []
+Tau
+Pid 1 <- RV_num(4)
+
+Pid 1 -> close (FD 3)
+Tau
+Pid 1 <- RV_none
+
+Pid 1 -> open f1.txt []
+Tau
+Pid 1 <- RV_num(3)
+
+Pid 1 -> close (FD 4)
+Tau
+Pid 1 <- RV_none
+
+Pid 1 -> close (FD 3)
+Tau
+Pid 1 <- RV_none
+
+
+# open both files in the same process 
+# and close and open again
+Pid 1 -> open f1.txt []
+Tau
+Pid 1 <- RV_num(3)
+
+Pid 1 -> open f2.txt []
+Tau
+Pid 1 <- RV_num(4)
+
+Pid 1 -> close (FD 3)
+Tau
+Pid 1 <- RV_none
+
+Pid 1 -> open f1.txt []
+Tau
+Pid 1 <- RV_num(3)
+
+Pid 1 -> close (FD 4)
+Tau
+Pid 1 <- RV_none
+
+Pid 1 -> close (FD 3)
+Tau
+Pid 1 <- RV_none
+
+
+
+
+# open both files in the different processes
+Pid 1 -> open f1.txt []
+Tau
+Pid 1 <- RV_num(3)
+
+Pid 2 -> open f2.txt []
+Tau
+Pid 2 <- RV_num(3)
+
+Pid 1 -> close (FD 3)
+Tau
+Pid 1 <- RV_none
+
+Pid 2 -> close (FD 3)
+Tau
+Pid 2 <- RV_none

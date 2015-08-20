@@ -1,0 +1,92 @@
+<h1 id="name">NAME</h1>
+<blockquote>
+<p>readlink, readlinkat - read the contents of a symbolic link</p>
+</blockquote>
+<h1 id="synopsis">SYNOPSIS</h1>
+<blockquote>
+<h1>include <unistd.h></h1>
+</blockquote>
+<blockquote>
+<p>ssize_t readlink(const char <em>restrict path, char </em>restrict buf, size_t bufsize);</p>
+<p>ssize_t readlinkat(int fd, const char <em>restrict path, char </em>restrict buf, size_t bufsize);</p>
+</blockquote>
+<h1 id="description">DESCRIPTION</h1>
+<blockquote>
+<p>The readlink() function shall place the contents of the symbolic link referred to by path in the buffer buf which has size bufsize. If the number of bytes in the symbolic link is less than bufsize, the contents of the remainder of buf are unspecified. If the buf argument is not large enough to contain the link content, the first bufsize bytes shall be placed in buf.</p>
+</blockquote>
+<blockquote>
+<p>If the value of bufsize is greater than {SSIZE_MAX}, the result is implementation-defined.</p>
+</blockquote>
+<blockquote>
+<p>The readlinkat() function shall be equivalent to the readlink() function except in the case where path specifies a relative path. In this case the symbolic link whose content is read is relative to the directory associated with the file descriptor fd instead of the current working directory. If the file descriptor was opened without O_SEARCH, the function shall check whether directory searches are permitted using the current permissions of the directory underlying the file descriptor. If the file descriptor was opened with O_SEARCH, the function shall not perform the check.</p>
+</blockquote>
+<blockquote>
+<p>If readlinkat() is passed the special value AT_FDCWD in the fd parameter, the current working directory shall be used and the behavior shall be identical to a call to readlink().</p>
+</blockquote>
+<h1 id="return-value">RETURN VALUE</h1>
+<blockquote>
+<p>Upon successful completion, these functions shall return the count of bytes placed in the buffer. Otherwise, these functions shall return a value of -1, leave the buffer unchanged, and set errno to indicate the error.</p>
+</blockquote>
+<h1 id="timestamps">TIMESTAMPS</h1>
+<blockquote>
+<p>Upon successful completion, readlink() shall mark for update the last data access timestamp of the symbolic link.</p>
+</blockquote>
+<p>READLINK_TS</p>
+<h1 id="errors">ERRORS</h1>
+<blockquote>
+<p>These functions shall fail if:</p>
+</blockquote>
+<h1 id="eacces">[EACCES]</h1>
+<blockquote>
+<p>Search permission is denied for a component of the path prefix of path.</p>
+</blockquote>
+<h2 id="einval">[EINVAL]</h2>
+<blockquote>
+<p>The path argument names a file that is not a symbolic link.</p>
+</blockquote>
+<h2 id="eio">[EIO]</h2>
+<blockquote>
+<p>An I/O error occurred while reading from the file system.</p>
+</blockquote>
+<h2 id="eloop">[ELOOP]</h2>
+<blockquote>
+<p>A loop exists in symbolic links encountered during resolution of the path argument.</p>
+</blockquote>
+<h2 id="enametoolong">[ENAMETOOLONG]</h2>
+<blockquote>
+<p>The length of a component of a pathname is longer than {NAME_MAX}.</p>
+</blockquote>
+<h2 id="enoent">[ENOENT]</h2>
+<blockquote>
+<p>A component of path does not name an existing file or path is an empty string.</p>
+</blockquote>
+<h2 id="enotdir">[ENOTDIR]</h2>
+<blockquote>
+<p>A component of the path prefix names an existing file that is neither a directory nor a symbolic link to a directory, or the path argument contains at least one non- <slash> character and ends with one or more trailing <slash> characters and the last pathname component names an existing file that is neither a directory nor a symbolic link to a directory.</p>
+</blockquote>
+<blockquote>
+<p>The readlinkat() function shall fail if:</p>
+</blockquote>
+<h2 id="eacces-1">[EACCES]</h2>
+<blockquote>
+<p>fd was not opened with O_SEARCH and the permissions of the directory underlying fd do not permit directory searches.</p>
+</blockquote>
+<h2 id="ebadf">[EBADF]</h2>
+<blockquote>
+<p>The path argument does not specify an absolute path and the fd argument is neither AT_FDCWD nor a valid file descriptor open for reading or searching.</p>
+</blockquote>
+<h2 id="enotdir-1">[ENOTDIR]</h2>
+<blockquote>
+<p>The path argument is not an absolute path and fd is a file descriptor associated with a non-directory file.</p>
+</blockquote>
+<blockquote>
+<p>These functions may fail if:</p>
+</blockquote>
+<h2 id="eloop-1">[ELOOP]</h2>
+<blockquote>
+<p>More than {SYMLOOP_MAX} symbolic links were encountered during resolution of the path argument.</p>
+</blockquote>
+<h2 id="enametoolong-1">[ENAMETOOLONG]</h2>
+<blockquote>
+<p>The length of a pathname exceeds {PATH_MAX}, or pathname resolution of a symbolic link produced an intermediate result with a length that exceeds {PATH_MAX}.</p>
+</blockquote>

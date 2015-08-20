@@ -1,0 +1,7 @@
+include Makefile.common
+
+doc: ocamldoc
+
+ocamldoc: srcs FORCE
+	mkdir -p ocamldoc
+	$(OCAMLDOC) -d ocamldoc -html  -I ../include `$(OCAMLDEP) -sort $(wildcard *.mli) $(DOTML)`

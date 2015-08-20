@@ -1,0 +1,13 @@
+These functions shall fail if:
+
+[EEXIST]
+The path2 argument resolves to an existing directory entry or refers to a symbolic link.
+
+FIXME shouldn't this also be a file entry? FIXME error in posix spec?
+
+[ENOENT]
+A component of either path prefix does not exist; the file named by path1 does not exist; or path1 or path2 points to an empty string.
+[ENOTDIR]
+A component of either path prefix names an existing file that is neither a directory nor a symbolic link to a directory, or the path1 argument contains at least one non- <slash> character and ends with one or more trailing <slash> characters and the last pathname component names an existing file that is neither a directory nor a symbolic link to a directory, or the path1 argument names an existing non-directory file and the path2 argument names a nonexistent file, contains at least one non- <slash> character, and ends with one or more trailing <slash> characters.
+[EPERM]
+The file named by path1 is a directory and either the calling process does not have appropriate privileges or the implementation prohibits using link() on directories.

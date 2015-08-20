@@ -1,0 +1,2 @@
+OS_CALL(Pid 1,open /tmp_dir_2000/nonempty_dir/f1.txt [O_RDONLY;O_CLOEXEC;O_DIRECTORY;O_EXCL;O_NOFOLLOW;O_TRUNC] 0)
+Int1(3)

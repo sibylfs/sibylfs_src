@@ -1,0 +1,19 @@
+OS_CALL(Pid 1,link /tmp_dir_302//d1/nonempty_dir1/f1.txt /tmp_dir_302//d1/nonempty_dir1/f1.txt/)
+[EEXIST]
+
+This is observed on Linux, but posix spec says
+
+## [EEXIST] reconciled
+
+> The path2 argument resolves to an existing directory entry or refers
+> to a symbolic link.
+> 
+
+EEXIST:1
+
+Note that "existing directory entry" means a file, directory or other.
+
+--
+
+Here, it is not clear whether .../f1.txt/ resolves to an existing
+directory entry. Maybe it does if you ignore the trailing slash.

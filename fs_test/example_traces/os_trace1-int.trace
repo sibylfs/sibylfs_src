@@ -1,0 +1,22 @@
+@type script
+
+mkdir /tmp_dir_1490/ 0o000
+
+mkdir /tmp_dir_1490/d1 0o000
+
+mkdir /tmp_dir_1490/d1/empty_dir1 0o000
+
+mkdir /tmp_dir_1490/d1/empty_dir2 0o000
+
+mkdir /tmp_dir_1490/d1/nonempty_dir1 0o000
+
+open /tmp_dir_1490/d1/nonempty_dir1/f1.txt [O_RDWR;O_CREAT] 0o000
+
+open /tmp_dir_1490/d1/nonempty_dir1/f1.txt [O_RDWR]
+
+stat /tmp_dir_1490/d1/nonempty_dir1/f1.txt
+
+# stat a non-existing file
+stat /tmp_dir_1490/d1/nosuchdir/non.txt
+
+

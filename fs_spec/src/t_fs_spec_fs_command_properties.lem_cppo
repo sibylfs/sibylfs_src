@@ -1,0 +1,1809 @@
+(******************************************************************************
+   This file contains theorems stating high level properties of               
+   filesystem operations. The specification itself might be too large
+   and sometime too complex to quickly see high-level properties. 
+   The theorems prented here try to provide this high-level view.
+ ******************************************************************************)
+
+
+open import Bool Maybe Maybe_extra Basic_classes Tuple Num List List_extra Word Set
+
+open import T_fs_spec T_fs_prelude T_fs_spec_properties 
+
+open Resolve Finset The_monad Fs_operations Fs_types Fs_arch Fs_transition_system
+#ifdef aspect_perms
+open Fs_permissions
+#endif
+
+
+
+
+(******************************************************************************)
+(* Infrastructure for specifying high level properties                        *)
+(******************************************************************************)
+
+(* The lemmata stating the properties of fs-commands should be as
+   clear and concise as possible. In order to achieve this, first a
+   datatype "operation_spec" is defined for the most interesting
+   properties. By providing semantics to this datatype via
+   "operation_spec", the following theorems can be stated clearer.
+*)
+
+type operation_spec =
+  OSp_success     
+  (* the operation succeeds *)
+  | OSp_success_deterministic
+    (* the operation is deterministic except that it might be uncertain, which errors are raised *)
+  | OSp_weak_success     
+    (* the operation succeeds or hits an impossible state  *)
+  | OSp_no_success  
+    (* the operation cannot succeed, i.e. no normal state in the whole result set *)
+  | OSp_no_special      
+    (* the operation hits no special state *)
+  | OSp_no_impossible
+    (* the operation hits no impossible state *)
+  | OSp_only_checks
+    (* the operation only raises errors or special stated, but does not modify the state *)
+  | OSp_error of error 
+    (* The given error may be raised, but depending on the implementation it might be
+       shadowed by another error or a special state *)
+  | OSp_error_no_other of list error
+       (* if the result is an error, it is in the given list *)
+
+val has_internal_state : forall 'a 'b. Eq 'a => 'a -> monad_state 'a 'b -> bool
+let non_exec has_internal_state s0 st = match st with
+  | Normal_state (s1, _) -> (s0 = s1)
+  | Error_state (s1, _) -> (s0 = s1)
+  | Special_state _ -> true
+end
+
+(* assign semantics to the specs *)
+val operation_spec_pred : forall 'impl 'a. Eq 'impl => 'impl -> finset (monad_state 'impl 'a) -> operation_spec -> bool
+let non_exec operation_spec_pred s0 st_s ops = 
+  match ops with
+  | OSp_success -> (forall st. finset_mem st st_s --> is_Normal_state st)
+  | OSp_success_deterministic -> (
+       (exists st. is_Normal_state st && st_s = finset_singleton st) ||
+       (forall st. finset_mem st st_s --> not (is_Normal_state st) && has_internal_state s0 st))
+  | OSp_weak_success -> (forall st. finset_mem st st_s --> is_Normal_state st || is_Impossible_state st)
+  | OSp_no_success -> (forall st. finset_mem st st_s --> not (is_Normal_state st))
+  | OSp_no_special -> (forall st. finset_mem st st_s --> not (is_Special_state st))
+  | OSp_no_impossible -> (forall st. finset_mem st st_s --> not (is_Impossible_state st))
+  | OSp_only_checks -> ((exists v. st_s = finset_singleton (Normal_state (s0, v))) ||
+         (forall st. finset_mem st st_s --> ((not (is_Normal_state st)) && has_internal_state s0 st)))
+  | OSp_error e -> (exists st. finset_mem st st_s && is_Error_state_err e st)
+  | OSp_error_no_other es -> (forall st e. (finset_mem st st_s && is_Error_state_err e st) --> elem e es)
+ end
+
+val operation_spec : forall 'impl 'a. SetType 'impl, SetType 'a, Eq 'impl => 'impl -> fsmonad 'impl 'a -> operation_spec -> bool
+let non_exec operation_spec s0 m ops = 
+  let st_s = run_fsmonad m s0 in
+  not (finset_is_empty st_s) &&
+  operation_spec_pred s0 st_s ops
+
+
+
+(* One important property of all fs-commands is that they happen in
+   two phases.  The checking-phase checks for errors and special
+   conditions. Only if it does not detect a problem, the core-phase is
+   executed which does the real work and cannot fail. It can only run
+   into impossible states or succeed. If the checking is sucessful,
+   the core-phase can't reach impossible states. Notice that this implies
+   that sucessful and error/special states cannot be mixed and that it
+   is always deterministic, whether an error / special state is reached.
+   (which error is reached, might not be determined though).
+
+   This idea of commands running in 2 phases is formalised by
+   the following definition. 
+*)
+
+val operation_phases_ok : forall 'impl 'a 'b. Eq 'impl, SetType 'a, SetType 'b, SetType 'impl => 
+   fsmonad 'impl 'a -> fsmonad 'impl 'b -> bool
+let non_exec operation_phases_ok m_checks m_core =
+   (forall s0. operation_spec s0 m_checks OSp_only_checks) &&
+   (forall s0. operation_spec s0 m_core OSp_weak_success) &&
+   (forall s0. operation_spec s0 (m_checks >>= (fun _ -> m_core)) OSp_no_impossible)
+
+
+
+(******************************************************************************)
+(* Maschinery                                                                 *)
+(******************************************************************************)
+
+(* First, let's prove plenty of auxiliary lemmata about our specification 
+   infrastructure. This helps proving the interesting lemmata.
+
+   Readers not interested in internas, are advised to skip this section.
+   It is rather technical and has few deep insights.
+*)
+
+lemma operation_spec_fsm_get_state : forall s0 m osp.
+  operation_spec s0 (fsm_get_state >>= m) osp = operation_spec s0 (m s0) osp
+
+lemma operation_spec_fsm_raises_specials : forall s0 cs e es'.
+  (operation_spec s0 (fsm_raises_specials cs) (OSp_error_no_other es') = 
+     ((cs <> []) && (forall e. elem (EOS_error e) cs --> elem e es'))) &&
+
+  (operation_spec s0 (fsm_raises_specials cs) (OSp_error e) = 
+     (elem (EOS_error e) cs)) &&
+
+  (operation_spec s0 (fsm_raises_specials cs) OSp_no_impossible = 
+     ((cs <> []) && (forall c. elem c cs --> not (is_EOS_impossible c)))) &&
+
+  (operation_spec s0 (fsm_raises_specials cs) OSp_only_checks = (cs <> [])) &&
+
+  (operation_spec s0 (fsm_raises_specials cs) OSp_weak_success = 
+     ((cs <> []) && (forall c. elem c cs --> (is_EOS_impossible c)))) &&
+
+  (operation_spec s0 (fsm_raises_specials cs) OSp_success = false) &&
+  (operation_spec s0 (fsm_raises_specials cs) OSp_success_deterministic = (cs <> [])) &&
+  (operation_spec s0 (fsm_raises_specials cs) OSp_no_success = (cs <> [])) &&
+  (operation_spec s0 (fsm_raises_specials cs) OSp_no_special = 
+     ((cs <> []) && (forall c. (elem c cs) --> not (is_EOS_special c))))
+
+
+lemma operation_spec_fsm_normals : forall s0 f es' e l.
+  (operation_spec s0 (fsm_normals f l) (OSp_error_no_other es') = (l <> [])) &&
+  (operation_spec s0 (fsm_normals f l) (OSp_error e) = false) &&
+  (operation_spec s0 (fsm_normals f l) OSp_no_impossible = (l <> [])) &&
+  (operation_spec s0 (fsm_normals f l) OSp_only_checks = ((l <> []) && (exists v. forall x.
+     List.elem x l --> (f (s0, x) = (s0, v))))) &&
+  (operation_spec s0 (fsm_normals f l) OSp_weak_success = (l <> [])) &&
+  (operation_spec s0 (fsm_normals f l) OSp_success = (l <> [])) &&
+  (operation_spec s0 (fsm_normals f l) OSp_success_deterministic = ((l <> []) && (exists v s1. forall x.
+     List.elem x l --> (f (s0, x) = (s1, v))))) &&
+  (operation_spec s0 (fsm_normals f l) OSp_no_success = false) &&
+  (operation_spec s0 (fsm_normals f l) OSp_no_special = (l <> []))
+
+
+lemma operation_spec_fsm_normal : forall s0 f es' e.
+  (operation_spec s0 (fsm_normal f) (OSp_error_no_other es') = true) &&
+  (operation_spec s0 (fsm_normal f) (OSp_error e) = false) &&
+  (operation_spec s0 (fsm_normal f) OSp_no_impossible = true) &&
+  (operation_spec s0 (fsm_normal f) OSp_only_checks = (fst (f s0) = s0)) &&
+  (operation_spec s0 (fsm_normal f) OSp_weak_success = true) &&
+  (operation_spec s0 (fsm_normal f) OSp_success = true) &&
+  (operation_spec s0 (fsm_normal f) OSp_success_deterministic = true) &&
+  (operation_spec s0 (fsm_normal f) OSp_no_success = false) &&
+  (operation_spec s0 (fsm_normal f) OSp_no_special = true)
+
+
+lemma operation_spec_fsm_normal_intros :
+  (forall s0 osp. operation_spec s0 fsm_do_nothing osp = 
+                  operation_spec s0 (fsm_normal (fun s -> (s, dummy_return_value))) osp) &&
+  (forall s0 osp x. operation_spec s0 (fsm_return x) osp = 
+                    operation_spec s0 (fsm_normal (fun s -> (s, x))) osp) &&
+  (forall s0 osp. operation_spec s0 fsm_get_state osp = 
+                    operation_spec s0 (fsm_normal (fun s -> (s, s))) osp) &&
+  (forall s0 osp s' rv. operation_spec s0 (fsm_put_state_return s' rv) osp = 
+                    operation_spec s0 (fsm_normal (fun s -> (s', rv))) osp) &&
+  (forall s0 osp s'. operation_spec s0 (fsm_put_state s') osp = 
+                     operation_spec s0 (fsm_normal (fun s -> (s', RV_none))) osp)
+
+
+lemma operation_spec_fsm_cond_raises_specials : forall s0 cbs es' e.
+  (operation_spec s0 (fsm_cond_raises_specials cbs) (OSp_error_no_other es') = 
+     (forall e. elem (EOS_error e, true) cbs --> elem e es')) &&
+
+  (operation_spec s0 (fsm_cond_raises_specials cbs) (OSp_error e) =
+     (elem (EOS_error e, true) cbs)) &&
+
+  (operation_spec s0 (fsm_cond_raises_specials cbs) OSp_no_impossible = 
+     (forall c b. elem (c,b) cbs --> is_EOS_impossible c --> not b)) &&
+
+  (operation_spec s0 (fsm_cond_raises_specials cbs) OSp_only_checks = true) &&
+
+  (operation_spec s0 (fsm_cond_raises_specials cbs) OSp_weak_success = 
+     (forall c b. elem (c,b) cbs --> not (is_EOS_impossible c) --> not b)) &&
+
+  (operation_spec s0 (fsm_cond_raises_specials cbs) OSp_success = 
+     (forall cb. elem cb cbs --> not (snd cb))) &&
+
+  (operation_spec s0 (fsm_cond_raises_specials cbs) OSp_success_deterministic = true) &&
+
+  (operation_spec s0 (fsm_cond_raises_specials cbs) OSp_no_success = 
+     (exists cb. elem cb cbs && snd cb)) &&
+
+  (operation_spec s0 (fsm_cond_raises_specials cbs) OSp_no_special = 
+     (forall c b. elem (c,b) cbs --> is_EOS_special c --> not b))
+
+
+lemma operation_spec_intros : (
+  (forall s0 es sp.  (operation_spec s0 ((fsm_raises es):fsmonad 'a 'b) sp = 
+                      operation_spec s0 ((fsm_raises_specials (List.map EOS_error es)):fsmonad 'a 'b) sp)) &&
+  (forall s0 ss sp.  (operation_spec s0 ((fsm_specials ss):fsmonad 'a 'b) sp = 
+                      operation_spec s0 ((fsm_raises_specials (List.map EOS_special ss)):fsmonad 'a 'b) sp)) &&
+  (forall s0 ces sp. (operation_spec s0 (fsm_cond_raises ces) sp = 
+                      operation_spec s0 (fsm_cond_raises_specials (List.map (fun (e, c) -> (EOS_error e, c)) ces)) sp)) &&
+  (forall s0 css sp. (operation_spec s0 (fsm_cond_specials css) sp = 
+                      operation_spec s0 (fsm_cond_raises_specials (List.map (fun (ssm, c) -> (EOS_special ssm, c)) css)) sp))
+)
+
+lemma operation_spec_no_impossible_fsm_cond_raises_specials_bind :  forall s0 cbs m.
+  operation_spec s0 (fsm_cond_raises_specials cbs >>= m) OSp_no_impossible = (
+    (forall c b. (elem (c,b) cbs && is_EOS_impossible c) --> not b) &&
+    ((forall c b. (elem (c,b) cbs --> not b)) --> operation_spec s0 (m dummy_return_value) OSp_no_impossible)
+  )
+
+lemma operation_spec_success_alt_def : forall s0 m.
+  operation_spec s0 m OSp_success = 
+  (operation_spec s0 m OSp_weak_success && operation_spec s0 m OSp_no_impossible)
+
+lemma operation_spec_error_not_success :
+  forall s0 m e. operation_spec s0 m (OSp_error e) --> not (operation_spec s0 m OSp_success)
+
+lemma operation_spec_success_no_special :
+  forall s0 m. operation_spec s0 m OSp_success --> operation_spec s0 m OSp_no_special
+
+lemma operation_phases_ok_drop_checks : forall s0 m_checks m_core.
+  operation_phases_ok m_checks m_core -->
+  (operation_spec s0 (m_checks >>= (fun _ -> m_core)) OSp_success) -->
+  (run_fsmonad (m_checks >>= (fun _ -> m_core)) s0 = run_fsmonad m_core s0)
+
+lemma operation_phases_ok_no_impossible : forall s0 m_checks m_core.
+  operation_phases_ok m_checks m_core -->
+  operation_spec s0 (m_checks >>= (fun _ -> m_core)) OSp_no_impossible
+
+lemma operation_phases_ok_success : forall s0 m_checks m_core.
+  operation_phases_ok m_checks m_core -->
+  (operation_spec s0 (m_checks >>= (fun _ -> m_core)) OSp_success =
+   operation_spec s0 m_checks OSp_success)
+
+lemma operation_phases_ok_no_success : forall s0 m_checks m_core.
+  operation_phases_ok m_checks m_core -->
+  (operation_spec s0 (m_checks >>= (fun _ -> m_core)) OSp_no_success =
+   operation_spec s0 m_checks OSp_no_success)
+
+lemma operation_phases_ok_error_no_other : forall s0 m_checks m_core es.
+  operation_phases_ok m_checks m_core -->
+  (operation_spec s0 (m_checks >>= (fun _ -> m_core)) (OSp_error_no_other es) =
+   operation_spec s0 m_checks (OSp_error_no_other es))
+
+lemma operation_phases_ok_no_special : forall s0 m_checks m_core.
+  operation_phases_ok m_checks m_core -->
+  (operation_spec s0 (m_checks >>= (fun _ -> m_core)) OSp_no_special =
+   operation_spec s0 m_checks OSp_no_special)
+
+lemma operation_phases_ok_error : forall s0 m_checks m_core e.
+  operation_phases_ok m_checks m_core -->
+  (operation_spec s0 (m_checks >>= (fun _ -> m_core)) (OSp_error e) =
+   operation_spec s0 m_checks (OSp_error e))
+
+lemma operation_phases_ok_success_det : forall s0 m_checks m_core e.
+  operation_phases_ok m_checks m_core -->
+  (operation_spec s0 (m_checks >>= (fun _ -> m_core)) OSp_success_deterministic =
+   (operation_spec s0 m_checks OSp_no_success ||
+    operation_spec s0 m_core OSp_success_deterministic))
+
+
+
+
+(******************************************************************************)
+(* Proving theorems about all fs-commands                                     *)
+(******************************************************************************)
+
+(* For each command "cmd", there are two theorems:
+
+     - "cmd_phases_ok" states that the command really operates in two phases
+     - "operation_spec_cmd" states high level properties of the command
+
+   To express "operation_spec_cmd" concisely, usually two predicates
+   are defined
+
+   - "cmd_success_cond" holds if and only if the command succeeds
+   - "cmd_special_cond" holds if and only if the command runs into a special state
+
+   Since many commands cannot run into special states,
+   "cmd_special_cond" may not be defined.
+*)
+
+
+(* ------------------------- *)
+(* Link                      *)
+(* ------------------------- *)
+
+lemma fsop_link_phases_ok : forall env spath dpath.
+  operation_phases_ok (fsop_link_checks env spath dpath) (fsop_link_core env spath dpath)
+
+
+val fsop_link_success_cond : forall 'dir_ref 'file_ref 'impl.
+     'impl ->
+     environment 'dir_ref 'file_ref 'impl ->
+     res_name 'dir_ref 'file_ref -> 
+     res_name 'dir_ref 'file_ref -> 
+     bool
+let fsop_link_success_cond s0 env spath dpath =
+  match (spath, dpath) with
+    | (RN_file _, RN_none (d0_ref', _, _)) -> (
+#ifdef aspect_perms
+        env.env_prms.cp_has_dir_write_permission s0 d0_ref' &&
+#endif
+       not (is_linux_arch env && res_name_is_symlink env.env_ops s0 spath && rn_ends_with_slash spath) &&
+       not (rn_ends_with_slash dpath)
+      )
+    | _ -> false
+  end
+
+val fsop_link_special_cond : forall 'dir_ref 'file_ref 'impl.
+     'impl ->
+     environment 'dir_ref 'file_ref 'impl ->
+     res_name 'dir_ref 'file_ref -> 
+     res_name 'dir_ref 'file_ref -> 
+     bool
+let fsop_link_special_cond s0 env spath dpath =
+  match spath with
+    | (RN_dir (d0_ref, _)) -> (
+#ifdef aspect_perms
+        env.env_prms.cp_has_dir_link_create_privilege s0 d0_ref &&
+#endif
+        arch_allows_dir_links env
+      )
+    | _ -> false
+  end
+
+
+lemma operation_spec_fsop_link :
+  forall env spath dpath s0.
+  let link_spec osp = operation_spec s0 (fsop_link env spath dpath) osp in (
+     (* link might only raise the following errors *) 
+     link_spec (OSp_error_no_other 
+        ([ENOENT; ENOTDIR; EEXIST; EPERM; EACCES] ++ 
+         get_res_name_errors spath ++ 
+         get_res_name_errors dpath)) &&
+
+     (* for the intended use-case this list can be pruned *) 
+     ((is_RN_file spath && is_RN_none dpath) -->
+      link_spec (OSp_error_no_other [ENOTDIR; EACCES; ENOENT; EPERM])) &&
+
+     (* link only hits special states if dir_links are allowed and we try linking a directory *) 
+     (link_spec OSp_no_special = (not (fsop_link_special_cond s0 env spath dpath))) &&
+
+     (* spath must exist posix/link.md ENOENT:2 *) 
+     (is_RN_none spath --> link_spec (OSp_error ENOENT)) &&
+
+     (* spath and dpath errors are raised *) 
+     (is_RN_error spath --> link_spec (OSp_error (get_RN_error_err spath))) &&
+     (is_RN_error dpath --> link_spec (OSp_error (get_RN_error_err dpath))) &&
+
+     (* posix/link.md EEXIST:1, dpath must not exist *) 
+     (is_RN_file dpath --> link_spec (OSp_error EEXIST)) &&
+     (is_RN_dir dpath --> link_spec (OSp_error EEXIST)) &&
+
+     (* linking dirs is not supported *) 
+     (is_RN_dir spath --> ((link_spec (OSp_error EPERM) || not (link_spec OSp_no_special)))) &&
+
+     (* link succeeds iff and only iff ... *) 
+     (link_spec OSp_success <-> fsop_link_success_cond s0 env spath dpath) &&
+
+     (* no impossible_state can be reached *)
+     (link_spec OSp_no_impossible) &&
+
+     (* deterministic, if it succeeds *)
+     (link_spec OSp_success_deterministic)
+  )
+
+
+
+
+(* ------------------------- *)
+(* mkdir                     *)
+(* ------------------------- *)
+
+lemma fsop_mkdir_phases_ok : forall env rpath mode.
+  operation_phases_ok (fsop_mkdir_checks env rpath mode) (fsop_mkdir_core env rpath mode)
+
+val fsop_mkdir_success_cond : forall 'dir_ref 'file_ref 'impl.
+     'impl ->
+     environment 'dir_ref 'file_ref 'impl ->
+     res_name 'dir_ref 'file_ref -> 
+     file_perm ->
+     bool
+let fsop_mkdir_success_cond s0 env rpath mode =
+  match rpath with
+    | (RN_none(d0_ref,_,_)) ->
+#ifdef aspect_perms
+         not (contains_implementation_specific_file_perms mode) &&
+         (env.env_prms.cp_has_dir_write_permission s0 d0_ref)
+#else
+         true
+#endif
+    | _ -> false
+  end
+
+val fsop_mkdir_special_cond : forall 'dir_ref 'file_ref 'impl.
+     'impl ->
+     environment 'dir_ref 'file_ref 'impl ->
+     res_name 'dir_ref 'file_ref -> 
+     file_perm ->
+     bool
+let fsop_mkdir_special_cond s0 env rpath mode =
+#ifdef aspect_perms
+     (contains_implementation_specific_file_perms mode)
+#else
+     false
+#endif
+
+
+lemma operation_spec_fsop_mkdir :
+  forall env rpath mode s0. (
+  let mkdir_spec osp = operation_spec s0 (fsop_mkdir env rpath mode) osp in 
+     (* mkdir might only raise the following errors *) 
+     (mkdir_spec (OSp_error_no_other 
+        ([ENOENT; ENOTDIR; EEXIST; EACCES] ++ 
+         get_res_name_errors rpath))) &&
+
+     (* for the intended use-case this list can be pruned *) 
+     (is_RN_none rpath --> mkdir_spec (OSp_error_no_other [EACCES])) &&
+
+     (* mkdir only hits special states if wrong mode is given *) 
+     (mkdir_spec OSp_no_special = not (fsop_mkdir_special_cond s0 env rpath mode)) &&
+
+     (* rpath errors are raised *) 
+     (is_RN_error rpath --> mkdir_spec (OSp_error (get_RN_error_err rpath))) &&
+
+     (* posix/mkdir.md EEXIST:1, rpath must not exist *) 
+     (is_RN_file rpath --> mkdir_spec (OSp_error EEXIST)) &&
+     (is_RN_dir rpath --> mkdir_spec (OSp_error EEXIST)) &&
+
+     (* mkdir succeeds iff and only iff ... *) 
+     (mkdir_spec OSp_success <-> fsop_mkdir_success_cond s0 env rpath mode) &&
+     
+     (* no impossible_state can be reached *)
+     (mkdir_spec OSp_no_impossible) &&
+
+     (* deterministic, if it succeeds *)
+     (mkdir_spec OSp_success_deterministic)
+  )
+
+
+
+(* ------------------------- *)
+(* open                      *)
+(* ------------------------- *)
+
+lemma fsop_open_phases_ok : forall env rpath oflag mode.
+  operation_phases_ok (fsop_open_checks env rpath oflag mode) (fsop_open_core env rpath oflag mode)
+
+
+val fsop_open_success_cond_perms : forall 'dir_ref 'file_ref 'impl.
+     'impl ->
+     environment 'dir_ref 'file_ref 'impl ->
+     res_name 'dir_ref 'file_ref -> 
+     finset open_flag ->
+     maybe file_perm ->
+     bool
+let fsop_open_success_cond_perms s0 env rpath oflags mode_opt =
+#ifdef aspect_perms
+ (match rpath with
+  | RN_file (d0_ref, name, i0_ref, rp) -> (
+       (finset_mem O_RDWR oflags --> (env.env_prms.cp_has_file_write_permission s0 i0_ref &&
+                                      env.env_prms.cp_has_file_read_permission s0 i0_ref)) &&
+       (finset_mem O_RDONLY oflags --> env.env_prms.cp_has_file_read_permission s0 i0_ref) &&
+       (finset_mem O_WRONLY oflags --> env.env_prms.cp_has_file_write_permission s0 i0_ref) &&
+       (finset_mem O_TRUNC oflags --> env.env_prms.cp_has_file_write_permission s0 i0_ref) &&
+       (finset_mem O_EXEC oflags --> env.env_prms.cp_has_file_execute_permission s0 i0_ref)
+     )
+  | (RN_dir (d0_ref, rp)) -> (
+       (finset_mem O_RDONLY oflags --> env.env_prms.cp_has_dir_read_permission s0 d0_ref) &&
+       (finset_mem O_SEARCH oflags --> env.env_prms.cp_has_dir_search_permission s0 d0_ref)
+     )
+  | RN_none (d0_ref, n, rp) -> (
+       (isJust mode_opt --> not (contains_implementation_specific_file_perms (fromJust mode_opt))) &&
+       env.env_prms.cp_has_dir_write_permission s0 d0_ref
+     )
+  | RN_error _ -> false
+  end )
+#else
+  true
+#endif
+
+
+val fsop_open_success_cond : forall 'dir_ref 'file_ref 'impl.
+     'impl ->
+     environment 'dir_ref 'file_ref 'impl ->
+     res_name 'dir_ref 'file_ref -> 
+     int_open_flags ->
+     maybe file_perm ->
+     bool
+let fsop_open_success_cond s0 env rpath oflag mode_opt = 
+ let arch = architecture_of_ty_arch env.env_arch in
+ let (oflags:finset open_flag) = arch.arch_open_flags_of_int oflag in (
+ fsop_open_success_cond_perms s0 env rpath oflags mode_opt &&
+ (match rpath with
+  | RN_file (d0_ref, name, i0_ref, rp) -> (
+       (finset_mem O_CREAT oflags --> not(rn_ends_with_slash rpath)) &&
+       (finset_mem O_NOFOLLOW oflags --> ((env.env_ops.fops_stat_file s0 i0_ref).st_kind <> S_IFLNK)) &&
+       (if (is_linux_arch env) then (
+         (finset_mem O_CREAT oflags --> not (finset_mem O_EXCL oflags))
+       ) else (
+         (open_flag_set_access_mode_ok oflags) &&
+         (not (finset_mem O_DIRECTORY oflags)) &&
+         (not (finset_mem O_SEARCH oflags)) &&
+         (not (finset_mem O_EXCL oflags)) &&
+         (finset_mem O_TRUNC oflags --> (finset_mem O_RDWR oflags || finset_mem O_WRONLY oflags))
+       ))
+     )
+   | (RN_dir (d0_ref, rp)) -> (
+       not (finset_mem O_RDWR oflags) &&
+       not (finset_mem O_WRONLY oflags) &&
+       not (finset_mem O_TRUNC oflags) &&
+       (if (is_linux_arch env) then (
+         (not (finset_mem O_CREAT oflags))
+       ) else (
+         open_flag_set_access_mode_ok oflags &&
+         (not (finset_mem O_EXEC oflags)) &&
+         (not (finset_mem O_EXCL oflags)) &&
+         (finset_mem O_CREAT oflags --> not(rn_ends_with_slash rpath))
+       ))
+     )
+   | RN_none (d0_ref, n, rp) -> (
+       (finset_mem O_CREAT oflags) &&
+       not(rn_ends_with_slash rpath) &&
+       (if (is_linux_arch env) then (
+         true
+       ) else (
+         open_flag_set_access_mode_ok oflags &&
+         (finset_mem O_TRUNC oflags --> (finset_mem O_RDWR oflags || finset_mem O_WRONLY oflags)) &&
+         (isJust mode_opt) 
+       ))
+     )
+   | RN_error _ -> false
+end ))
+
+
+val fsop_open_special_cond : forall 'dir_ref 'file_ref 'impl.
+     'impl ->
+     environment 'dir_ref 'file_ref 'impl ->
+     res_name 'dir_ref 'file_ref -> 
+     int_open_flags ->
+     maybe file_perm ->
+     bool
+let fsop_open_special_cond s0 env rpath oflag mode_opt = 
+  let arch = architecture_of_ty_arch env.env_arch in
+  let (oflags:finset open_flag) = arch.arch_open_flags_of_int oflag in 
+
+  not (is_linux_arch env) && (
+    (finset_mem O_EXCL oflags && not (finset_mem O_CREAT oflags)) ||
+    not (open_flag_set_access_mode_ok oflags) ||
+    (finset_mem O_TRUNC oflags && not (finset_mem O_RDWR oflags) && not (finset_mem O_WRONLY oflags)) 
+  ) ||
+  (match rpath with
+   | RN_file (d0_ref, name, i0_ref, rp) -> (
+       not (is_linux_arch env) && (finset_mem O_SEARCH oflags) 
+     )
+   | (RN_dir (d0_ref, rp)) -> (
+       not (is_linux_arch env) && (
+         (finset_mem O_TRUNC oflags) ||
+         (finset_mem O_EXEC oflags)
+       )
+     )
+   | RN_none (d0_ref, n, rp) -> (
+       ((finset_mem O_CREAT oflags) && (isJust mode_opt) && (contains_implementation_specific_file_perms (fromJust mode_opt))) ||
+       (not (is_linux_arch env) && finset_mem O_CREAT oflags && isNothing mode_opt)
+     )
+   | RN_error _ -> false
+end )
+   
+
+(* a simplified version for linux *)
+val fsop_open_special_cond_linux : forall 'dir_ref 'file_ref 'impl.
+     'impl ->
+     environment 'dir_ref 'file_ref 'impl ->
+     res_name 'dir_ref 'file_ref -> 
+     int_open_flags ->
+     maybe file_perm ->
+     bool
+let fsop_open_special_cond_linux s0 env rpath oflag mode_opt = 
+  let (oflags:finset open_flag) = linux_arch.arch_open_flags_of_int oflag in 
+  ((is_RN_none rpath) && ((finset_mem O_CREAT oflags) && (isJust mode_opt) && 
+  (contains_implementation_specific_file_perms (fromJust mode_opt))))
+
+lemma fsop_open_special_cond_linux_thm : forall s0 env rpath oflag mode_opt. 
+  is_linux_arch env -->
+  (fsop_open_special_cond s0 env rpath oflag mode_opt = 
+   fsop_open_special_cond_linux s0 env rpath oflag mode_opt)
+
+
+
+lemma operation_spec_fsop_open : forall env rpath oflag s0 mode_opt.
+  let fsop_open_spec = (fun osp -> operation_spec s0 (fsop_open env rpath oflag mode_opt) osp) in
+  let arch = architecture_of_ty_arch env.env_arch in
+  let (oflags:finset open_flag) = arch.arch_open_flags_of_int oflag in (
+
+(* mkdir might only raise the following errors *)
+(fsop_open_spec (OSp_error_no_other
+      ([ENOENT; ENOTDIR; EEXIST; EACCES; EISDIR; ELOOP] ++ get_res_name_errors rpath))) &&
+
+(* rpath errors are raised *) 
+(is_RN_error rpath --> fsop_open_spec (OSp_error (get_RN_error_err rpath))) &&
+
+(* posix/open.md ENOENT:1, RN_none only allowed, if newly created *) 
+((is_RN_none rpath && not (finset_mem O_CREAT oflags)) --> fsop_open_spec (OSp_error ENOENT)) &&
+
+(* posix/open.md EISDIR:1
+     no write permissions allowed on directories 
+   posix/open.md O_TRUNC:3, posix/open.md O_EXEC:1
+     truncating or execute permission on directories is not fully defined *)
+((is_RN_dir rpath && (finset_mem O_RDWR oflags || finset_mem O_WRONLY oflags)) --> fsop_open_spec (OSp_error EISDIR)) &&
+((is_RN_dir rpath && (finset_mem O_TRUNC oflags) && not (is_linux_arch env)) --> not(fsop_open_spec OSp_no_special)) &&
+((is_RN_dir rpath && (finset_mem O_EXEC oflags) && not (is_linux_arch env)) --> not(fsop_open_spec OSp_no_special)) &&
+
+(* posix/open.md ENOTDIR:1, O_DIRECTORY enforces reading dirs
+   posix/open.md O_SEARCH:1
+   posix/open.md ELOOP:1 *)
+((is_RN_file rpath && finset_mem O_DIRECTORY oflags && not (is_linux_arch env)) --> fsop_open_spec (OSp_error ENOTDIR)) &&
+((is_RN_file rpath && finset_mem O_SEARCH oflags && not (is_linux_arch env)) --> not(fsop_open_spec OSp_no_special)) &&
+((res_name_is_symlink env.env_ops s0 rpath && finset_mem O_NOFOLLOW oflags) --> 
+   fsop_open_spec (OSp_error ELOOP)) &&
+
+(* it is impossible to create new directories
+   posix/open.md ENOTDIR:2
+   posix/open.md ENOENT:3 
+*)
+((rn_ends_with_slash rpath && finset_mem  O_CREAT oflags) --> 
+   fsop_open_spec (OSp_error ENOTDIR) || fsop_open_spec (OSp_error ENOENT)) &&
+((is_RN_file rpath || is_RN_dir rpath) --> not(fsop_open_spec (OSp_error ENOENT))) &&
+
+(* posix/open.md EEXIST:1 *)
+(((is_RN_file rpath || is_RN_dir rpath) && finset_mem O_EXCL oflags && finset_mem O_CREAT oflags) --> 
+   (fsop_open_spec (OSp_error EEXIST))) &&
+
+(* posix/open.md D:1, posix/open.md O_TRUNC:4
+   sanity checks on flags *)
+((not (open_flag_set_access_mode_ok oflags) && not (is_linux_arch env)) --> not(fsop_open_spec OSp_no_special)) &&
+((finset_mem O_EXCL oflags && not (finset_mem O_CREAT oflags) && not (is_linux_arch env)) --> not(fsop_open_spec OSp_no_special)) &&
+((finset_mem O_TRUNC oflags && not (finset_mem O_RDWR oflags) && not (finset_mem O_WRONLY oflags) && not (is_linux_arch env)) --> not(fsop_open_spec OSp_no_special)) &&
+
+(* reaches special case, iff ...*)
+(fsop_open_spec OSp_no_special = not (fsop_open_special_cond s0 env rpath oflag mode_opt)) &&
+
+(* succeeds iff ...*)
+(fsop_open_spec OSp_success = fsop_open_success_cond s0 env rpath oflag mode_opt) &&
+
+(* no impossible_state can be reached *)
+(fsop_open_spec OSp_no_impossible) &&
+
+(* deterministic, if it succeeds *)
+(fsop_open_spec OSp_success_deterministic)
+
+  )
+
+
+(* ------------------------- *)
+(* open-close                *)
+(* ------------------------- *)
+
+lemma fsop_open_close_phases_ok : forall env rpath oflag mode.
+  operation_phases_ok (fsop_open_close_checks env rpath oflag mode) (fsop_open_close_core env rpath oflag mode)
+
+lemma operation_spec_fsop_open_close : forall env rpath oflag s0 mode_opt.
+  let fsop_open_close_spec = (fun osp -> operation_spec s0 (fsop_open_close env rpath oflag mode_opt) osp) in
+  let arch = architecture_of_ty_arch env.env_arch in
+  let (oflags:finset open_flag) = arch.arch_open_flags_of_int oflag in (
+
+(* mkdir might only raise the following errors *)
+(fsop_open_close_spec (OSp_error_no_other
+      ([ENOENT; ENOTDIR; EEXIST; EACCES; EISDIR; ELOOP] ++ get_res_name_errors rpath))) &&
+
+(* rpath errors are raised *) 
+(is_RN_error rpath --> fsop_open_close_spec (OSp_error (get_RN_error_err rpath))) &&
+
+(* posix/open.md ENOENT:1, RN_none only allowed, if newly created *) 
+((is_RN_none rpath && not (finset_mem O_CREAT oflags)) --> fsop_open_close_spec (OSp_error ENOENT)) &&
+
+(* posix/open.md EISDIR:1
+     no write permissions allowed on directories 
+   posix/open.md O_TRUNC:3, posix/open.md O_EXEC:1
+     truncating or execute permission on directories is not fully defined *)
+((is_RN_dir rpath && (finset_mem O_RDWR oflags || finset_mem O_WRONLY oflags)) --> fsop_open_close_spec (OSp_error EISDIR)) &&
+((is_RN_dir rpath && (finset_mem O_TRUNC oflags) && not (is_linux_arch env)) --> not(fsop_open_close_spec OSp_no_special)) &&
+((is_RN_dir rpath && (finset_mem O_EXEC oflags) && not (is_linux_arch env)) --> not(fsop_open_close_spec OSp_no_special)) &&
+
+(* posix/open.md ENOTDIR:1, O_DIRECTORY enforces reading dirs
+   posix/open.md O_SEARCH:1
+   posix/open.md ELOOP:1 *)
+((is_RN_file rpath && finset_mem O_DIRECTORY oflags && not (is_linux_arch env)) --> fsop_open_close_spec (OSp_error ENOTDIR)) &&
+((is_RN_file rpath && finset_mem O_SEARCH oflags && not (is_linux_arch env)) --> not(fsop_open_close_spec OSp_no_special)) &&
+((res_name_is_symlink env.env_ops s0 rpath && finset_mem O_NOFOLLOW oflags) --> 
+   fsop_open_close_spec (OSp_error ELOOP)) &&
+
+(* it is impossible to create new directories
+   posix/open.md ENOTDIR:2
+   posix/open.md ENOENT:3 
+*)
+((rn_ends_with_slash rpath && finset_mem  O_CREAT oflags) --> 
+   fsop_open_close_spec (OSp_error ENOTDIR) || fsop_open_close_spec (OSp_error ENOENT)) &&
+((is_RN_file rpath || is_RN_dir rpath) --> not(fsop_open_close_spec (OSp_error ENOENT))) &&
+
+(* posix/open.md EEXIST:1 *)
+(((is_RN_file rpath || is_RN_dir rpath) && finset_mem O_EXCL oflags && finset_mem O_CREAT oflags) --> 
+   (fsop_open_close_spec (OSp_error EEXIST))) &&
+
+(* posix/open.md D:1, posix/open.md O_TRUNC:4
+   sanity checks on flags *)
+((not (open_flag_set_access_mode_ok oflags) && not (is_linux_arch env)) --> not(fsop_open_close_spec OSp_no_special)) &&
+((finset_mem O_EXCL oflags && not (finset_mem O_CREAT oflags) && not (is_linux_arch env)) --> not(fsop_open_close_spec OSp_no_special)) &&
+((finset_mem O_TRUNC oflags && not (finset_mem O_RDWR oflags) && not (finset_mem O_WRONLY oflags) && not (is_linux_arch env)) --> not(fsop_open_close_spec OSp_no_special)) &&
+
+(* reaches special case, iff ...*)
+(fsop_open_close_spec OSp_no_special = not (fsop_open_special_cond s0 env rpath oflag mode_opt)) &&
+
+(* succeeds iff ...*)
+(fsop_open_close_spec OSp_success = fsop_open_success_cond s0 env rpath oflag mode_opt) &&
+
+(* no impossible_state can be reached *)
+(fsop_open_close_spec OSp_no_impossible) &&
+
+(* deterministic, if it succeeds *)
+(fsop_open_close_spec OSp_success_deterministic)
+
+  )
+
+
+
+(* ------------------------- *)
+(* pread                     *)
+(* ------------------------- *)
+
+lemma fsop_pread_phases_ok : forall ops entry ofs len.
+  operation_phases_ok (fsop_pread_checks ops entry ofs len) (fsop_pread_core ops entry ofs len)
+
+
+val fsop_pread_success_cond : forall 'dir_ref 'file_ref 'impl.
+     environment 'dir_ref 'file_ref 'impl ->
+     entry 'dir_ref 'file_ref -> 
+     nat -> off_t ->
+     bool
+let fsop_pread_success_cond env entry len ofs = 
+  (not (ofs < 0) && is_file_ref_entry entry)
+
+val fsop_pread_special_cond : forall 'dir_ref 'file_ref 'impl.
+     environment 'dir_ref 'file_ref 'impl ->
+     entry 'dir_ref 'file_ref -> 
+     nat -> off_t ->
+     bool
+let fsop_pread_special_cond env entry len ofs = 
+  let arch = architecture_of_ty_arch env.env_arch in
+  (is_dir_ref_entry entry) && (arch.arch_allows_dir_read)
+
+
+lemma operation_spec_fsop_pread : forall env entry ofs len s0.
+  let arch = architecture_of_ty_arch env.env_arch in
+  let pread_spec = (fun osp -> operation_spec s0 (fsop_pread env entry len ofs) osp) in (
+
+(* pre_fs_read might only raise the following errors *)
+(pread_spec (OSp_error_no_other [EISDIR; EINVAL])) &&
+
+(* if used as intended, only EINVAL *)
+(is_file_ref_entry entry --> pread_spec (OSp_error_no_other [EINVAL])) &&
+
+(* off_set must be positive *)
+(ofs < 0 --> pread_spec (OSp_error EINVAL)) &&
+
+(* only files can be read *)
+((is_dir_ref_entry entry &&  not(arch.arch_allows_dir_read)) --> pread_spec (OSp_error EISDIR)) &&
+((is_dir_ref_entry entry && arch.arch_allows_dir_read) --> not (pread_spec OSp_no_special)) &&
+
+(* special only if reading a directory *)
+(pread_spec OSp_no_special = not (fsop_pread_special_cond env entry len ofs)) &&
+
+(* succeeds, iff ... *)
+(pread_spec OSp_success = (fsop_pread_success_cond env entry len ofs)) &&
+
+(* no impossible_state can be reached *)
+(pread_spec OSp_no_impossible) 
+
+)
+
+
+(* ------------------------- *)
+(* fsop_pread_rn             *)
+(* ------------------------- *)
+
+lemma fsop_pread_rn_phases_ok : forall env rn ofs len.
+  operation_phases_ok (fsop_pread_rn_checks env rn len ofs) (fsop_pread_rn_core env rn len ofs)
+
+
+val fsop_pread_rn_success_cond : forall 'dir_ref 'file_ref 'impl.
+     'impl ->
+     environment 'dir_ref 'file_ref 'impl ->
+     res_name 'dir_ref 'file_ref -> 
+     nat -> off_t ->
+     bool
+let fsop_pread_rn_success_cond s0 env rn len ofs = 
+   (match rn with
+     | RN_file (_, _, i0_ref, _) -> not (ofs < 0) 
+#ifdef aspect_perms
+          && (env.env_prms.cp_has_file_read_permission s0 i0_ref)
+#endif
+     | _ -> false
+    end)
+
+val fsop_pread_rn_special_cond : forall 'dir_ref 'file_ref 'impl.
+     'impl ->
+     environment 'dir_ref 'file_ref 'impl ->
+     res_name 'dir_ref 'file_ref -> 
+     nat -> off_t ->
+     bool
+let fsop_pread_rn_special_cond s0 env rn len ofs = 
+  let arch = architecture_of_ty_arch env.env_arch in
+  (is_RN_dir rn) && (arch.arch_allows_dir_read)
+
+
+lemma operation_spec_fsop_pread_rn : forall env rn ofs len s0.
+   let arch = architecture_of_ty_arch env.env_arch in
+   let pread_rn_spec = (fun osp -> operation_spec s0 (fsop_pread_rn env rn len ofs) osp) in (
+
+(* read might only raise the following errors *)
+(pread_rn_spec (OSp_error_no_other ([EISDIR; EINVAL;EACCES;ENOENT] ++ get_res_name_errors rn))) &&
+
+(* if used as intended, only EINVAL and EACCESS can happen *)
+(is_RN_file rn --> pread_rn_spec (OSp_error_no_other [EINVAL; EACCES])) &&
+
+(* off_set must be positive *)
+(ofs < 0 --> pread_rn_spec (OSp_error EINVAL)) &&
+
+(* rn errors are raised *) 
+(is_RN_error rn --> pread_rn_spec (OSp_error (get_RN_error_err rn))) &&
+
+(* rn must exist *)
+(is_RN_none rn --> pread_rn_spec (OSp_error ENOENT)) &&
+
+(* rn must not be a directory *)
+((is_RN_dir rn && not(arch.arch_allows_dir_read)) --> pread_rn_spec (OSp_error EISDIR)) &&
+((is_RN_dir rn && arch.arch_allows_dir_read) --> not (pread_rn_spec OSp_no_special)) &&
+
+(* special only if reading a directory *)
+(pread_rn_spec OSp_no_special = not (fsop_pread_rn_special_cond s0 env rn len ofs)) &&
+
+(* succeeds, iff ... *)
+((pread_rn_spec OSp_success) = (fsop_pread_rn_success_cond s0 env rn len ofs)) &&
+
+(* no impossible_state can be reached *)
+(pread_rn_spec OSp_no_impossible) 
+
+)
+
+
+(* ------------------------- *)
+(* rename                    *)
+(* ------------------------- *)
+
+lemma fsop_rename_phases_ok : forall env rsrc rdst.
+  operation_phases_ok (fsop_rename_checks env rsrc rdst) (fsop_rename_core env rsrc rdst)
+
+val fsop_rename_success_cond : forall 'dir_ref 'file_ref 'impl.
+   Eq 'dir_ref, Eq 'file_ref =>
+   'impl ->
+   environment 'dir_ref 'file_ref 'impl ->
+   res_name 'dir_ref 'file_ref ->
+   res_name 'dir_ref 'file_ref ->
+   bool
+let non_exec fsop_rename_success_cond s0 env rsrc rdst = 
+   (* linux specifc symlink behaviour *)
+   (is_linux_arch env --> (
+      not (res_name_is_symlink env.env_ops s0 rsrc && rn_ends_with_slash rsrc) &&
+      not (res_name_is_symlink env.env_ops s0 rdst && rn_ends_with_slash rdst)
+   )) && (
+
+#ifdef aspect_perms
+   let arch = architecture_of_ty_arch env.env_arch in
+   (fsop_rename_same_rsrc_rdst env rsrc rdst s0 ||
+#endif
+   match (rsrc, rdst) with
+    | (RN_file (d0_ref,nsrc,i0_ref,_), RN_none (d1_ref, ndst, rp)) -> 
+        (not (name_list_ends_with_slash (ty_name_list_to_list rp.rp_nl)))
+#ifdef aspect_perms
+        && env.env_prms.cp_has_file_restricted_delete_privilege (arch.arch_allows_removing_from_protected_dir_if_writeable) s0 d0_ref i0_ref &&
+        env.env_prms.cp_has_dir_write_permission s0 d0_ref &&
+        env.env_prms.cp_has_dir_write_permission s0 d1_ref
+#endif
+    | (RN_file (d0_ref,nsrc,i0_ref,_), RN_file (d1_ref,ndst,i1_ref,_)) -> 
+#ifdef aspect_perms
+        env.env_prms.cp_has_file_restricted_delete_privilege arch.arch_allows_removing_from_protected_dir_if_writeable s0 d0_ref i0_ref &&
+        env.env_prms.cp_has_file_restricted_delete_privilege arch.arch_allows_removing_from_protected_dir_if_writeable s0 d1_ref i1_ref &&
+        env.env_prms.cp_has_dir_write_permission s0 d0_ref &&
+        env.env_prms.cp_has_dir_write_permission s0 d1_ref 
+#else
+        true
+#endif
+    | (RN_dir (d0_ref,rp0), RN_none (d1_ref,ndst,rp1)) -> 
+        exists d0_p_ref d0_p_n.
+        (env.env_ops.fops_get_parent s0 d0_ref = Just (d0_p_ref, d0_p_n)) &&
+        (not (realpath_proper_subdir rp0 rp1))
+#ifdef aspect_perms
+        && env.env_prms.cp_has_dir_restricted_delete_privilege arch.arch_allows_removing_from_protected_dir_if_writeable s0 d0_p_ref d0_ref &&
+        env.env_prms.cp_has_dir_write_permission s0 d0_ref &&
+        env.env_prms.cp_has_dir_write_permission s0 d0_p_ref &&
+        env.env_prms.cp_has_dir_write_permission s0 d1_ref
+#endif
+    | (RN_dir (d0_ref,rp0), RN_dir (d1_ref,rp1)) -> 
+        exists d0_p_ref d0_p_n d1_p_ref d1_p_n.
+        (env.env_ops.fops_get_parent s0 d0_ref = Just (d0_p_ref, d0_p_n)) &&
+        (env.env_ops.fops_get_parent s0 d1_ref = Just (d1_p_ref, d1_p_n)) &&       
+        (dir_is_empty env.env_ops s0 d1_ref) && 
+        (not (realpath_proper_subdir rp0 rp1)) 
+#ifdef aspect_perms
+        && env.env_prms.cp_has_dir_restricted_delete_privilege arch.arch_allows_removing_from_protected_dir_if_writeable s0 d0_p_ref d0_ref &&
+        env.env_prms.cp_has_dir_restricted_delete_privilege arch.arch_allows_removing_from_protected_dir_if_writeable s0 d1_p_ref d1_ref &&
+        env.env_prms.cp_has_dir_write_permission s0 d0_ref &&
+        env.env_prms.cp_has_dir_write_permission s0 d1_ref &&
+        env.env_prms.cp_has_dir_write_permission s0 d0_p_ref &&
+        env.env_prms.cp_has_dir_write_permission s0 d1_p_ref
+#endif
+    | _ -> false
+  end))
+
+
+
+lemma operation_spec_fsop_rename : forall env rsrc rdst s0. (
+  let rename_spec = (fun osp -> operation_spec s0 (fsop_rename env rsrc rdst) osp) in
+
+(* fsop_rename might only raise the following errors *)
+(rename_spec (OSp_error_no_other ([ENOENT; ENOTDIR; ENOTEMPTY; EINVAL; EISDIR; EEXIST; EACCES; EPERM] ++ 
+   get_res_name_errors rsrc ++ get_res_name_errors rdst))) &&
+
+(* intended use cases are simpler *)
+(is_RN_file rsrc && (is_RN_none rdst && not(rn_ends_with_slash rdst)) -->
+  rename_spec (OSp_error_no_other [EACCES; EPERM; ENOTDIR])) &&
+(is_RN_file rsrc && is_RN_file rdst -->
+  rename_spec (OSp_error_no_other [EACCES; EPERM; ENOTDIR])) &&
+(is_RN_dir rsrc && is_RN_none rdst -->
+  rename_spec (OSp_error_no_other [EINVAL; EACCES; EPERM])) &&
+(is_RN_dir rsrc && is_RN_dir rdst -->
+  rename_spec (OSp_error_no_other [EINVAL; EACCES; EEXIST; ENOTEMPTY; EPERM])) &&
+
+(* posix/rename.md ENOENT:1 source must exists *)
+(is_RN_none rsrc --> rename_spec (OSp_error ENOENT)) &&
+
+(* errors are forwarded *) 
+(is_RN_error rsrc --> rename_spec (OSp_error (get_RN_error_err rsrc))) &&
+(is_RN_error rdst --> rename_spec (OSp_error (get_RN_error_err rdst))) &&
+
+(* files only renamed to files 
+   posix/rename.md EISDIR:1,
+   posix/rename.md ENOTDIR:4 *)
+(is_RN_file rsrc && is_RN_dir rdst --> rename_spec (OSp_error EISDIR)) &&
+(is_RN_file rsrc && is_RN_none rdst && rn_ends_with_slash rdst --> rename_spec (OSp_error ENOTDIR)) &&
+
+(* dirs only renamed to empty dirs 
+   ENOTDIR:2,
+   tr/6 ENOTEMPTY:1 *)
+(is_RN_dir rsrc && is_RN_file rdst --> rename_spec (OSp_error ENOTDIR)) &&
+(is_RN_dir rdst && not (fsop_rename_same_rsrc_rdst env rsrc rdst s0) && 
+   not (dir_is_empty env.env_ops s0 (get_RN_dir_dir_ref rdst)) --> 
+   (rename_spec (OSp_error EEXIST) && rename_spec (OSp_error ENOTEMPTY))) &&
+
+
+(* no special cases *)
+(rename_spec OSp_no_special) &&
+
+(* rename succeeds, iff ... *)
+((rename_spec OSp_success) = fsop_rename_success_cond s0 env rsrc rdst) &&
+
+(* no impossible_state can be reached *)
+(rename_spec OSp_no_impossible) &&
+
+(* deterministic, if it succeeds *)
+(rename_spec OSp_success_deterministic)
+)
+
+
+
+(* ------------------------- *)
+(* rmdir                     *)
+(* ------------------------- *)
+
+
+lemma fsop_rmdir_phases_ok : forall env rn.
+  operation_phases_ok (fsop_rmdir_checks env rn) (fsop_rmdir_core env rn)
+
+val fsop_rmdir_success_cond : forall 'dir_ref 'file_ref 'impl.
+     'impl ->
+     environment 'dir_ref 'file_ref 'impl ->
+     res_name 'dir_ref 'file_ref -> 
+     bool
+let fsop_rmdir_success_cond s0 env rpath = 
+   (match rpath with
+     | RN_dir (d0_ref, _) -> (dir_is_empty env.env_ops s0 d0_ref &&
+          (match (env.env_ops.fops_get_parent s0 d0_ref) with
+            | Nothing -> false
+            | Just (d1_ref, _) -> 
+#ifdef aspect_perms
+                ((env.env_prms.cp_has_dir_write_permission s0 d1_ref) &&
+                (let arch = architecture_of_ty_arch env.env_arch in
+                 let arch_allows_removing_writable = arch.arch_allows_removing_from_protected_dir_if_writeable in
+                 env.env_prms.cp_has_dir_restricted_delete_privilege arch_allows_removing_writable s0 d1_ref d0_ref))
+#else
+                true
+#endif
+           end))
+     | _ -> false
+    end)
+
+val fsop_rmdir_special_cond : forall 'dir_ref 'file_ref 'impl.
+     'impl ->
+     environment 'dir_ref 'file_ref 'impl ->
+     res_name 'dir_ref 'file_ref -> 
+     bool
+let fsop_rmdir_special_cond s0 env rpath = 
+  is_RN_dir rpath && isNothing(parent_dir_of_res_name env.env_ops s0 rpath)
+
+
+lemma operation_spec_fsop_rmdir : forall env rpath s0.
+let rmdir_spec = (fun osp -> operation_spec s0 (fsop_rmdir env rpath) osp) in (
+
+(* rmdir might only raise the following errors *)
+(rmdir_spec (OSp_error_no_other ([ENOENT; ENOTDIR; ENOTEMPTY; EEXIST; EPERM; EACCES] ++
+   get_res_name_errors rpath))) &&
+
+
+(* intended use cases are simpler *)
+(is_RN_dir rpath --> rmdir_spec (OSp_error_no_other [ENOTEMPTY; EEXIST; EPERM; EACCES])) &&
+
+(* posix/rmdir.md ENOENT:1 source must exists *)
+(is_RN_none rpath --> rmdir_spec (OSp_error ENOENT)) &&
+
+(* posix/rmdir.md ENOTDIR:1 source must be a directory *)
+(is_RN_file rpath --> rmdir_spec (OSp_error ENOTDIR)) &&
+
+(* errors are forwarded *) 
+(is_RN_error rpath --> rmdir_spec (OSp_error (get_RN_error_err rpath))) &&
+
+(* files empty directories can be deleted *)
+((is_RN_dir rpath && not (dir_is_empty env.env_ops s0 (get_RN_dir_dir_ref rpath))) --> 
+   (rmdir_spec (OSp_error EEXIST) && rmdir_spec (OSp_error ENOTEMPTY))) &&
+
+(* only special case is deleting the root directory  *)
+((rmdir_spec OSp_no_special) = (not(fsop_rmdir_special_cond s0 env rpath))) &&
+
+(* rmdir_spec succeeds iff ... *)
+((rmdir_spec OSp_success) = (fsop_rmdir_success_cond s0 env rpath)) &&
+
+(* no impossible_state can be reached *)
+(rmdir_spec OSp_no_impossible) &&
+
+(* deterministic, if it succeeds *)
+(rmdir_spec OSp_success_deterministic)
+)
+
+
+
+(* ------------------------- *)
+(* stat                      *)
+(* ------------------------- *)
+
+lemma fsop_stat_phases_ok : forall ops rn.
+  operation_phases_ok (fsop_stat_checks ops rn) (fsop_stat_core ops rn)
+
+val fsop_stat_success_cond : forall 'dir_ref 'file_ref 'impl.
+     'impl ->
+     fs_ops 'dir_ref 'file_ref 'impl ->
+     res_name 'dir_ref 'file_ref -> 
+     bool
+let fsop_stat_success_cond s0 env rn = 
+   (is_RN_file rn || is_RN_dir rn)
+
+lemma operation_spec_fsop_stat : forall ops rn s0.
+let stat_spec = (fun osp -> operation_spec s0 (fsop_stat ops rn) osp) in (
+
+
+(* rmdir might only raise the following errors *)
+(stat_spec (OSp_error_no_other ([ENOENT] ++ get_res_name_errors rn))) &&
+
+(* rn must exists *)
+(is_RN_none rn --> stat_spec (OSp_error ENOENT)) &&
+
+(* errors are forwarded *) 
+(is_RN_error rn --> stat_spec (OSp_error (get_RN_error_err rn))) &&
+
+(* no special cases  *)
+(stat_spec OSp_no_special) &&
+
+(* rmdir_spec succeeds iff ... *)
+((stat_spec OSp_success) = fsop_stat_success_cond s0 ops rn) &&
+
+(* no impossible_state can be reached *)
+(stat_spec OSp_no_impossible) &&
+
+(* deterministic, if it succeeds *)
+(stat_spec OSp_success_deterministic)
+)
+
+(* ------------------------- *)
+(* truncate                  *)
+(* ------------------------- *)
+
+lemma fsop_truncate_phases_ok : forall env rpath len.
+  operation_phases_ok (fsop_truncate_checks env rpath len) (fsop_truncate_core env rpath len)
+
+val fsop_truncate_success_cond : forall 'dir_ref 'file_ref 'impl.
+     'impl ->
+     environment 'dir_ref 'file_ref 'impl ->
+     res_name 'dir_ref 'file_ref -> 
+     int ->
+     bool
+let fsop_truncate_success_cond s0 env rpath len = 
+   (match rpath with
+     | RN_file (_, _, i0_ref, _) -> 
+#ifdef aspect_perms
+        (not (len < 0) && (env.env_prms.cp_has_file_write_permission s0 i0_ref))
+#else
+        (not (len < 0))
+#endif
+     | _ -> false
+    end)
+
+
+lemma operation_spec_fsop_truncate : forall env rpath len s0.
+let truncate_spec = (fun osp -> operation_spec s0 (fsop_truncate env rpath len) osp) in (
+
+(* truncate might only raise the following errors *)
+(truncate_spec (OSp_error_no_other ([ENOENT; EINVAL; EISDIR; EACCES] ++ get_res_name_errors rpath))) &&
+
+(* simpler for intended use case *)
+(is_RN_file rpath && (len >= 0) --> truncate_spec (OSp_error_no_other [EACCES])) &&
+
+(* len must not be negative *)
+((len < 0) --> truncate_spec (OSp_error EINVAL)) &&
+
+(* rpath must exists *)
+(is_RN_none rpath --> truncate_spec (OSp_error ENOENT)) &&
+
+(* rpath must not be a directory *)
+(is_RN_dir rpath --> truncate_spec (OSp_error EISDIR)) &&
+
+(* errors are forwarded *) 
+(is_RN_error rpath --> truncate_spec (OSp_error (get_RN_error_err rpath))) &&
+
+(* no special cases *)
+(truncate_spec OSp_no_special) &&
+
+(* truncate_spec succeeds iff ... *)
+((truncate_spec OSp_success) = fsop_truncate_success_cond s0 env rpath len) &&
+
+(* no impossible_truncatee can be reached *)
+(truncate_spec OSp_no_impossible) &&
+
+(* deterministic, if it succeeds *)
+(truncate_spec OSp_success_deterministic)
+)
+
+
+(* ------------------------- *)
+(* unlink                    *)
+(* ------------------------- *)
+
+lemma fsop_unlink_phases_ok : forall env rpath.
+  operation_phases_ok (fsop_unlink_checks env rpath) (fsop_unlink_core env rpath)
+
+val fsop_unlink_success_cond : forall 'dir_ref 'file_ref 'impl.
+     'impl ->
+     environment 'dir_ref 'file_ref 'impl ->
+     res_name 'dir_ref 'file_ref -> 
+     bool
+let fsop_unlink_success_cond s0 env rpath = 
+   (match rpath with
+     | RN_file (d0_ref, _, i0_ref, _) -> 
+#ifdef aspect_perms
+          ((env.env_prms.cp_has_dir_write_permission s0 d0_ref) &&
+          (let arch = architecture_of_ty_arch env.env_arch in
+           let arch_allows_removing_writable = arch.arch_allows_removing_from_protected_dir_if_writeable in
+           env.env_prms.cp_has_file_restricted_delete_privilege arch_allows_removing_writable s0 d0_ref i0_ref)) &&
+#endif
+          (not (is_linux_arch env && res_name_is_symlink env.env_ops s0 rpath && rn_ends_with_slash rpath))
+     | _ -> false
+    end)
+
+lemma operation_spec_fsop_unlink : forall env rpath s0.
+let unlink_spec = (fun osp -> operation_spec s0 (fsop_unlink env rpath) osp) in (
+
+(* unlink might only raise the following errors *)
+(unlink_spec (OSp_error_no_other ([ENOENT; ENOTDIR; EISDIR; EPERM; EACCES] ++ get_res_name_errors rpath))) &&
+
+(* simpler for intended use case *)
+(is_RN_file rpath --> unlink_spec (OSp_error_no_other [EACCES; EPERM; ENOTDIR])) &&
+
+(* rpath must exists *)
+(is_RN_none rpath --> unlink_spec (OSp_error ENOENT)) &&
+
+(* rpath must not be a directory *)
+(is_RN_dir rpath --> unlink_spec (OSp_error EISDIR)) &&
+
+(* errors are forwarded *) 
+(is_RN_error rpath --> unlink_spec (OSp_error (get_RN_error_err rpath))) &&
+
+(* no special cases *)
+(unlink_spec OSp_no_special) &&
+
+(* unlink_spec succeeds iff ... *)
+((unlink_spec OSp_success) = fsop_unlink_success_cond s0 env rpath) &&
+
+(* no impossible_unlinke can be reached *)
+(unlink_spec OSp_no_impossible) &&
+
+(* deterministic, if it succeeds *)
+(unlink_spec OSp_success_deterministic)
+)
+
+
+(* ------------------------- *)
+(* pwrite                    *)
+(* ------------------------- *)
+
+lemma fsop_pwrite_phases_ok : forall ops entry ofs bs len.
+  operation_phases_ok (fsop_pwrite_checks ops entry bs len ofs) (fsop_pwrite_core ops entry bs len ofs)
+
+
+val fsop_pwrite_success_cond : forall 'dir_ref 'file_ref 'impl.
+     'impl ->
+     fs_ops 'dir_ref 'file_ref 'impl -> 
+     entry 'dir_ref 'file_ref -> ty_bytes -> nat -> off_t -> 
+     bool
+let fsop_pwrite_success_cond s0 ops entry bs len ofs = (is_file_ref_entry entry && (ofs >= 0))
+
+
+lemma operation_spec_fsop_pwrite : forall ops entry ofs bs len s0.
+let pwrite_spec = (fun osp -> operation_spec s0 (fsop_pwrite ops entry bs len ofs) osp) in (
+
+(* pre_fs_write might only raise the following errors *)
+(pwrite_spec (OSp_error_no_other [EINVAL; EISDIR])) &&
+
+(* ofs must not be negative *)
+((ofs < 0) --> pwrite_spec (OSp_error EINVAL)) &&
+
+(* entry must be a file *)
+(is_dir_ref_entry entry --> pwrite_spec (OSp_error EISDIR)) &&
+
+(* no special cases *)
+(pwrite_spec OSp_no_special) &&
+
+(* pwrite_spec succeeds iff ... *)
+((pwrite_spec OSp_success) = (fsop_pwrite_success_cond s0 ops entry bs len ofs)) &&
+
+(* no impossible_pre_fs_writee can be reached *)
+(pwrite_spec OSp_no_impossible) 
+
+)
+
+
+(* ------------------------- *)
+(* pwrite_rn                 *)
+(* ------------------------- *)
+
+lemma fsop_pwrite_rn_phases_ok : forall env rn ofs bs len.
+  (operation_phases_ok (fsop_pwrite_rn_checks env rn bs len ofs) (fsop_pwrite_rn_core env rn bs len ofs))
+
+val fsop_pwrite_rn_success_cond : forall 'dir_ref 'file_ref 'impl.
+  'impl -> environment 'dir_ref 'file_ref 'impl -> res_name 'dir_ref 'file_ref -> ty_bytes -> nat -> off_t -> bool
+let fsop_pwrite_rn_success_cond s0 env (rn:res_name 'dir_ref 'file_ref) bs len ofs = (
+ (ofs >= 0) &&
+ (match rn with
+   | RN_file (_, _, i0_ref, _) -> 
+#ifdef aspect_perms
+       (env.env_prms.cp_has_file_write_permission s0 i0_ref)
+#else
+       true
+#endif
+   | _ -> false
+  end)
+)
+
+
+lemma operation_spec_fsop_pwrite_rn : forall env rn ofs bs len s0.
+let pwrite_rn_spec = (fun osp -> operation_spec s0 (fsop_pwrite_rn env rn bs len ofs) osp) in (
+
+(* write might only raise the following errors *)
+(pwrite_rn_spec (OSp_error_no_other ([EINVAL;EISDIR;ENOENT;EACCES] ++ get_res_name_errors rn))) &&
+
+(* simpler for intended use-case *)
+(is_RN_file rn && (ofs >= 0) --> pwrite_rn_spec (OSp_error_no_other [EACCES])) &&
+
+(* ofs must not be negative *)
+((ofs < 0) --> pwrite_rn_spec (OSp_error EINVAL)) &&
+
+(* rn must be a file *)
+(is_RN_none rn --> pwrite_rn_spec (OSp_error ENOENT)) &&
+(is_RN_dir rn --> pwrite_rn_spec (OSp_error EISDIR)) &&
+(is_RN_error rn --> pwrite_rn_spec (OSp_error (get_RN_error_err rn))) &&
+
+(* no special cases *)
+(pwrite_rn_spec OSp_no_special) &&
+
+(* pwrite_rn_spec succeeds iff ... *)
+((pwrite_rn_spec OSp_success) = fsop_pwrite_rn_success_cond s0 env rn bs len ofs) &&
+
+(* no impossible_writee can be reached *)
+(pwrite_rn_spec OSp_no_impossible)
+
+)
+
+
+(* ------------------------- *)
+(* symlink                   *)
+(* ------------------------- *)
+
+lemma fsop_symlink_phases_ok : forall env src dst.
+  (operation_phases_ok (fsop_symlink_checks env src dst) (fsop_symlink_core env src dst))
+
+val fsop_symlink_success_cond : forall 'dir_ref 'file_ref 'impl.
+  'impl -> environment 'dir_ref 'file_ref 'impl -> ty_bytes -> res_name 'dir_ref 'file_ref -> bool
+let fsop_symlink_success_cond s0 env src dst = (
+ (match dst with
+   | RN_none (d0_ref, _, _) -> 
+       ((is_linux_arch env) --> not(rn_ends_with_slash dst)) 
+#ifdef aspect_perms
+       && (env.env_prms.cp_has_dir_write_permission s0 d0_ref)
+#endif
+   | _ -> false
+  end)
+)
+
+
+lemma operation_spec_fsop_symlink : forall env src dst s0.
+let symlink_spec = (fun osp -> operation_spec s0 (fsop_symlink env src dst) osp) in (
+
+(* symlink might only raise the following errors *)
+(symlink_spec (OSp_error_no_other ([EEXIST; EACCES; ENOENT] ++ get_res_name_errors dst))) &&
+
+(* dst must not exist *)
+(is_RN_file dst --> symlink_spec (OSp_error EEXIST)) &&
+(is_RN_dir dst --> symlink_spec (OSp_error EEXIST)) &&
+(is_RN_error dst --> symlink_spec (OSp_error (get_RN_error_err dst))) &&
+
+(* no special cases *)
+(symlink_spec OSp_no_special) &&
+
+(* symlink_spec succeeds iff ... *)
+((symlink_spec OSp_success) = fsop_symlink_success_cond s0 env src dst) &&
+
+(* no impossible_symlinke can be reached *)
+(symlink_spec OSp_no_impossible) &&
+
+(* deterministic, if it succeeds *)
+(symlink_spec OSp_success_deterministic)
+)
+
+
+
+(* ------------------------- *)
+(* opendir                   *)
+(* ------------------------- *)
+
+lemma fsop_opendir_phases_ok : forall env rn.
+  operation_phases_ok (fsop_opendir_checks env rn) (fsop_opendir_core env rn)
+
+val fsop_opendir_success_cond : forall 'dir_ref 'file_ref 'impl.
+     'impl ->
+     environment 'dir_ref 'file_ref 'impl ->
+     res_name 'dir_ref 'file_ref -> 
+     bool
+let fsop_opendir_success_cond s0 env rn = 
+   (match rn with
+     | RN_dir (d0_ref, _) -> 
+#ifdef aspect_perms
+         (env.env_prms.cp_has_dir_read_permission s0 d0_ref)
+#else
+         true
+#endif
+     | _ -> false
+    end)
+
+lemma operation_spec_fsop_opendir : forall env rn s0.
+  let opendir_spec = (fun osp -> operation_spec s0 (fsop_opendir env rn) osp) in  (
+
+(* opendir might only raise the following errors *)
+(opendir_spec (OSp_error_no_other ([EACCES; ENOTDIR; ENOENT] ++  get_res_name_errors rn))) &&
+
+(* if used as intended, only EACCESS can happen *)
+(is_RN_dir rn --> opendir_spec (OSp_error_no_other [EACCES])) &&
+
+(* rn errors are raised *) 
+(is_RN_error rn --> opendir_spec (OSp_error (get_RN_error_err rn))) &&
+
+(* rn must exist *)
+(is_RN_none rn --> opendir_spec (OSp_error ENOENT)) &&
+
+(* rn must not be a file *)
+(is_RN_file rn --> opendir_spec (OSp_error ENOTDIR)) &&
+
+(* special only if reading a directory *)
+(opendir_spec OSp_no_special) &&
+
+(* succeeds, iff ... *)
+(opendir_spec OSp_success = fsop_opendir_success_cond s0 env rn) &&
+
+(* no impossible_state can be reached *)
+(opendir_spec OSp_no_impossible) &&
+
+(* deterministic, if it succeeds *)
+(opendir_spec OSp_success_deterministic)
+
+)
+
+
+(* ------------------------- *)
+(* readlink                  *)
+(* ------------------------- *)
+
+lemma fsop_readlink_phases_ok : forall env src.
+  operation_phases_ok (fsop_readlink_checks env src) (fsop_readlink_core env src)
+
+val fsop_readlink_success_cond : forall 'dir_ref 'file_ref 'impl.
+     'impl ->
+     environment 'dir_ref 'file_ref 'impl ->
+     res_name 'dir_ref 'file_ref -> 
+     bool
+let fsop_readlink_success_cond s0 env rn = 
+   res_name_is_symlink env.env_ops s0 rn
+
+
+lemma operation_spec_fsop_readlink : forall env src s0.
+let readlink_spec = (fun osp -> operation_spec s0 (fsop_readlink env src) osp) in (
+
+(* readlink might only raise the following errors *)
+(readlink_spec (OSp_error_no_other ([EINVAL; ENOENT] ++ get_res_name_errors src))) &&
+
+(* src must be a symbolic link *)
+(is_RN_none src --> readlink_spec (OSp_error ENOENT)) &&
+(is_RN_dir src --> readlink_spec (OSp_error EINVAL)) &&
+(is_RN_error src --> readlink_spec (OSp_error (get_RN_error_err src))) &&
+((is_RN_file src && not(res_name_is_symlink env.env_ops s0 src)) --> readlink_spec (OSp_error EINVAL)) &&
+
+(* no special cases *)
+(readlink_spec OSp_no_special) &&
+
+(* readlink_spec succeeds iff ... *)
+((readlink_spec OSp_success) = fsop_readlink_success_cond s0 env src) &&
+
+(* no impossible_readlinke can be reached *)
+(readlink_spec OSp_no_impossible) &&
+
+(* deterministic, if it succeeds *)
+(readlink_spec OSp_success_deterministic)
+)
+
+
+
+(* ------------------------- *)
+(* chmod                     *)
+(* ------------------------- *)
+
+lemma fsop_chmod_phases_ok : forall env rn p.
+  operation_phases_ok (fsop_chmod_checks env rn p) (fsop_chmod_core env rn p)
+
+
+val fsop_chmod_success_cond : forall 'dir_ref 'file_ref 'impl.
+   'impl -> environment 'dir_ref 'file_ref 'impl -> res_name 'dir_ref 'file_ref -> file_perm -> bool
+let fsop_chmod_success_cond s0 env rn p = (match rn with
+  | (RN_none _) -> false
+  | (RN_error _) -> false
+  | (RN_file (_, _, i0_ref, _)) -> env.env_prms.cp_has_file_chmod_permission s0 i0_ref 
+  | (RN_dir (d0_ref, _)) -> env.env_prms.cp_has_dir_chmod_permission s0 d0_ref
+end)
+
+
+lemma operation_spec_fsop_chmod : forall env rn p s0.
+let chmod_spec = (fun osp -> operation_spec s0 (fsop_chmod env rn p) osp) in (
+
+(* chmod might only raise the following errors *)
+(chmod_spec (OSp_error_no_other ([EPERM; ENOENT] ++ (get_res_name_errors rn)))) &&
+
+(* rn must exist *)
+(is_RN_none rn --> chmod_spec (OSp_error ENOENT)) &&
+(is_RN_error rn --> chmod_spec (OSp_error (get_RN_error_err rn))) &&
+
+(* no special cases *)
+(chmod_spec OSp_no_special) &&
+
+(* readlink_spec succeeds iff ... *)
+((chmod_spec OSp_success) = fsop_chmod_success_cond s0 env rn p) &&
+
+(* no impossible_readlinke can be reached *)
+(chmod_spec OSp_no_impossible) &&
+
+(* deterministic, if it succeeds *)
+(chmod_spec OSp_success_deterministic)
+
+)
+
+
+
+(* ------------------------- *)
+(* chown                     *)
+(* ------------------------- *)
+
+lemma fsop_chown_phases_ok : forall env rn u g.
+  operation_phases_ok (fsop_chown_checks env rn u g) (fsop_chown_core env rn u g)
+
+val fsop_chown_success_cond : forall 'dir_ref 'file_ref 'impl.
+   'impl -> environment 'dir_ref 'file_ref 'impl -> res_name 'dir_ref 'file_ref -> uid -> gid -> bool
+let fsop_chown_success_cond s0 env rn u g = (match rn with
+  | (RN_none _) -> false
+  | (RN_error _) -> false
+  | (RN_file (_, _, i0_ref, _)) -> env.env_prms.cp_has_file_chown_permission s0 i0_ref 
+  | (RN_dir (d0_ref, _)) -> env.env_prms.cp_has_dir_chown_permission s0 d0_ref
+end)
+
+
+lemma operation_spec_fsop_chown : forall env rn u g s0.
+let chown_spec = (fun osp -> operation_spec s0 (fsop_chown env rn u g) osp) in (
+
+(* chown might only raise the following errors *)
+(chown_spec (OSp_error_no_other ([EPERM; ENOENT] ++ (get_res_name_errors rn)))) &&
+
+(* rn must exist *)
+(is_RN_none rn --> chown_spec (OSp_error ENOENT)) &&
+(is_RN_error rn --> chown_spec (OSp_error (get_RN_error_err rn))) &&
+
+(* no special cases *)
+(chown_spec OSp_no_special) &&
+
+(* readlink_spec succeeds iff ... *)
+((chown_spec OSp_success) = fsop_chown_success_cond s0 env rn u g) &&
+
+(* no impossible_readlinke can be reached *)
+(chown_spec OSp_no_impossible) &&
+
+(* deterministic, if it succeeds *)
+(chown_spec OSp_success_deterministic)
+
+)
+
+
+
+
+(******************************************************************************)
+(* Properties of all FS-commands                                              *)
+(******************************************************************************)
+
+(* So far, properties of single fs-commands have been verified.  Now,
+   let's use these lemmata to state some high-level statements about
+   all fs-commands. These lemmata are high-level and probably the most
+   interesting ones in this file. *)
+
+
+(* ---------------------------- *)
+(* fs-commands are organised in *)
+(* a check and a core phase     *)
+(* ---------------------------- *)
+
+val ty_fs_command_to_fsmonad_checks : forall 'dir_ref 'file_ref 'impl. 
+   environment 'dir_ref 'file_ref 'impl -> 
+   ty_fs_command 'dir_ref 'file_ref -> 
+   fsmonad 'impl ret_value 
+let ty_fs_command_to_fsmonad_checks env cmd = match cmd with 
+    | FS_LINK (s,d)                               -> (fsop_link_checks env s d)
+    | FS_MKDIR (s,p)                              -> (fsop_mkdir_checks env s p)
+    | FS_READLINK p                               -> (fsop_readlink_checks env p)
+    | FS_RENAME (s,d)                             -> (fsop_rename_checks env s d)
+    | FS_RMDIR p                                  -> (fsop_rmdir_checks env p)
+    | FS_STAT p                                   -> (fsop_stat_checks env.env_ops p)
+    | FS_LSTAT p                                  -> (fsop_stat_checks env.env_ops p)
+    | FS_SYMLINK (s,d)                            -> (fsop_symlink_checks env s d)
+    | FS_TRUNCATE (p,l)                           -> (fsop_truncate_checks env p l)
+    | FS_UNLINK p                                 -> (fsop_unlink_checks env p)
+    | FS_CHMOD (s, p)                             -> (fsop_chmod_checks env s p)
+    | FS_CHOWN (s, u, g)                          -> (fsop_chown_checks env s u g) 
+    | FS_EXTENDED_CMD (FS_OPEN_CLOSE (p,fs,mo))   -> (fsop_open_close_checks env p fs mo)
+    | FS_EXTENDED_CMD (FS_PREAD (p,len_,ofs))     -> (fsop_pread_rn_checks env p len_ ofs)
+    | FS_EXTENDED_CMD (FS_PWRITE (p,bs,len_,ofs)) -> (fsop_pwrite_rn_checks env p bs len_ ofs)
+end
+
+
+val ty_fs_command_to_fsmonad_core : forall 'dir_ref 'file_ref 'impl. 
+   environment 'dir_ref 'file_ref 'impl -> 
+   ty_fs_command 'dir_ref 'file_ref -> 
+   fsmonad 'impl ret_value 
+let ty_fs_command_to_fsmonad_core env cmd = match cmd with 
+    | FS_LINK (s,d)                               -> (fsop_link_core env s d)
+    | FS_MKDIR (s,p)                              -> (fsop_mkdir_core env s p)
+    | FS_READLINK p                               -> (fsop_readlink_core env p)
+    | FS_RENAME (s,d)                             -> (fsop_rename_core env s d)
+    | FS_RMDIR p                                  -> (fsop_rmdir_core env p)
+    | FS_STAT p                                   -> (fsop_stat_core env.env_ops p)
+    | FS_LSTAT p                                  -> (fsop_stat_core env.env_ops p)
+    | FS_SYMLINK (s,d)                            -> (fsop_symlink_core env s d)
+    | FS_TRUNCATE (p,l)                           -> (fsop_truncate_core env p l)
+    | FS_UNLINK p                                 -> (fsop_unlink_core env p)
+    | FS_CHMOD (s, p)                             -> (fsop_chmod_core env s p)
+    | FS_CHOWN (s, u, g)                          -> (fsop_chown_core env s u g) 
+    | FS_EXTENDED_CMD (FS_OPEN_CLOSE (p,fs,mo))   -> (fsop_open_close_core env p fs mo)
+    | FS_EXTENDED_CMD (FS_PREAD (p,len_,ofs))     -> (fsop_pread_rn_core env p len_ ofs)
+    | FS_EXTENDED_CMD (FS_PWRITE (p,bs,len_,ofs)) -> (fsop_pwrite_rn_core env p bs len_ ofs)
+end
+
+
+(* all fs-commands are organised in a check and a core phase *)
+lemma fs_command_phases_ok : forall env cmd.
+  (ty_fs_command_to_fsmonad env cmd =
+   (ty_fs_command_to_fsmonad_checks env cmd >>= (fun _ -> ty_fs_command_to_fsmonad_core env cmd))) &&
+
+  operation_phases_ok (ty_fs_command_to_fsmonad_checks env cmd) (ty_fs_command_to_fsmonad_core env cmd)
+
+
+
+(* ---------------------------- *)
+(* fs-commands cannot reach     *)
+(* impossible states            *)
+(* ---------------------------- *)
+
+lemma fs_command_no_impossible : forall s0 env cmd.
+   operation_spec s0 (ty_fs_command_to_fsmonad env cmd) OSp_no_impossible
+
+
+(* ----------------------------- *)
+(* high level specification of   *)
+(* which fs-commands are         *)
+(* determistic                   *)
+(* ----------------------------- *)
+
+val ty_fs_command_is_deterministic : forall 'dir_ref 'file_ref 'impl. 
+   ty_fs_command 'dir_ref 'file_ref -> 
+   bool 
+let ty_fs_command_is_deterministic cmd = match cmd with 
+    | FS_LINK _                         -> true
+    | FS_MKDIR _                        -> true
+    | FS_READLINK _                     -> true
+    | FS_RENAME _                       -> true
+    | FS_RMDIR _                        -> true
+    | FS_STAT _                         -> true
+    | FS_LSTAT _                         -> true
+    | FS_SYMLINK _                      -> true
+    | FS_TRUNCATE _                     -> true
+    | FS_UNLINK _                       -> true
+    | FS_CHMOD _                        -> true
+    | FS_CHOWN _                        -> true
+    | FS_EXTENDED_CMD (FS_OPEN_CLOSE _) -> true
+    | FS_EXTENDED_CMD (FS_PREAD _)      -> false
+    | FS_EXTENDED_CMD (FS_PWRITE _)     -> false
+end
+
+lemma fs_command_is_deterministic : forall env cmd s0.
+  ty_fs_command_is_deterministic cmd -->
+  (operation_spec s0 (ty_fs_command_to_fsmonad env cmd) OSp_success_deterministic)
+
+
+(* ---------------------------- *)
+(* high level specification     *)
+(* of special states            *)
+(* ---------------------------- *)
+
+val ty_fs_command_to_special_cond : forall 'dir_ref 'file_ref 'impl. 
+   environment 'dir_ref 'file_ref 'impl -> 
+   ty_fs_command 'dir_ref 'file_ref -> 
+   'impl ->
+   bool 
+let ty_fs_command_to_special_cond env cmd s0 = match cmd with 
+    | FS_LINK (s,d)                               -> (fsop_link_special_cond s0 env s d)
+    | FS_MKDIR (s,p)                              -> (fsop_mkdir_special_cond s0 env s p)
+    | FS_READLINK p                               -> false
+    | FS_RENAME (s,d)                             -> false
+    | FS_RMDIR p                                  -> (fsop_rmdir_special_cond s0 env p)
+    | FS_STAT p                                   -> false
+    | FS_LSTAT p                                   -> false
+    | FS_SYMLINK (s,d)                            -> false
+    | FS_TRUNCATE (p,l)                           -> false
+    | FS_UNLINK p                                 -> false
+    | FS_CHMOD (s, p)                             -> false
+    | FS_CHOWN (s, u, g)                          -> false
+    | FS_EXTENDED_CMD (FS_OPEN_CLOSE (p,fs,mo))   -> (fsop_open_special_cond s0 env p fs mo)
+    | FS_EXTENDED_CMD (FS_PREAD (p,len_,ofs))     -> (fsop_pread_rn_special_cond s0 env p len_ ofs)
+    | FS_EXTENDED_CMD (FS_PWRITE (p,bs,len_,ofs)) -> false
+end
+
+lemma fs_command_no_special : forall s0 env cmd. 
+ operation_spec s0 (ty_fs_command_to_fsmonad env cmd) OSp_no_special = 
+ (not (ty_fs_command_to_special_cond env cmd s0))
+
+
+(* for linux it is a bit simpler *)
+val ty_fs_command_to_special_cond_linux : forall 'dir_ref 'file_ref 'impl. 
+   environment 'dir_ref 'file_ref 'impl -> 
+   ty_fs_command 'dir_ref 'file_ref -> 
+   'impl ->
+   bool 
+let ty_fs_command_to_special_cond_linux env cmd s0 = match cmd with 
+    | FS_LINK (s,d)                               -> false
+    | FS_MKDIR (s,p)                              -> (fsop_mkdir_special_cond s0 env s p)
+    | FS_READLINK p                               -> false
+    | FS_RENAME (s,d)                             -> false
+    | FS_RMDIR p                                  -> (fsop_rmdir_special_cond s0 env p)
+    | FS_STAT p                                   -> false
+    | FS_LSTAT p                                  -> false
+    | FS_SYMLINK (s,d)                            -> false
+    | FS_TRUNCATE (p,l)                           -> false
+    | FS_UNLINK p                                 -> false
+    | FS_CHMOD (s, p)                             -> false
+    | FS_CHOWN (s, u, g)                          -> false
+    | FS_EXTENDED_CMD (FS_OPEN_CLOSE (p,fs,mo))   -> (fsop_open_special_cond_linux s0 env p fs mo)
+    | FS_EXTENDED_CMD (FS_PREAD (p,len_,ofs))     -> false
+    | FS_EXTENDED_CMD (FS_PWRITE (p,bs,len_,ofs)) -> false
+end
+
+lemma ty_fs_command_to_special_cond_linux_thm : forall s0 env cmd. 
+  is_linux_arch env -->
+  (ty_fs_command_to_special_cond env cmd s0 = ty_fs_command_to_special_cond_linux env cmd s0)
+
+
+(* ----------------------------- *)
+(* high level specification      *)
+(* of when a fs-command succeeds *)
+(* ----------------------------- *)
+
+val ty_fs_command_to_success_cond : forall 'dir_ref 'file_ref 'impl. 
+   Eq 'dir_ref, Eq 'file_ref =>
+   environment 'dir_ref 'file_ref 'impl -> 
+   ty_fs_command 'dir_ref 'file_ref -> 
+   'impl ->
+   bool 
+let non_exec ty_fs_command_to_success_cond env cmd s0 = match cmd with 
+    | FS_LINK (s,d)                               -> (fsop_link_success_cond s0 env s d)
+    | FS_MKDIR (s,p)                              -> (fsop_mkdir_success_cond s0 env s p)
+    | FS_READLINK p                               -> (fsop_readlink_success_cond s0 env p)
+    | FS_RENAME (s,d)                             -> (fsop_rename_success_cond s0 env s d)
+    | FS_RMDIR p                                  -> (fsop_rmdir_success_cond s0 env p)
+    | FS_STAT p                                   -> (fsop_stat_success_cond s0 env.env_ops p)
+    | FS_LSTAT p                                  -> (fsop_stat_success_cond s0 env.env_ops p)
+    | FS_SYMLINK (s,d)                            -> (fsop_symlink_success_cond s0 env s d)
+    | FS_TRUNCATE (p,l)                           -> (fsop_truncate_success_cond s0 env p l)
+    | FS_UNLINK p                                 -> (fsop_unlink_success_cond s0 env p)
+    | FS_CHMOD (s, p)                             -> (fsop_chmod_success_cond s0 env s p)
+    | FS_CHOWN (s, u, g)                          -> (fsop_chown_success_cond s0 env s u g) 
+    | FS_EXTENDED_CMD (FS_OPEN_CLOSE (p,fs,mo))   -> (fsop_open_success_cond s0 env p fs mo)
+    | FS_EXTENDED_CMD (FS_PREAD (p,len_,ofs))     -> (fsop_pread_rn_success_cond s0 env p len_ ofs)
+    | FS_EXTENDED_CMD (FS_PWRITE (p,bs,len_,ofs)) -> (fsop_pwrite_rn_success_cond s0 env p bs len_ ofs)
+end
+
+lemma fs_command_success : forall s0 env cmd. 
+ operation_spec s0 (ty_fs_command_to_fsmonad env cmd) OSp_success = 
+ (ty_fs_command_to_success_cond env cmd s0)
+
+
+(* ----------------------------- *)
+(* errors during name resolution *)
+(* are not masked                *)
+(* ----------------------------- *)
+
+val errors_of_ty_fs_command : forall 'dir_ref 'file_ref.
+  ty_fs_command 'dir_ref 'file_ref -> list error
+let errors_of_ty_fs_command cmd = 
+  concat (List.map get_res_name_errors (res_names_of_ty_fs_command cmd))
+
+lemma fs_command_propagates_res_name_errors : forall env e cmd s0.
+  (elem e (errors_of_ty_fs_command cmd)) -->
+  (operation_spec s0 (ty_fs_command_to_fsmonad env cmd) (OSp_error e))
+
+
+(* ----------------------------- *)
+(* overapproximation of the      *)
+(* possible errors fs-commands   *)
+(* ----------------------------- *)
+
+val ty_fs_command_possible_errors : forall 'dir_ref 'file_ref 'impl. 
+   ty_fs_command 'dir_ref 'file_ref -> 
+   list error
+let ty_fs_command_possible_errors cmd = match cmd with 
+    | FS_LINK _                         -> [ENOENT; ENOTDIR; EEXIST; EPERM; EACCES]
+    | FS_MKDIR _                        -> [ENOENT; ENOTDIR; EEXIST; EACCES]
+    | FS_READLINK _                     -> [EINVAL; ENOENT]
+    | FS_RENAME _                       -> [ENOENT; ENOTDIR; ENOTEMPTY; EINVAL; EISDIR; EEXIST; EACCES; EPERM]
+    | FS_RMDIR _                        -> [ENOENT; ENOTDIR; ENOTEMPTY; EEXIST; EPERM; EACCES]
+    | FS_STAT _                         -> [ENOENT]
+    | FS_LSTAT _                         -> [ENOENT]
+    | FS_SYMLINK _                      -> [EEXIST; EACCES; ENOENT]
+    | FS_TRUNCATE _                     -> [ENOENT; EINVAL; EISDIR; EACCES]
+    | FS_UNLINK _                       -> [ENOENT; ENOTDIR; EISDIR; EPERM; EACCES]
+    | FS_CHMOD _                        -> [EPERM; ENOENT]
+    | FS_CHOWN _                        -> [EPERM; ENOENT]
+    | FS_EXTENDED_CMD (FS_OPEN_CLOSE _) -> [ENOENT; ENOTDIR; EEXIST; EACCES; EISDIR; ELOOP]
+    | FS_EXTENDED_CMD (FS_PREAD _)      -> [EISDIR; EINVAL;EACCES;ENOENT]
+    | FS_EXTENDED_CMD (FS_PWRITE _)     -> [EINVAL;EISDIR;ENOENT;EACCES]
+end
+
+lemma fs_command_possible_errors : forall env cmd s0.
+  (operation_spec s0 (ty_fs_command_to_fsmonad env cmd) (OSp_error_no_other (
+    (ty_fs_command_possible_errors cmd) ++ (* errors the command can produce itself *) 
+    (errors_of_ty_fs_command cmd)          (* errors passed in arguments *)
+  )))
+

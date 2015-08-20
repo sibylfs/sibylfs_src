@@ -1,0 +1,418 @@
+# Tests for open and close
+
+##############################################
+# basic cases that should work
+##############################################
+
+# create a file with some content
+open f1.txt [O_WRONLY;O_CREAT] rw-r--r--
+write (FD 3) "0123456789" 10
+close (FD 3)
+
+# read that file again
+open f1.txt [O_RDONLY]
+read (FD 3) 100
+close (FD 3)
+
+# read-write 
+open f1.txt [O_RDWR] 
+write (FD 3) "ABCDE" 5
+lseek (FD 3) 0 SEEK_SET
+read (FD 3) 100
+close (FD 3)
+
+# write only on existing file
+open f1.txt [O_WRONLY] 
+write (FD 3) "012" 3
+close (FD 3)
+
+# read that file again
+open f1.txt [O_RDWR] 
+read (FD 3) 100
+close (FD 3)
+
+# open for execute 
+open f1.txt [O_EXEC] 
+read (FD 3) 100
+close (FD 3)
+
+
+mkdir d1 rwxr-xr-x
+
+# open directory for searching
+open d1 [O_SEARCH] 
+read (FD 3) 100
+close (FD 3)
+
+
+##############################################
+# opening problems with 
+# non-existing files and dirs
+##############################################
+
+open non-such-file.txt [O_RDONLY] 
+read (FD 3) 100
+close (FD 3)
+
+open /no_such_dir/non-such-file.txt [O_RDONLY] 
+read (FD 3) 100
+close (FD 3)
+
+open non-such-dir/ [O_RDONLY] 
+read (FD 3) 100
+close (FD 3)
+
+open /no_such_dir/non-such-dir2/ [O_RDONLY] 
+read (FD 3) 100
+close (FD 3)
+
+# opening an existing file with a slash at the end
+open f1.txt/ [O_RDONLY] 
+read (FD 3) 100
+close (FD 3)
+
+
+##############################################
+# O_CREAT
+##############################################
+
+# create without write flag is fine. It create
+# a file (if it does not exist before), but
+# we can only read from it
+open f1.txt [O_CREAT] rw-r--r--
+write (FD 3) "ABCDE" 5
+read (FD 3) 100
+close (FD 3)
+
+open f2.txt [O_CREAT] rw-r--r--
+write (FD 3) "ABCDE" 5
+pread (FD 3) 100 0
+close (FD 3)
+unlink f2.txt
+
+# if O_EXCL is given the file must not exist
+open f1.txt [O_RDWR;O_CREAT;O_EXCL] rw-r--r--
+close (FD 3)
+
+open f2.txt [O_RDWR;O_CREAT;O_EXCL] rw-r--r--
+write (FD 3) "ABCDE" 5
+pread (FD 3) 100 0
+close (FD 3)
+unlink f2.txt
+
+# if O_EXCL but not O_CREATE is set, the result is undefined
+# open f1.txt [O_RDWR;O_EXCL] 0o777
+# close (FD 3)
+
+# to create a file, we need write access to the parent dir
+#chmod /d1 r-xr-xr-x
+open /d1/f3.txt [O_CREAT;O_WRONLY] rw-r--r--
+close (FD 3)
+
+#chmod /d1 rwxr-xr-x
+open /d1/f3.txt [O_CREAT;O_RDWR] rw-r--r--
+write (FD 3) "ABCDE" 5
+pread (FD 3) 100 0
+close (FD 3)
+unlink /d1/f3.txt
+
+# the file-permissions of a newly created file don't matter
+open /d1/f3.txt [O_CREAT;O_RDWR] r--r--r--
+write (FD 3) "ABCDE" 5
+pread (FD 3) 100 0
+close (FD 3)
+
+open /d1/f3.txt [O_RDWR] 
+close (FD 3)
+
+open /d1/f3.txt [O_RDONLY] 
+read (FD 3) 100
+close (FD 3)
+
+# open does not change the permissions on existing files
+open /d1/f3.txt [O_CREAT;O_RDONLY] ---------
+pread (FD 3) 100 0
+close (FD 3)
+
+open /d1/f3.txt [O_RDONLY] 
+read (FD 3) 100
+close (FD 3)
+unlink /d1/f3.txt
+
+# not even read permission is needed on newly created files
+open /d1/f3.txt [O_CREAT;O_RDONLY] ---------
+pread (FD 3) 100 0
+close (FD 3)
+
+open /d1/f3.txt [O_RDONLY] 
+read (FD 3) 100
+close (FD 3)
+unlink /d1/f3.txt
+
+
+# O_CREAT flag only creates files not the dirs in path
+open /no-such-dir/file.txt [O_CREAT;O_RDONLY] rw-r--r--
+close (FD 3)
+
+
+# creating a file without providing a mode is
+# unspecified in Posix. For Linux, the
+# default mode is 0o101
+open f2.txt [O_CREAT;O_WRONLY] 
+close (FD 3)
+stat f2.txt
+unlink f2.txt
+
+##############################################
+# O_TRUNC
+##############################################
+
+# O_TRUNC works as expected
+unlink f1.txt
+open f1.txt [O_WRONLY;O_CREAT] rw-r--r--
+write (FD 3) "0123456789" 10
+close (FD 3)
+
+open f1.txt [O_RDWR]
+read (FD 3) 100
+close (FD 3)
+
+open f1.txt [O_RDWR;O_TRUNC]
+read (FD 3) 100
+close (FD 3)
+
+# behaviour of O_TRUNC without write flag is undefined
+# on linux architecture, the O_TRUNC just truncates 
+# even in read-only mode
+open f1.txt [O_RDWR;O_TRUNC]
+write (FD 3) "0123456789" 10
+close (FD 3)
+
+open f1.txt []
+read (FD 3) 100
+close (FD 3)
+
+open f1.txt [O_TRUNC]
+read (FD 3) 100
+close (FD 3)
+
+# but we can't truncate file we don't have write permission to
+open f1.txt [O_RDWR;O_TRUNC]
+write (FD 3) "0123456789" 10
+close (FD 3)
+
+open f1.txt []
+read (FD 3) 100
+close (FD 3)
+
+chmod f1.txt r--r--r--
+open f1.txt [O_TRUNC]
+read (FD 3) 100
+close (FD 3)
+
+open f1.txt []
+read (FD 3) 100
+close (FD 3)
+
+chmod f1.txt rw-r--r--
+open f1.txt [O_TRUNC]
+read (FD 3) 100
+close (FD 3)
+
+open f1.txt []
+read (FD 3) 100
+close (FD 3)
+
+
+##############################################
+# O_DIRECTORY
+##############################################
+
+# using O_DIRECTORY with dirs is fine
+# but we can't do anything afterwards :-)
+open d1 [O_DIRECTORY]
+read (FD 3) 100
+close (FD 3)
+
+# using O_DIRECTORY with files fails
+open f1.txt [O_DIRECTORY]
+read (FD 3) 100
+close (FD 3)
+
+# using O_DIRECTORY on non-existing files
+open no-such-file.txt [O_DIRECTORY]
+read (FD 3) 100
+close (FD 3)
+
+# using O_DIRECTORY on non-existing dir
+open /no-such-dir/ [O_DIRECTORY]
+read (FD 3) 100
+close (FD 3)
+
+# we can't create directories
+open /no-such-dir/ [O_DIRECTORY;O_CREAT]
+read (FD 3) 100
+close (FD 3)
+
+open /no-such-dir/ [O_CREAT]
+read (FD 3) 100
+close (FD 3)
+
+
+##############################################
+# O_APPEND
+##############################################
+
+# write fresh content
+open f1.txt [O_RDWR;O_TRUNC] 
+write (FD 3) "0123456789" 10
+pread (FD 3) 100 0
+close (FD 3)
+
+# override at beginning
+open f1.txt [O_RDWR] 
+write (FD 3) "ABCDE" 5
+pread (FD 3) 100 0
+close (FD 3)
+
+# override at end
+open f1.txt [O_RDWR;O_APPEND] 
+write (FD 3) "ABCDE" 5
+pread (FD 3) 100 0
+close (FD 3)
+
+# O_APPEND sets file-offset before every(!) write
+open f1.txt [O_RDWR;O_APPEND] 
+write (FD 3) "XXX" 3
+lseek (FD 3) 0 SEEK_SET
+write (FD 3) "YYY" 3
+lseek (FD 3) 0 SEEK_SET
+write (FD 3) "ZZZ" 3
+read (FD 3) 100
+lseek (FD 3) 0 SEEK_SET
+read (FD 3) 100 
+close (FD 3)
+
+# O_APPEND also affects pwrite
+open f1.txt [O_RDWR;O_APPEND] 
+pwrite (FD 3) "AAA" 3 0 
+pwrite (FD 3) "BBB" 3 -1
+pwrite (FD 3) "CCC" 3 5
+pread (FD 3) 100 0
+close (FD 3)
+
+# pwrite does not modify fd-offset, whereas write does
+open f1.txt [O_RDWR;O_APPEND] 
+lseek (FD 3) 0 SEEK_CUR
+pwrite (FD 3) "DDD" 3 0 
+lseek (FD 3) 0 SEEK_CUR
+write (FD 3) "EEE" 3 
+lseek (FD 3) 0 SEEK_CUR
+pread (FD 3) 100 0
+close (FD 3)
+
+
+# O_APPEND does only influence write and pwrite
+open f1.txt [O_RDWR;O_APPEND] 
+read (FD 3) 100 
+close (FD 3)
+
+open f1.txt [O_RDWR;O_APPEND] 
+pread (FD 3) 100 0
+close (FD 3)
+
+open f1.txt [O_RDWR;O_APPEND] 
+lseek (FD 3) 0 SEEK_CUR
+close (FD 3)
+
+
+##############################################
+# testing file permissions
+##############################################
+
+# read-only needs read permission
+chmod f1.txt r--------
+open_close f1.txt [O_RDONLY]
+
+chmod f1.txt ---------
+open_close f1.txt [O_RDONLY]
+
+
+# write-only needs write permission
+chmod f1.txt -w-------
+open_close f1.txt [O_WRONLY]
+
+chmod f1.txt ---------
+open_close f1.txt [O_WRONLY]
+
+chmod f1.txt r--------
+open_close f1.txt [O_WRONLY]
+
+# read-write needs read and write permission
+chmod f1.txt rw-------
+open_close f1.txt [O_RDWR]
+
+chmod f1.txt r--------
+open_close f1.txt [O_RDWR]
+
+chmod f1.txt -w-------
+open_close f1.txt [O_RDWR]
+
+chmod f1.txt ---------
+open_close f1.txt [O_RDWR]
+
+
+# truncate requires write permission
+chmod f1.txt rw-------
+open_close f1.txt [O_RDONLY;O_TRUNC] 
+
+chmod f1.txt r--------
+open_close f1.txt [O_RDONLY;O_TRUNC] 
+
+
+# append makes only sense with write, but 
+# does not require it
+chmod f1.txt r--------
+open f1.txt [O_RDONLY;O_APPEND] 
+write (FD 3) "0123456789" 10
+close (FD 3)
+
+
+##############################################
+# testing dir permissions
+##############################################
+
+# creating a file needs search and write permission
+# to the parent directory
+chmod d1 ---------
+open_close d1/f2.txt [O_WRONLY;O_CREAT] rw-r--r--
+
+chmod d1 -w-------
+open_close d1/f2.txt [O_WRONLY;O_CREAT] rw-r--r--
+
+chmod d1 --x------
+open_close d1/f2.txt [O_WRONLY;O_CREAT] rw-r--r--
+
+chmod d1 -wx------
+open_close d1/f2.txt [O_WRONLY;O_CREAT] rw-r--r--
+
+
+# to read a file, we needs search permission for the
+# parent directory (as well as to the file itself)
+
+chmod d1 ---------
+open_close d1/f2.txt [] 
+
+chmod d1 --x------
+open_close d1/f2.txt [] 
+
+
+# search permission to the parent is enough to modify a file
+chmod d1 ---------
+open_close d1/f2.txt [O_WRONLY] 
+
+chmod d1 --x------
+open_close d1/f2.txt [O_WRONLY] 
+
+# clean-up for dump etc.
+chmod d1 rwx------

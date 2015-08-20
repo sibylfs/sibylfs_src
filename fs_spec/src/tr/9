@@ -1,0 +1,2 @@
+rename /tmp_dir_96/d1/empty_dir1 /tmp_dir_96/d1/nonempty_dir1
+[ENOTEMPTY]

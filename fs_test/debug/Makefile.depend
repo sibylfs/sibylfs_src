@@ -1,0 +1,15 @@
+########################################################################
+# depend
+
+# .depend is not generated automatically; needs to be rebuilt when
+# files change
+
+OCAMLDEP:=ocamlfind ocamldep -package sexplib,sexplib.syntax,cow,cow.syntax -syntax camlp4o
+
+all: depend #.depend.linear
+
+depend: 
+	$(OCAMLDEP) -one-line *.ml *.mli >.depend
+
+.depend.linear: 
+	$(OCAMLDEP) -sort *.ml *.mli >.depend.linear

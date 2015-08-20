@@ -1,0 +1,21 @@
+# processing file 'example_traces/simple_dump_type_error-check.trace' ...
+        # processing file 'example_traces/simple_dump-int.trace' ...
+        @type trace
+     3: dump-result "/"
+           "/"|F|0|0|"0"
+        end dump-result
+# 
+#         "/"|D|0
+# 
+# 
+# Error:      3: dump-result "/"
+#            "/"|F|0|0|"0"
+#         end dump-result
+#    
+#    comparison of dump-results failed:
+#       differing entry: /
+# 
+# 
+
+# trace not accepted
+# processing file 'example_traces/simple_dump_type_error-check.trace' failed

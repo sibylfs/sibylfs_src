@@ -1,0 +1,84 @@
+This file contains a list of references in the mechanized semantics,
+and the corresponding page and line number references in the C138.pdf
+official version of the Open Group specification.
+
+Our file label ref            |C138 page|C138 line|C138 start...finish (for disambiguation)  
+------------------------------|---------|---------|----------------------------------------
+posix/chmod.md ENOENT:1       |661      |22378    |
+                              |         |         |
+posix/chown.md  ENOENT:1      |665      |22551    |
+                              |         |         |
+posix/link.md EACCES:2        |1229     |40824    |or the requested...denies write permission
+posix/link.md EEXIST:1        |1229     |40828    |
+posix/link.md ENOENT:2        |1229     |40835    |the file named by path1
+posix/link.md ENOTDIR:4       |1229     |40842    |or the path1 argument names
+posix/link.md EPERM:1         |1229     |40846    |
+posix/link.md EPERM:2         |1229     |40847    |or the implementation prohibits
+                              |         |         |
+posix/lseek.md EBADF:1        |1277     |42337    |
+posix/lseek.md EINVAL:1       |1277     |42338    |The whence...value
+posix/lseek.md EINVAL:2       |1277     |42338    |or...directory
+                              |         |         |
+posix/mkdir.md EACCES:2       |1301     |43051    |or...created.
+posix/mkdir.md EEXIST:1       |1301     |43053    |
+posix/mkdir.md ENOENT:4       |1302     |43059    |
+                              |         |         |
+posix/open.md O_EXEC:1        |1391     |45963    |
+posix/open.md O_SEARCH:1      |1391     |45968    |
+posix/open.md ENOTDIR:1       |1392     |45991    |
+posix/open.md D:1             |1392     |46000    |
+posix/open.md ELOOP:1         |1392     |46005    |
+posix/open.md O_TRUNC:3       |1393     |46038    |Its effect...implementation-defined.
+posix/open.md O_TRUNC:4       |1393     |46039    |
+posix/open.md EACCES:2        |1394     |46089    |or...denied
+posix/open.md EACCES:3        |1394     |46090    |or...created
+posix/open.md EACCES:4        |1394     |46091    |
+posix/open.md EEXIST:1        |1394     |46093    |
+posix/open.md EISDIR:1        |1394     |46098    |
+posix/open.md ENOENT:1        |1394     |46106    |
+posix/open.md ENOENT:3        |1394     |46110    |
+posix/open.md ENOTDIR:2       |1394     |46110    |
+                              |         |         |
+posix/read.md EBADF:1         |1754     |56401    |
+posix/read.md EISDIR:1        |1754     |56413    |
+posix/read.md EINVAL:2        |1754     |56420    |
+                              |         |         |
+posix/rename.md RENAME:3      |1797     |57900    |
+posix/rename.md EACCES:2      |1798     |57946    |or one...old
+posix/rename.md EACCES:3      |1798     |57947    |
+posix/rename.md EACCES:4      |1798     |57947    |or, write...old
+posix/rename.md EACCES:5      |1798     |57948    |
+posix/rename.md EINVAL:1      |1798     |57954    |
+posix/rename.md EISDIR:1      |1798     |57957    |
+posix/rename.md ENOENT:1      |1798     |57965    |
+posix/rename.md ENOENT:2      |1798     |57965    |a component...exist
+posix/rename.md ENOTDIR:1     |1799     |57968    |
+posix/rename.md ENOTDIR:2     |1799     |57969    |or the old...file;
+posix/rename.md ENOTDIR:3     |1799     |57970    |
+posix/rename.md ENOTDIR:4     |1799     |57973    |or the ole...characters;
+posix/rename.md ENOTDIR:5     |1799     |57976    |
+posix/rename.md               |         |         |
+        EPERM:1,2 EACCES:6,7  |1799     |57979    |
+                              |         |         |
+posix/rmdir.md EACCES:2       |1806     |58244    |write...removed.
+posix/rmdir.md EBUSY:1        |1806     |58246    |
+posix/rmdir.md ENOENT:1       |1806     |58257    |or...directory
+posix/rmdir.md ENOTDIR:1      |1807     |58259    |
+posix/rmdir.md EPERM:1        |1807     |58262    |
+posix/rmdir.md EACCES:3       |1807     |58262    |
+                              |         |         |
+posix/symlink.md EACCES:1     |2073     |66163    |
+posix/symlink.md EEXISTS:1    |2074     |66166    |
+                              |         |         |
+posix/truncate.md EINVAL:1    |2155     |68731    |
+posix/truncate.md EACCES:2    |2155     |68735    |or...file.
+posix/truncate.md EISDIR:1    |2155     |68737    |
+posix/truncate.md ENOENT:1    |2155     |68742    |
+                              |         |         |
+posix/unlink.md EACCES:2      |2174     |69202    |write...removed.
+posix/unlink.md ENOENT:1      |2175     |69212    |
+posix/unlink.md EPERM:1       |2175     |69218    |
+posix/unlink.md EPERM:2       |2175     |69221    |
+posix/unlink.md EACCES:3      |2175     |69221    |
+                              |         |         |
+posix/write.md EBADF:1        |2287     |72459    |

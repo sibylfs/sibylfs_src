@@ -1,0 +1,43 @@
+# processing file 'example_traces/os_trace1-check.trace' ...
+        @type trace
+
+     3: mkdir "/tmp_dir_1490/" 0o000
+     4: Tau
+     5: RV_none
+
+     7: mkdir "/tmp_dir_1490/d1" 0o000
+     8: Tau
+     9: RV_none
+
+    11: mkdir "/tmp_dir_1490/d1/empty_dir1" 0o000
+    12: Tau
+    13: RV_none
+
+    15: mkdir "/tmp_dir_1490/d1/empty_dir2" 0o000
+    16: Tau
+    17: RV_none
+
+    19: mkdir "/tmp_dir_1490/d1/nonempty_dir1" 0o000
+    20: Tau
+    21: RV_none
+
+    23: open "/tmp_dir_1490/d1/nonempty_dir1/f1.txt" [O_CREAT;O_RDWR] 0o000
+    24: Tau
+    25: RV_num(3)
+
+    27: open "/tmp_dir_1490/d1/nonempty_dir1/f1.txt" [O_RDWR]
+    28: Tau
+    29: RV_num(4)
+
+    31: stat "/tmp_dir_1490/d1/nonempty_dir1/f1.txt"
+    32: Tau
+    33: -
+
+        # stat a non-existing file
+    36: stat "/tmp_dir_1490/d1/nosuchdir/non.txt"
+    37: Tau
+    38: ENOENT
+
+
+
+# trace accepted

@@ -1,0 +1,19 @@
+1816,1818c1816
+<   (*val >>= : forall 'impl 'a 'b. fsmonad 'impl 'a -> ('a -> fsmonad 'impl 'b) -> fsmonad 'impl 'b*)
+<   definition >>= :: "('impl,'a)fsmonad \<Rightarrow>('a \<Rightarrow>('impl,'b)fsmonad) \<Rightarrow>('impl,'b)fsmonad "  where 
+<      " >>= = ( fsm_bind )"
+---
+>   notation fsm_bind (infixl ">>=" 55)
+1897,1905c1895,1896
+< 
+<   (*val <|||> : forall 'impl 'a 'b. fsmonad 'impl 'a -> fsmonad 'impl 'b -> fsmonad 'impl ('a * 'b)*)
+<   definition <|||> :: "('impl,'a)fsmonad \<Rightarrow>('impl,'b)fsmonad \<Rightarrow>('impl,('a*'b))fsmonad "  where 
+<      " <|||> = ( fsm_parallel_composition )"
+< 
+< 
+<   (*val ||| : forall 'impl. fsmonad 'impl ret_value -> fsmonad 'impl ret_value -> fsmonad 'impl ret_value*)
+<   definition ||| :: "('impl,(ret_value))fsmonad \<Rightarrow>('impl,(ret_value))fsmonad \<Rightarrow>('impl,(ret_value))fsmonad "  where 
+<      " ||| = ( fsm_parallel_composition_drop )"
+---
+>   notation fsm_parallel_composition (infixl "<|||>" 55)
+>   notation fsm_parallel_composition_drop (infixl "|||" 55)

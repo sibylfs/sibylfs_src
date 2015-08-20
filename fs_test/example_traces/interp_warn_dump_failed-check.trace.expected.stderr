@@ -1,0 +1,3 @@
+
+Fatal error: File "example_traces/interp_warn_dump_failed-check.trace", line 6, characters 5-20:
+dump not allowed in trace

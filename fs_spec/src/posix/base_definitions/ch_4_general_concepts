@@ -1,0 +1,271 @@
+@Andrea
+
+> Each file has three distinct associated timestamps: the time of last data access,
+> the time of last data modification, and the time the file status last changed.
+> These values are returned in the file characteristics structure struct stat, as described in <sys/stat.h>.
+
+In <sys/stat.h> the fields are:
+   struct timespec st_atim -> Last data access timestamp.
+   struct timespec st_mtim -> Last data modification timestamp.
+   struct timespec st_ctim -> Last file status change timestamp.
+
+Where timespec, see (http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/sys_stat.h.html):
+
+> The <sys/stat.h> header shall define the timespec structure as described in <time.h>. 
+> Times shall be given in seconds since the Epoch.
+
+The structure timespec is defined as, see (http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/time.h.html) :
+
+> The <time.h> header shall declare the timespec structure, which shall include at least the following members:
+
+> time_t  tv_sec  ->  Seconds.
+> long    tv_nsec ->  Nanoseconds.
+
+> Each function or utility in POSIX.1-2008 that reads or writes data (even if the data does not change)
+> or performs an operation to change file status (even if the file status does not change)
+> indicates which of the appropriate timestamps shall be marked for update.
+> If an implementation of such a function or utility marks for update one of these timestamps
+> in a place or time not specified by POSIX.1-2008, this shall be documented,
+> except that any changes caused by pathname resolution need not be documented.
+> For the other functions or utilities in POSIX.1-2008 (those that are not explicitly required to read or write file data or change file status, but that in some implementations happen to do so),
+>  the effect is unspecified.
+>
+> An implementation may update timestamps that are marked for update immediately,
+> or it may update such timestamps periodically.
+> At the point in time when an update occurs, any marked timestamps shall be set to the current time
+> and the update marks shall be cleared.
+> All timestamps that are marked for update shall be updated when the file
+> ceases to be open by any process or before a
+> fstat(), fstatat(), fsync(), futimens(), lstat(), stat(), utime(), utimensat(),
+> or utimes() is successfully performed on the file.
+> Other times at which updates are done are unspecified.
+> Marks for update, and updates themselves, shall not be done for files on read-only file systems; see Read-Only File System.
+>
+> The resolution of timestamps of files in a file system is implementation-defined,
+> but shall be no coarser than one-second resolution.
+> The three timestamps shall always have values that are supported by the file system.
+> Whenever any of a file's timestamps are to be set to a value V
+> according to the rules of the preceding paragraphs of this section,
+> the implementation shall immediately set the timestamp to
+> the greatest value supported by the file system that is not greater than V.
+
+--
+
+> 4.12 Pathname Resolution
+> 
+> PARA: Pathname resolution is performed for a process to resolve a
+> pathname to a particular directory entry for a file in the file
+> hierarchy. 
+
+> There may be multiple pathnames that resolve to the same
+> directory entry, and multiple directory entries for the same
+> file. 
+
+> When a process resolves a pathname of an existing directory
+> entry, the entire pathname shall be resolved as described below. 
+
+This seems highly ambiguous - does it mean "pathname of something that
+is expected to be an existing entry"? The alternative is that somehow
+path resolution already knows whether the path resolves to an existing
+entry or not. This almost certainly can't be the right
+interpretation. On the other hand, is it always clear whether a
+command expects something to be already existing? Probably yes.
+
+> When
+> a process resolves a pathname of a directory entry that is to be
+> created immediately after the pathname is resolved, pathname
+> resolution terminates when all components of the path prefix of the
+> last component have been resolved. 
+
+Can we always know whether a directory entry is to be created from the
+command and the path involved? Probably yes, eg rename has the second
+path "to be created".
+
+Note resolution (on Linux) does not attempt to process the last
+component in this case, even apparently if the last component is a
+file, and there is a trailing slash. This may be in accordance with
+POSIX, although it is not clear (see email to Austin group
+http://article.gmane.org/gmane.comp.standards.posix.austin.general/9182
+)
+
+Note resolution is dependent on the purpose of the pathname, and so
+dependent on the function ("process") that is doing the resolution.
+
+Not sure if process here means the same thing as "process" in
+ch_3_definitions ; presumably it can't mean the same thing.
+
+> It is then the responsibility of
+> the process to create the final component.
+
+> 
+> PARA: Each filename in the pathname is located in the directory
+> specified by its predecessor (for example, in the pathname fragment
+> a/b, file b is located in directory a). 
+
+> Pathname resolution shall fail
+> if this cannot be accomplished. 
+
+If no entry, then resolution fails
+
+> If the pathname begins with a <slash>,
+> the predecessor of the first filename in the pathname shall be taken
+> to be the root directory of the process (such pathnames are referred
+> to as "absolute pathnames"). 
+
+> If the pathname does not begin with a
+> <slash>, the predecessor of the first filename of the pathname shall
+> be taken to be either the current working directory of the process or
+> for certain interfaces the directory identified by a file descriptor
+> passed to the interface (such pathnames are referred to as "relative
+> pathnames").
+
+renameat and friends, presumably, are "certain interfaces"
+
+> 
+> PARA: The interpretation of a pathname component is dependent on the
+> value of {NAME_MAX} and _POSIX_NO_TRUNC associated with the path
+> prefix of that component. 
+
+Dependent how? See description of these limits
+
+> If any pathname component is longer than
+> {NAME_MAX}, the implementation shall consider this an error.
+> 
+
+> PARA: A pathname that contains at least one non- <slash> character and
+> that ends with one or more trailing <slash> characters shall not be
+> resolved successfully unless the last pathname component before the
+> trailing <slash> characters names an existing directory or a directory
+> entry that is to be created for a directory immediately after the
+> pathname is resolved. 
+
+"That is to be created for a directory" - this is too much - e.g. for
+rename, there is no way to know that the dst path is to be created for
+a directory without first resolving the src path
+
+So you can't have /a/nonexist_file/ is you are renaming a file. FIXME
+what errors should arise? 
+
+Note that this makes resolution dependent on the actual operation that
+is to be performed, and the role that the pathname is to perform, and
+on the nature of other pathnames
+
+e.g. rename /a/d1 /a/nonexist_dir/ resolves successfully if d1 is a
+dir, because the target is indeed a directory entry for a directory
+that is going to be created after the pathname is resolved
+
+
+
+> Interfaces using pathname resolution may specify
+> additional constraints1 when a pathname that does not name an existing
+> directory contains at least one non- <slash> character and contains
+> one or more trailing <slash> characters.
+
+Additional constraints footnote: "The only interfaces that further
+constrain pathnames in POSIX.1-2008 are the rename() and renameat()
+functions (see XSH rename) and the mv utility (see XCU mv)."
+
+i.e. further constraints on resolving particular to an interface
+
+FIXME what are these constraints for rename?
+
+> 
+> PARA: If a symbolic link is encountered during pathname resolution,
+> the behavior shall depend on whether the pathname component is at the
+> end of the pathname and on the function being performed. 
+
+> If all of the
+> following are true, then pathname resolution is complete:
+> 
+>   1. This is the last pathname component of the pathname.
+> 
+>   2. The pathname has no trailing <slash>.
+> 
+>   3. The function is required to act on the symbolic link itself, or
+>   certain arguments direct that the function act on the symbolic link
+>   itself.
+
+Resolution dependent on function again. 
+
+This covers e.g. /a/link_to_f1 if the function is acting on the link
+
+Note "function required to act on link itself"
+
+Note operating on the link requires that there are no trailing slashes
+
+> 
+> PARA: In all other cases, the system shall prefix the remaining
+> pathname, if any, with the contents of the symbolic link. 
+
+So if the contents of link_to_f1 are xxx and we resolve
+/a/link_to_f1/yyy, we actually resolve xxx/yyy from directory a
+
+> If the
+> combined length exceeds {PATH_MAX}, and the implementation considers
+> this to be an error, errno shall be set to [ENAMETOOLONG] and an error
+> indication shall be returned. 
+
+> Otherwise, the resolved pathname shall
+> be the resolution of the pathname just created. 
+
+> If the resulting
+> pathname does not begin with a <slash>, the predecessor of the first
+> filename of the pathname is taken to be the directory containing the
+> symbolic link.
+
+Relative links
+
+> 
+> PARA: If the system detects a loop in the pathname resolution process,
+> it shall set errno to [ELOOP] and return an error indication. 
+
+> The same
+> may happen if during the resolution process more symbolic links were
+> followed than the implementation allows. 
+
+> This implementation-defined
+> limit shall not be smaller than {SYMLOOP_MAX}.
+> 
+> PARA: The special filename dot shall refer to the directory specified
+> by its predecessor. 
+
+What does predecessor mean here? Predecessor in pathname terms? Yes,
+where you have got to so far
+
+> The special filename dot-dot shall refer to the
+> parent directory of its predecessor directory. 
+
+ie not in pathname terms, but after resolution has occurred; each
+directory must have a parent (except for disconnected directories)
+
+> As a special case, in
+> the root directory, dot-dot may refer to the root directory itself.
+
+May, but need not. FIXME not clear what it refers to if it doesn't
+refer to root.
+
+> 
+> PARA: A pathname consisting of a single <slash> shall resolve to the
+> root directory of the process. 
+
+> A null pathname shall not be
+> successfully resolved. 
+
+ENOENT
+
+> If a pathname begins with two successive
+> <slash> characters, the first component following the leading <slash>
+> characters may be interpreted in an implementation-defined manner,
+> although more than two leading <slash> characters shall be treated as
+> a single <slash> character.
+
+// leads to implementation defined behaviour; this is essentially for network paths I believe
+
+> 
+> PARA: Pathname resolution for a given pathname shall yield the same
+> results when used by any interface in POSIX.1-2008 as long as there
+> are no changes to any files evaluated during pathname resolution for
+> the given pathname between resolutions.
+
+This is contradictory - different functions can lead resolution to
+give different results according to the previous text.

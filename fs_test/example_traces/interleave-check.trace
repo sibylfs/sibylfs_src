@@ -1,0 +1,14 @@
+@type trace
+
+Pid 2 -> create
+
+open_close "foo" [O_CREAT] 0o600
+Tau
+RV_none
+
+Pid 1 -> unlink "foo"
+Pid 2 -> unlink "foo"
+Tau
+Tau
+Pid 1 <- RV_none
+Pid 2 <- ENOENT

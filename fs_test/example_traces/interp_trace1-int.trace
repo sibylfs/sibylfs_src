@@ -1,0 +1,20 @@
+mkdir /empty_dir 0o777
+mkdir /non_empty_dir 0o777
+
+open /non_empty_dir/f1.txt [O_RDWR;O_CREAT] 0o666
+write (FD 3) "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789" 100
+pread (FD 3) 50 0
+close (FD 3)
+
+open_close /non_empty_dir/f2.txt [O_RDWR;O_CREAT] 0o666
+
+opendir /non_empty_dir
+readdir (DH 1)
+readdir (DH 1)
+readdir (DH 1)
+readdir (DH 1)
+closedir (DH 1)
+
+rename /non_empty_dir/f1.txt /non_empty_dir/f1a.txt
+
+dump

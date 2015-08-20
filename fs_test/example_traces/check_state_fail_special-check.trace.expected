@@ -1,0 +1,17 @@
+# processing file 'example_traces/check_state_fail_special-check.trace' ...
+        @type trace
+
+     3: open_close "file" [O_RDONLY;O_CREAT] 0o700
+     4: Tau
+     5: RV_none
+
+     7: open_close "file" [O_RDONLY;O_TRUNC]
+     8: Tau
+# 
+# Fatal error:      8: Tau
+#    special states found:
+#      - OS_special (Undefined, "open: O_TRUNC, no O_RDWR or O_WRONLY, posix/open.md O_TRUNC:4")
+#    no normal result states
+
+# trace not accepted
+# processing file 'example_traces/check_state_fail_special-check.trace' failed

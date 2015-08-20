@@ -1,0 +1,4 @@
+# debug
+echo_vars:
+	echo "GENERATED_ML: $(GENERATED_ML)"
+	echo "DOTML: $(DOTML)"

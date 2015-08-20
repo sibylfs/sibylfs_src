@@ -1,0 +1,13 @@
+# processing file 'example_traces/no_errors-check.trace' ...
+        # processing file 'example_traces/os_trace1-int.trace' ...
+        @type trace
+     3: open "/ooOOoo" [O_RDONLY] 0o000
+     4: Tau
+     5: -
+# 
+# Error:      5: -
+#    errors possible: ENOENT
+#    continuing execution with ENOENT
+
+# trace not accepted
+# processing file 'example_traces/no_errors-check.trace' failed

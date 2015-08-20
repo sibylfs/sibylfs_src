@@ -1,0 +1,11 @@
+
+        "/"|D|0
+
+
+Error:      3: dump-result "/"
+           "/"|F|0|0|"0"
+        end dump-result
+   
+   comparison of dump-results failed:
+      differing entry: /
+

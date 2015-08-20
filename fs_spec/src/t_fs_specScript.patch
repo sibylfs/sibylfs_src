@@ -1,0 +1,35 @@
+2422,2425c2422,2427
+<   (*val >>= : forall 'impl 'a 'b. fsmonad 'impl 'a -> ('a -> fsmonad 'impl 'b) -> fsmonad 'impl 'b*)
+<   val _ = Define `
+<  (>>= = fsm_bind)`;
+< 
+---
+>   (* manually added *)
+>   val _ = add_infix(">>=", 90, HOLgrammars.NONASSOC);
+>   val fsm_bind'_def = new_infixl_definition(
+>     "fsm_bind'",
+>     --`$>>= x y = fsm_bind x y`--,
+>     500);
+2658,2665c2660,2672
+<   (*val <|||> : forall 'impl 'a 'b. fsmonad 'impl 'a -> fsmonad 'impl 'b -> fsmonad 'impl ('a * 'b)*)
+<   val _ = Define `
+<  (<|||> = fsm_parallel_composition)`;
+< 
+< 
+<   (*val ||| : forall 'impl. fsmonad 'impl ret_value -> fsmonad 'impl ret_value -> fsmonad 'impl ret_value*)
+<   val _ = Define `
+<  (||| = fsm_parallel_composition_drop)`;
+---
+>   (* manually added *)
+>   val _ = add_infix("<|||>", 90, HOLgrammars.NONASSOC);
+>   val fsm_parallel_composition'_def = new_infixl_definition(
+>      "fsm_parallel_composition'",
+>      --`$<|||> x y = fsm_parallel_composition x y`--,
+>      500);
+>   
+>   (* manually added *)
+>   val _ = add_infix("|||", 90, HOLgrammars.NONASSOC);
+>   val fsm_parallel_composition_drop'_def = new_infixl_definition(
+>      "fsm_parallel_composition_drop'",
+>      --`$||| x y = fsm_parallel_composition_drop x y`--,
+>      500);

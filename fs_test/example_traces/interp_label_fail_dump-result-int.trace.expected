@@ -1,0 +1,5 @@
+# processing file 'example_traces/interp_label_fail_dump-result-int.trace' ...
+# 
+# Fatal error: File "example_traces/interp_label_fail_dump-result-int.trace", line 2, characters 0-14:
+# dump-result not allowed in script
+# processing file 'example_traces/interp_label_fail_dump-result-int.trace' failed

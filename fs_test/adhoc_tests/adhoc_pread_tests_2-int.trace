@@ -1,0 +1,218 @@
+# adhoc_pread_tests2: adhoc tests to check behaviour of read in various situations
+
+
+##############################################
+# initialization
+##############################################
+
+# empty and non-empty directories to read from
+mkdir /empty_dir 0o777
+mkdir /non_empty_dir 0o777
+
+# create files with different contents in the non-empty directory
+chdir /non_empty_dir
+
+# f1.txt is empty
+open_close f1.txt [O_RDWR;O_CREAT] 0o666
+
+# f2.txt contains some short text
+open f2.txt [O_RDWR;O_CREAT] 0o666
+write (FD 3) "Lorem ipsum dolor sit a" 23
+close (FD 3)
+
+# f3.txt contains all kinds of strange characters
+open f3.txt [O_RDWR;O_CREAT] 0o666
+write (FD 3) "\"-#@/\000\001\x01\xF3\008" 10
+close (FD 3)
+
+
+##############################################
+# read on an empty file
+##############################################
+
+# read nothing 
+open f1.txt []
+pread (FD 3) 0 0
+close (FD 3)
+
+# read 1 char beyond end
+open f1.txt []
+pread (FD 3) 1 0
+close (FD 3)
+
+# read 1 char after seeking beyond end
+open f1.txt []
+pread (FD 3) 1 100
+close (FD 3)
+
+# read with negative offset 
+open f1.txt []
+pread (FD 3) 1 -100
+close (FD 3)
+
+
+
+##############################################
+# read on a non-empty file
+##############################################
+
+# f2.txt is 23 bytes long
+
+# pread 0 chars
+open f2.txt [] 
+pread (FD 3) 0 0
+close (FD 3)
+
+# read 0 chars
+open f2.txt [] 
+read (FD 3) 0
+close (FD 3)
+
+# pread 2 chars
+open f2.txt [] 
+pread (FD 3) 2 0
+close (FD 3)
+
+# read 2 chars
+open f2.txt [] 
+read (FD 3) 2 
+close (FD 3)
+
+# pread 2 chars with offset 5
+open f2.txt [] 
+pread (FD 3) 2 5
+close (FD 3)
+
+# read 2 chars and then 3, preads don't influence each other
+open f2.txt [] 
+pread (FD 3) 2 0
+pread (FD 3) 3 0
+close (FD 3)
+
+# read 2 chars and then 3, reads influence each other
+open f2.txt [] 
+read (FD 3) 2 
+read (FD 3) 3 
+close (FD 3)
+
+# pread over end of file
+open f2.txt []
+pread (FD 3) 100 0
+close (FD 3)
+
+# read over end of file
+open f2.txt []
+read (FD 3) 100 
+close (FD 3)
+
+# pread just after end
+open f2.txt []
+pread (FD 3) 1 23 
+close (FD 3)
+
+# pread far beyond end
+open f2.txt []
+pread (FD 3) 1 100
+close (FD 3)
+
+# pread over end
+open f2.txt []
+pread (FD 3) 5 20
+close (FD 3)
+
+# pread with negative offset
+open f2.txt []
+pread (FD 3) 1 -100
+close (FD 3)
+
+# multiple preads don't influence each other or reads
+open f2.txt []
+read (FD 3) 2
+pread (FD 3) 5 10
+read (FD 3) 3
+pread (FD 3) 5 2
+read (FD 3) 2
+close (FD 3)
+
+# read is influenced by seek
+open f2.txt []
+lseek (FD 3) 6 SEEK_SET
+read (FD 3) 5
+close (FD 3)
+
+# pread is not influenced by seek
+open f2.txt []
+lseek (FD 3) 7 SEEK_SET
+pread (FD 3) 5 6
+close (FD 3)
+
+##############################################
+# test reading of special chars
+##############################################
+
+open f3.txt []
+read (FD 3) 100
+close (FD 3)
+
+
+##############################################
+# reading from file-descriptors open for 
+# different modes
+##############################################
+
+open f2.txt [O_RDONLY]
+read (FD 3) 100
+close (FD 3)
+
+open f2.txt [O_WRONLY]
+read (FD 3) 100
+close (FD 3)
+
+open f2.txt [O_RDWR]
+read (FD 3) 100
+close (FD 3)
+
+# open a descriptor, remove permission on file
+# and then read. Since descriptor is open
+# that should be fine, but opening again is not
+open f2.txt [O_RDONLY]
+chmod f2.txt 0o000
+read (FD 3) 100
+close (FD 3)
+
+open f2.txt [O_RDONLY]
+read (FD 3) 100
+close (FD 3)
+
+chmod f2.txt 0o666
+open f2.txt [O_RDONLY]
+read (FD 3) 100
+close (FD 3)
+
+##############################################
+# read on directories
+##############################################
+
+open /empty_dir []
+pread (FD 3) 0 0
+pread (FD 3) 1 0
+pread (FD 3) 1 1
+read (FD 3) 0 
+read (FD 3) 1 
+read (FD 3) 1 
+close (FD 3)
+
+open /non_empty_dir []
+pread (FD 3) 0 0
+pread (FD 3) 1 0
+pread (FD 3) 1 1
+read (FD 3) 0 
+read (FD 3) 1 
+read (FD 3) 1 
+close (FD 3)
+
+
+##############################################
+# finished :-)
+##############################################
+

@@ -1,0 +1,10 @@
+fs_lexer.ml
+fs_lr_parser.conflicts
+fs_lr_parser.ml
+fs_lr_parser.mli
+fs_test_version.ml
+cmo
+cmx
+depend.dot
+depend.pdf
+srcs

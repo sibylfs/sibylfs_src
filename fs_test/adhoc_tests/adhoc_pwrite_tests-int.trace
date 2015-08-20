@@ -1,0 +1,205 @@
+# tesing pwrite and write
+
+
+##############################################
+# initialization
+##############################################
+
+# empty and non-empty directories to write to
+mkdir /empty_dir 0o777
+mkdir /non_empty_dir 0o777
+
+chdir /non_empty_dir
+
+
+##############################################
+# simple writes
+##############################################
+
+# start on empty file and write something
+open f1.txt [O_RDWR;O_CREAT] 0o666
+write (FD 3) "0123456789" 10
+close (FD 3)
+
+open f1.txt []
+read (FD 3) 100
+close (FD 3)
+
+# write even more stuff at the end
+open f1.txt [O_RDWR;O_APPEND] 0o666
+write (FD 3) "0123456789" 10
+close (FD 3)
+
+open f1.txt []
+read (FD 3) 100
+close (FD 3)
+
+# overwrite at begining
+open f1.txt [O_RDWR] 0o666
+write (FD 3) "XXX" 3
+close (FD 3)
+
+open f1.txt []
+read (FD 3) 100
+close (FD 3)
+
+# truncate file
+open f1.txt [O_RDWR;O_TRUNC] 0o666
+write (FD 3) "0123456789" 10
+close (FD 3)
+
+open f1.txt []
+read (FD 3) 100
+close (FD 3)
+
+# shorter size
+open f1.txt [O_RDWR;O_TRUNC] 0o666
+write (FD 3) "0123456789" 5
+close (FD 3)
+
+open f1.txt []
+read (FD 3) 100
+close (FD 3)
+
+
+##############################################
+# pwrite
+##############################################
+
+# write with pwrite at arbitrary positions
+open f1.txt [O_RDWR;O_TRUNC] 0o666
+write (FD 3) "0123456789" 10
+pwrite (FD 3) "X" 1 4
+pwrite (FD 3) "X" 1 6
+pwrite (FD 3) "X" 1 8
+write (FD 3) "0123456789" 10
+close (FD 3)
+
+open f1.txt []
+read (FD 3) 100
+close (FD 3)
+
+
+# pwrite with negative index
+open f1.txt [O_RDWR;O_TRUNC] 0o666
+pwrite (FD 3) "XXX" 3 -100
+close (FD 3)
+
+open f1.txt []
+read (FD 3) 100
+close (FD 3)
+
+
+# pwrite after end of file
+open f1.txt [O_RDWR;O_TRUNC] 0o666
+pwrite (FD 3) "XXX" 3 10
+close (FD 3)
+
+open f1.txt []
+read (FD 3) 100
+close (FD 3)
+
+
+# pwrite then write
+open f1.txt [O_RDWR;O_TRUNC] 0o666
+pwrite (FD 3) "XXX" 3 10
+write (FD 3) "01234" 5
+close (FD 3)
+
+open f1.txt []
+read (FD 3) 100
+close (FD 3)
+
+
+
+##############################################
+# lseek 
+##############################################
+
+open f1.txt [O_RDWR;O_TRUNC] 0o666
+write (FD 3) "0123456789" 10
+lseek (FD 3) -3 SEEK_CUR
+write (FD 3) "ABC" 3
+pwrite (FD 3) "X" 1 4
+lseek (FD 3) 2 SEEK_SET
+write (FD 3) "Y" 1 
+lseek (FD 3) 0 SEEK_SET
+read (FD 3) 100
+close (FD 3)
+
+#write after end adds 0s
+open f1.txt [O_RDWR;O_TRUNC] 0o666
+write (FD 3) "0123456789" 10
+lseek (FD 3) 5 SEEK_CUR
+write (FD 3) "ABCDE" 5
+lseek (FD 3) 0 SEEK_SET
+read (FD 3) 100
+close (FD 3)
+
+##############################################
+# writes with different file-descriptors
+##############################################
+
+# read/write is fine
+open f1.txt [O_RDWR;O_TRUNC] 
+write (FD 3) "0123456789" 10
+lseek (FD 3) 0 SEEK_SET
+read (FD 3) 100
+close (FD 3)
+
+# write_only is fine / truncate works
+open f1.txt [O_WRONLY;O_TRUNC] 
+write (FD 3) "ABCDE" 5
+close (FD 3)
+open f1.txt []
+read (FD 3) 100
+close (FD 3)
+
+# write_only without truncate keeps old content, but overwrites it 
+open f1.txt [O_WRONLY] 
+write (FD 3) "012" 3
+lseek (FD 3) 0 SEEK_SET
+read (FD 3) 100
+close (FD 3)
+open f1.txt []
+read (FD 3) 100
+close (FD 3)
+
+# append is adding at end
+open f1.txt [O_RDWR;O_APPEND]
+write (FD 3) "ABCDE" 5
+lseek (FD 3) 0 SEEK_SET
+read (FD 3) 100
+close (FD 3)
+
+# writing a read-only file fails
+open f1.txt [O_RDONLY]
+write (FD 3) "ABCDE" 5
+lseek (FD 3) 0 SEEK_SET
+read (FD 3) 100
+close (FD 3)
+
+# closed FD cannot be written to
+write (FD 3) "ABCDE" 5
+
+# non existing FD can't be used
+write (FD 300) "ABCDE" 5
+
+
+##############################################
+# writing to directories
+# this is already prohibited 
+# by the open command
+##############################################
+
+open /non_empty_dir [O_RDWR]
+write (FD 3) "ABC" 3
+close (FD 3)
+
+open /non_empty_dir [O_WRONLY]
+write (FD 3) "ABC" 3
+close (FD 3)
+
+open /non_empty_dir [O_RDONLY]
+write (FD 3) "ABC" 3
+close (FD 3)

@@ -1,0 +1,49 @@
+# Tests for a file underlying a file-descriptor
+# being modified while the descriptor is open
+
+# create a file with some content
+open f1.txt [O_RDWR;O_CREAT] rw-r--r--
+write (FD 3) "0123456789" 10
+
+open f1.txt []
+# check we are at the beginning
+read (FD 4) 100
+
+# check lseek to FD 4 does not affect FD 3
+lseek (FD 4) 0 SEEK_SET
+write (FD 3) "AB" 2
+
+# but content is present in both
+pread (FD 3) 100 0
+pread (FD 4) 100 0
+
+close (FD 3)
+close (FD 4)
+
+
+
+# open f1, then delete it
+open f1.txt [] 
+unlink f1.txt
+pread (FD 3) 100 0
+
+open_close f1.txt []
+
+close (FD 3)
+
+
+# open f1, then rename it
+open f1.txt [O_RDWR;O_CREAT] rw-r--r--
+write (FD 3) "0123456789" 10
+close (FD 3)
+
+open f1.txt [] 
+rename f1.txt f2.txt
+pread (FD 3) 100 0
+
+open_close f1.txt []
+open f2.txt []
+pread (FD 4) 100 0
+close (FD 4)
+close (FD 3)
+

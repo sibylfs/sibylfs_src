@@ -1,0 +1,188 @@
+OCAMLFIND=ocamlfind
+
+#WARNINGS=-w @f@p@u@s@40YZ+20+4
+WARNINGS=-w @f@p@u@s@40
+COMPFLAGS=$(WARNINGS) -g
+CAMLLIBS=unix,bigarray,str,num,bytes
+CMAS=$(EXTRACTCMA) $(FS_SPEC_LIB_CMA)
+CMXAS=$(EXTRACTCMXA) $(FS_SPEC_LIB_CMXA)
+CMIS=$(EXTRACTDIR)/*.cmi \
+     $(BUILD)/lem_support.cmi \
+     $(BUILD)/abstract_string.cmi \
+     $(BUILD)/fs_interface.cmi \
+     $(BUILD)/fs_dict_wrappers.cmi \
+     $(BUILD)/fs_prelude.cmi 
+
+#      $(BUILD)/list_array.cmi \
+
+LEM=$(shell command -v ../src_ext/lem/lem || command -v lem)
+EXTRACTDIR=$(shell dirname $(LEM))/ocaml-lib/_build
+EXTRACTCMA=$(EXTRACTDIR)/extract.cma
+EXTRACTCMXA=$(EXTRACTDIR)/extract.cmxa
+
+# allow overriding in case fs_spec is not sibling directory
+BUILD?=../fs_spec/build
+FS_SPEC_LIB_CMA=$(BUILD)/fs_spec_lib.cma
+FS_SPEC_LIB_CMXA=$(BUILD)/fs_spec_lib.cmxa
+
+SUBDIRS:=ld_preload
+
+NATIVES=check.native \
+        posix.native \
+	testpath.native 
+#  debug.native
+BYTES=testgen.byte #testpath.byte
+EXECS=fs_test run_trace
+
+CFLAGS=-I $(shell ocamlc -where) -fPIC -Wall -Wextra -Werror -std=c99
+
+all: beforeall $(NATIVES) $(BYTES) $(EXECS) subdirs
+.PHONY:: all
+
+beforeall: $(EXTRACTCMA) $(EXTRACTCMXA) $(FS_SPEC_LIB_CMA) $(FS_SPEC_LIB_CMXA)
+.PHONY:: beforeall
+
+subdirs: $(SUBDIRS)
+.PHONY:: subdirs $(SUBDIRS)
+
+$(SUBDIRS): 
+	$(MAKE) -C $@
+
+include: $(CMIS)
+	mkdir -p include
+	cp $(CMIS) include
+
+FS_TEST_LIB_SRC=lib/syscall.mli lib/syscall.ml lib/fs_test_config.ml \
+                lib/fs_test_system.mli lib/fs_test_system.ml
+
+FS_TEST_UTIL=lib/fs_test_util.mli lib/fs_test_util.ml
+
+lib/fs_check_lib.cmxa: FORCE
+	$(MAKE) -C lib
+
+CHECKLIB_SRC=$(FS_TEST_LIB_SRC) \
+  lib/checklib_shared_types.ml \
+  lib/posix_agent.ml \
+  lib/posix_ops.mli lib/posix_ops.ml \
+  lib/checkLib.mli lib/checkLib.ml 
+
+CHECK_SRC=$(CHECKLIB_SRC) $(FS_TEST_UTIL) check.ml
+CHECK_DEPS=$(CMXAS) lib/syscall_stubs.o lib/fs_check_lib.cmxa
+check.native: include $(CHECK_SRC) $(CHECK_DEPS)
+	$(OCAMLFIND) ocamlopt -linkpkg -o $@ \
+		-syntax camlp4o \
+		-package $(CAMLLIBS),sha,fd-send-recv,sexplib.syntax \
+		-I include -I lib \
+		$(COMPFLAGS) \
+		$(CHECK_DEPS) \
+		$(CHECK_SRC)
+
+debug.native: debug/debug.ml lib/fs_check_lib.cmxa
+	$(OCAMLFIND) ocamlopt -linkpkg -o $@ \
+	  -package $(CAMLLIBS),sha,fd-send-recv,sexplib -I include -I lib \
+	  $(COMPFLAGS) \
+	  $(CMXAS) \
+	  lib/fs_check_lib.cmxa \
+	  debug/debug.ml
+
+check2.native: debug/check2.ml lib/fs_check_lib.cmxa
+	$(OCAMLFIND) ocamlopt -linkpkg -o $@ \
+	  -package $(CAMLLIBS),sha,fd-send-recv,sexplib -I include -I lib \
+	  $(COMPFLAGS) \
+	  $(CMXAS) \
+	  lib/fs_check_lib.cmxa \
+		debug/check2.ml
+
+
+POSIX_C_OBJ=lib/syscall_stubs.o
+POSIX_SRC=$(CHECKLIB_SRC) \
+          posix.ml
+POSIX_DEPS=$(CMXAS) $(POSIX_C_OBJ) lib/fs_check_lib.cmxa
+posix.native: include $(POSIX_SRC) $(POSIX_DEPS)
+	$(OCAMLFIND) ocamlopt -linkpkg -o $@ \
+		-syntax camlp4o \
+		-package $(CAMLLIBS),sha,fd-send-recv,sexplib.syntax \
+		-I include -I lib \
+		$(COMPFLAGS) \
+		$(POSIX_DEPS) \
+		$(POSIX_SRC)
+
+TESTGEN_SRC=testgen/testgen.ml
+TESTGEN_DEPS=$(CMXAS) lib/fs_check_lib.cmxa
+testgen.native: include $(TESTGEN_SRC) $(TESTGEN_DEPS)
+	$(OCAMLFIND) ocamlopt -linkpkg -o $@ \
+		-syntax camlp4o \
+		-package $(CAMLLIBS),sha,sexplib.syntax -I include -I lib \
+		$(COMPFLAGS) \
+		$(TESTGEN_DEPS) \
+		$(TESTGEN_SRC)
+
+TESTGEN_BYTE_DEPS=$(CMAS) lib/fs_check_lib.cma
+testgen.byte: include $(TESTGEN_SRC) $(TESTGEN_BYTE_DEPS)
+	$(OCAMLFIND) ocamlc -linkpkg -o $@ \
+		-syntax camlp4o \
+		-package $(CAMLLIBS),sha,sexplib.syntax -I include -I lib \
+		$(COMPFLAGS) \
+		$(TESTGEN_BYTE_DEPS) \
+		$(TESTGEN_SRC)
+
+TESTPATH_SRC=$(CHECKLIB_SRC) paths/testpath.ml
+TESTPATH_DEPS=$(CMXAS) lib/syscall_stubs.o lib/fs_check_lib.cmxa
+testpath.native: include $(TESTPATH_SRC) $(TESTPATH_DEPS)
+	$(OCAMLFIND) ocamlopt -linkpkg -o $@ \
+		-syntax camlp4o \
+		-package $(CAMLLIBS),sha,fd-send-recv,sexplib.syntax \
+		-I include -I lib \
+		$(COMPFLAGS) \
+		$(TESTPATH_DEPS) \
+		$(TESTPATH_SRC)
+
+# fs_test_version.ml:
+# 	printf "let git_rev = \""                > fs_test_version.ml
+# 	echo -n "$(GIT_REV)"                    >> fs_test_version.ml
+# 	printf "\"\nlet git_dirty = $(DIRTY)\n" >> fs_test_version.ml
+# .PHONY:: fs_test_version.ml
+
+FS_TEST_SRC=$(CHECKLIB_SRC) lib/fs_test_version.ml lib/fs_test_mount.ml \
+	    lib/fs_test_cli.ml lib/fs_test_index.ml lib/fs_test_html.ml \
+	    fs_test.ml
+FS_TEST_DEPS=$(CMXAS) $(POSIX_C_OBJ) lib/fs_check_lib.cmxa
+fs_test: include $(FS_TEST_SRC) $(FS_TEST_DEPS)
+	$(OCAMLFIND) ocamlopt -linkpkg -o $@ \
+		-syntax camlp4o \
+		-package $(CAMLLIBS),cmdliner,fd-send-recv,sha \
+		-package sexplib.syntax,cow,cow.syntax \
+		-I include -I lib \
+		$(COMPFLAGS) \
+		$(FS_TEST_DEPS) \
+		$(FS_TEST_SRC)
+
+RUN_TRACE_SRC=$(FS_TEST_LIB_SRC) run_trace.ml
+RUN_TRACE_DEPS=$(POSIX_C_OBJ)
+run_trace: include $(RUN_TRACE_SRC) $(RUN_TRACE_DEPS)
+	$(OCAMLFIND) ocamlopt -linkpkg -o $@ \
+		-syntax camlp4o \
+		-package $(CAMLLIBS),fd-send-recv,sexplib.syntax \
+		-I include -I lib \
+		$(COMPFLAGS) \
+		$(RUN_TRACE_DEPS) \
+		$(RUN_TRACE_SRC)
+
+%.o: %.c
+	cc $(CFLAGS) -o $*.o -c $*.c
+
+clean_lib:
+	rm -f lib/*.cmi lib/*.cmx lib/*.cmo lib/*.o lib/*.a lib/*.cmxa lib/*.cma
+	rm -f lib/fs_lexer.ml lib/fs_lr_parser.mli lib/fs_lr_parser.ml
+.PHONY:: clean_lib
+
+clean: clean_lib
+	rm -f *.cmi *.cmx *.cmo *.o
+	rm -f testgen/*.cmi testgen/*.cmx testgen/*.cmo testgen/*.o
+	rm -f check/*.cmi check/*.cmx check/*.cmo check/*.o
+	rm -f $(NATIVES) $(BYTES) $(EXECS)
+	rm -rf include
+	for f in $(SUBDIRS); do ($(MAKE) -C $$f clean); done
+.PHONY:: clean
+
+FORCE:

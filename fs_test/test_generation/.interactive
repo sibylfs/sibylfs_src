@@ -1,0 +1,32 @@
+(* -*- mode: tuareg -*- *)
+#use "topfind";;
+#require "unix";;
+#require "bigarray";;
+#require "str";;
+#require "sha";;
+#require "num";;
+
+#require "sexplib";;
+#require "sexplib.syntax";;
+#require "sexplib.top";;
+#camlp4o;;
+
+#require "bytes";;
+#require "cmdliner";;
+#require "fd-send-recv";;
+
+(*
+#require "cow";;  (* stops "let lexer = " bindings *)
+#require "cow.syntax";;
+*)
+
+#directory "../../src_ext/lem/ocaml-lib/_build";;
+#load "extract.cma";;
+
+#directory "../../fs_spec/build";;
+#load "fs_spec_lib.cma";;
+
+#directory "../lib";;
+#load "top_level_lib.cma";;
+
+#mod_use "property_testgen.ml";;

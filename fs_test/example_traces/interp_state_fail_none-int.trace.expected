@@ -1,0 +1,7 @@
+# processing file 'example_traces/interp_state_fail_none-int.trace' ...
+        @type trace
+     2: Pid 2 -> destroy
+# 
+# Fatal error:      2: Pid 2 -> destroy
+#    no result states
+# processing file 'example_traces/interp_state_fail_none-int.trace' failed

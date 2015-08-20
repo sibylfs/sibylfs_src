@@ -1,0 +1,142 @@
+# create a directory without any permissions
+mkdir /tmp_dir_1490/ 0o000
+Tau
+RV_none
+
+
+#we get an error when trying to create a subdirectory
+mkdir /tmp_dir_1490/d1 0o700
+Tau
+EACCES
+
+
+#resolving allows using that dir as an argument to change it's permissions
+chmod /tmp_dir_1490/ 0o700
+Tau
+RV_none
+
+chown /tmp_dir_1490/ (User_id 0) (Group_id 0)
+Tau
+RV_none
+
+
+# now we can create the subdirectory
+mkdir /tmp_dir_1490/d1 0o700
+Tau
+RV_none
+
+mkdir /tmp_dir_1490/d1/empty_dir1 0o700
+Tau
+RV_none
+
+
+# let's remove the search permission from the top dir
+chmod /tmp_dir_1490 0o000
+Tau
+RV_none
+
+
+# despite the permissions on d1 not changing, we can't create another subdir now
+mkdir /tmp_dir_1490/d1/empty_dir2 0o700
+Tau
+EACCES
+
+
+# with more permissions it works
+chmod /tmp_dir_1490 0o100
+Tau
+RV_none
+
+mkdir /tmp_dir_1490/d1/empty_dir2 0o700
+Tau
+RV_none
+
+
+#let's try chdir and relative paths
+chdir /tmp_dir_1490/d1/
+Tau
+RV_none
+
+mkdir empty_dir3 0o700
+Tau
+RV_none
+
+
+chdir ..
+Tau
+RV_none
+
+mkdir d1/empty_dir4 0o700
+Tau
+RV_none
+
+
+# chdir to a non-existing dir
+chdir /tmp_dir_1490/non_existing/
+Tau
+ENOENT
+
+
+# chdir to a file / notice that cwd did not change in previous call
+open_close d1/f1.txt [O_RDWR;O_CREAT] 0o777
+Tau
+RV_none
+
+chdir d1/f1.txt
+Tau
+ENOTDIR
+
+
+# change dir so our working dir always has search permission
+# this is required by the implemenentation of the tool posix2
+chdir /
+Tau
+RV_none
+
+
+# chdir with missing search permssions
+chmod /tmp_dir_1490 0o000
+Tau
+RV_none
+
+chdir /tmp_dir_1490/d1/
+Tau
+EACCES
+
+
+chdir /
+Tau
+RV_none
+
+chmod /tmp_dir_1490 0o100
+Tau
+RV_none
+
+chdir /tmp_dir_1490/d1/
+Tau
+RV_none
+
+
+chdir /
+Tau
+RV_none
+
+chmod /tmp_dir_1490/d1 0o000
+Tau
+RV_none
+
+chdir /tmp_dir_1490/d1/
+Tau
+EACCES
+
+
+# add sufficient permissions for dump to work with posix2
+chmod /tmp_dir_1490/ 0o777
+Tau
+RV_none
+
+chmod /tmp_dir_1490/d1 0o777
+Tau
+RV_none
+
+dump

@@ -1,0 +1,117 @@
+# make sure we are not running as root
+create Pid 2 User_id 2 Group_id 2
+
+# create dirs with access permissions options for rwx
+Pid 2 -> mkdir /tmp_dir_uwx/ -wx------
+Tau
+Pid 2 <- -
+
+Pid 2 -> mkdir /tmp_dir_uw/ -w-------
+Tau
+Pid 2 <- -
+
+Pid 2 -> mkdir /tmp_dir_ux/ --x------
+Tau
+Pid 2 <- -
+
+# creating a subdir requieres both w or x permission
+Pid 2 -> mkdir /tmp_dir_uwx/d1 ---------
+Tau
+Pid 2 <- -
+
+Pid 2 -> mkdir /tmp_dir_uw/d1 ---------
+Tau
+Pid 2 <- EACCES
+
+Pid 2 -> mkdir /tmp_dir_ux/d1 ---------
+Tau
+Pid 2 <- EACCES
+
+# trying to access files in dirs without search permissions does not work
+Pid 2 -> open /tmp_dir_uw/f-nonexist.txt [O_RDONLY]
+Tau
+Pid 2 <- EACCES
+
+# creating files with permissions and trying to open them again 
+# with various openflags
+Pid 2 -> open /tmp_dir_uwx/f1rwx.txt [O_CREAT;O_RDWR] rwx------
+Tau
+Pid 2 <- -
+
+Pid 2 -> open /tmp_dir_uwx/f1rwx.txt [O_RDONLY]
+Tau
+Pid 2 <- -
+
+Pid 2 -> open /tmp_dir_uwx/f1rwx.txt [O_WRONLY]
+Tau
+Pid 2 <- -
+
+Pid 2 -> open /tmp_dir_uwx/f1rwx.txt [O_RDWR]
+Tau
+Pid 2 <- -
+
+Pid 2 -> open /tmp_dir_uwx/f1rwx.txt [O_EXEC]
+Tau
+Pid 2 <- -
+
+Pid 2 -> open /tmp_dir_uwx/f1r.txt [O_CREAT;O_RDWR] r--------
+Tau
+Pid 2 <- -
+
+Pid 2 -> open /tmp_dir_uwx/f1r.txt [O_RDONLY]
+Tau
+Pid 2 <- -
+
+Pid 2 -> open /tmp_dir_uwx/f1r.txt [O_WRONLY]
+Tau
+Pid 2 <- EACCES
+
+Pid 2 -> open /tmp_dir_uwx/f1r.txt [O_RDWR]
+Tau
+Pid 2 <- EACCES
+
+Pid 2 -> open /tmp_dir_uwx/f1r.txt [O_EXEC]
+Tau
+Pid 2 <- EACCES
+
+Pid 2 -> open /tmp_dir_uwx/f1w.txt [O_CREAT;O_RDWR] -w-------
+Tau
+Pid 2 <- -
+
+Pid 2 -> open /tmp_dir_uwx/f1w.txt [O_RDONLY]
+Tau
+Pid 2 <- EACCES
+
+Pid 2 -> open /tmp_dir_uwx/f1w.txt [O_WRONLY]
+Tau
+Pid 2 <- -
+
+Pid 2 -> open /tmp_dir_uwx/f1w.txt [O_RDWR]
+Tau
+Pid 2 <- EACCES
+
+Pid 2 -> open /tmp_dir_uwx/f1w.txt [O_EXEC]
+Tau
+Pid 2 <- EACCES
+
+Pid 2 -> open /tmp_dir_uwx/f1x.txt [O_CREAT;O_RDWR] --x------
+Tau
+Pid 2 <- -
+
+Pid 2 -> open /tmp_dir_uwx/f1x.txt [O_RDONLY]
+Tau
+Pid 2 <- EACCES
+
+Pid 2 -> open /tmp_dir_uwx/f1x.txt [O_WRONLY]
+Tau
+Pid 2 <- EACCES
+
+Pid 2 -> open /tmp_dir_uwx/f1x.txt [O_RDWR]
+Tau
+Pid 2 <- EACCES
+
+Pid 2 -> open /tmp_dir_uwx/f1x.txt [O_EXEC]
+Tau
+Pid 2 <- -
+
+

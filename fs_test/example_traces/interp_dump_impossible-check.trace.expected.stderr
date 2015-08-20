@@ -1,0 +1,7 @@
+Error: error while dumping fs-state: Dump.Dump_error("ls_path")
+
+Error:      3: dump-result "/impossible"
+           "/"|D|0
+           "/oooOOOOOoooo"|D|1
+        end dump-result
+   execution of dump failed

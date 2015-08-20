@@ -1,0 +1,41 @@
+# adhoc_det_read_write: adhoc tests to test deterministic versions of read and write
+
+# f1.txt contains some short text 
+# notice the use of write and write!
+open f1.txt [O_RDWR;O_CREAT] 0o666
+write! (FD 3) "Lorem ipsum dolor sit" 21
+write (FD 3) "0123456789" 10
+close (FD 3)
+
+# now read it with pread and pread!,
+# read and read!
+open f1.txt []
+pread (FD 3) 10 0
+pread! (FD 3) 10 0
+read (FD 3) 10 
+read (FD 3) 5
+lseek (FD 3) 0 SEEK_SET
+read! (FD 3) 10 
+read! (FD 3) 5
+close (FD 3)
+
+
+# now test write and pwrite
+open f2a.txt [O_RDWR;O_CREAT] 0o666
+open f2b.txt [O_RDWR;O_CREAT] 0o666
+
+write  (FD 3) "0123456789" 10
+write! (FD 4) "0123456789" 10
+
+pread! (FD 3) 100 0
+pread! (FD 4) 100 0
+
+pwrite  (FD 3) "ABCD" 4 3
+pwrite! (FD 4) "ABCD" 4 3
+
+pread! (FD 3) 100 0
+pread! (FD 4) 100 0
+
+close (FD 3)
+close (FD 4)
+

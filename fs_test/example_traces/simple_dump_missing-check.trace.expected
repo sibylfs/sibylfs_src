@@ -1,0 +1,19 @@
+# processing file 'example_traces/simple_dump_missing-check.trace' ...
+        # processing file 'example_traces/simple_dump-int.trace' ...
+        @type trace
+     3: dump-result "/"
+        end dump-result
+# 
+#         "/"|D|0
+# 
+# 
+# Error:      3: dump-result "/"
+#         end dump-result
+#    
+#    comparison of dump-results failed:
+#       missing entry: /
+# 
+# 
+
+# trace not accepted
+# processing file 'example_traces/simple_dump_missing-check.trace' failed

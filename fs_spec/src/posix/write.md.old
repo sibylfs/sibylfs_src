@@ -1,0 +1,24 @@
+OOOOOOOOOOOOOOOOOOOOLD
+
+# Description
+
+> The write() function shall attempt to write nbyte bytes from the buffer pointed 
+> to by buf to the file associated with the open file descriptor, fildes.
+>
+> Before any action described below is taken, and if nbyte is zero and
+> the file is a regular file, the write() function may detect and return errors as described below.
+> In the absence of errors, or if error detection is not performed,
+> the write() function shall return zero and have no other results.
+> If nbyte is zero and the file is not a regular file, the results are unspecified.
+
+Times
+
+> Upon successful completion, where nbyte is greater than 0,
+> write() shall mark for update the last data modification and
+> last file status change timestamps of the file,
+> and if the file is a regular file, the S_ISUID and S_ISGID bits of the file mode may be cleared.
+
+What about the access time?
+Likely we have the following situations:
+1) Write for new file creation -> the access time is unset
+2) Write for file modification -> the access time does not change.

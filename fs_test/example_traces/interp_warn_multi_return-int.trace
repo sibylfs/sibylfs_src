@@ -1,0 +1,6 @@
+@type script
+open "f1.txt" [O_CREAT;O_RDWR] 0o600
+write! (FD 3) "0123456789" 10
+pread (FD 3) 100 0
+close (FD 3)
+unlink "f1.txt"

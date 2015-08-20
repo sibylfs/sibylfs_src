@@ -1,0 +1,58 @@
+# create a directory without any permissions
+mkdir /tmp_dir_1490/ 0o000
+
+#we get an error when trying to create a subdirectory
+mkdir /tmp_dir_1490/d1 0o700
+
+#resolving allows using that dir as an argument to change it's permissions
+chmod /tmp_dir_1490/ 0o700
+chown /tmp_dir_1490/ (User_id 0) Group_id 0
+
+# now we can create the subdirectory
+mkdir /tmp_dir_1490/d1 0o700
+mkdir /tmp_dir_1490/d1/empty_dir1 0o700
+
+# let's remove the search permission from the top dir
+chmod /tmp_dir_1490 0o000
+
+# despite the permissions on d1 not changing, we can't create another subdir now
+mkdir /tmp_dir_1490/d1/empty_dir2 0o700
+
+# with more permissions it works
+chmod /tmp_dir_1490 --x------
+mkdir /tmp_dir_1490/d1/empty_dir2 0o700
+
+#let's try chdir and relative paths
+chdir /tmp_dir_1490/d1/
+mkdir empty_dir3 0o700
+
+chdir ..
+mkdir d1/empty_dir4 0o700
+
+# chdir to a non-existing dir
+chdir /tmp_dir_1490/non_existing/
+
+# chdir to a file / notice that cwd did not change in previous call
+open_close d1/f1.txt [O_CREAT;O_RDWR] 0o777
+chdir d1/f1.txt
+
+# change dir so our working dir always has search permission
+# this is required by the implemenentation of the tool posix2
+chdir /
+
+# chdir with missing search permssions
+chmod /tmp_dir_1490 ---------
+chdir /tmp_dir_1490/d1/
+
+chdir /
+chmod /tmp_dir_1490 --x------
+chdir /tmp_dir_1490/d1/
+
+chdir /
+chmod /tmp_dir_1490/d1 ---------
+chdir /tmp_dir_1490/d1/
+
+# add sufficient permissions for dump to work with posix2
+chmod /tmp_dir_1490/ 0o777
+chmod /tmp_dir_1490/d1 0o777
+dump

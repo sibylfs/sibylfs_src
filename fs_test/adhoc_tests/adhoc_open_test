@@ -1,0 +1,24 @@
+# test for open with more than one file access mode
+#
+mkdir /tmp_dir_0/ 0
+mkdir /tmp_dir_0/empty_dir 0
+mkdir /tmp_dir_0/nonempty_dir 0
+open_close /tmp_dir_0/nonempty_dir/f1.txt [O_RDWR;O_CREAT] 0
+open_close /tmp_dir_0/nonempty_dir/f2.txt [O_RDWR;O_CREAT] 0
+pwrite /tmp_dir_0/nonempty_dir/f2.txt 0 "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit an" 875
+open /tmp_dir_0/nonempty_dir/f1.txt [O_RDWR;O_WRONLY] 0
+#
+# test open with create flag but no mode argument
+open /tmp_dir_0/nonempty_dir/f3.txt [O_RDWR;O_CREAT]
+# stat /tmp_dir_0/nonempty_dir/f3.txt
+#
+# on ext4 under linux we get e.g. 
+#
+# $ ls -al /tmp/tmp2/tmp_dir_0/nonempty_dir/f3.txt 
+# ---x------ 1 tr61 tr61 0 Apr  7 16:05 /tmp/tmp2/tmp_dir_0/nonempty_dir/f3.txt
+#
+# ie the file is executable, but that is all
+close (FD 4)
+#
+# the following causes an error in posix; persumably the permission error can't be mapped for some reason 
+#open /tmp_dir_0/nonempty_dir/f3.txt [O_RDWR;O_CREAT]

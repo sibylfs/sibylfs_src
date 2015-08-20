@@ -1,0 +1,108 @@
+On Mac OS/X:
+
+
+        #####################################
+        # Test 18
+        #####################################
+  2061: mkdir /test_dir_0018 0o777
+  2062: Tau
+  2063: RV_none
+
+  2065: chdir /test_dir_0018
+  2066: Tau
+  2067: RV_none
+
+  2069: mkdir empty_dir1 0o777
+  2070: Tau
+  2071: RV_none
+
+  2073: mkdir empty_dir2 0o777
+  2074: Tau
+  2075: RV_none
+
+  2077: mkdir nonempty_dir1 0o777
+  2078: Tau
+  2079: RV_none
+
+  2081: open_close nonempty_dir1/f1.txt [O_CREAT;O_WRONLY] 0o666
+  2082: Tau
+  2083: RV_none
+
+  2085: mkdir nonempty_dir1/d2 0o777
+  2086: Tau
+  2087: RV_none
+
+  2089: open nonempty_dir1/d2/f3.txt [O_CREAT;O_WRONLY] 0o666
+  2090: Tau
+  2091: RV_num(3)
+
+  2093: write! (FD 3) "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor inc" 83
+  2094: Tau
+  2095: RV_num(83)
+
+  2097: close (FD 3)
+  2098: Tau
+  2099: RV_none
+
+  2101: mkdir nonempty_dir1/d2/d3 0o777
+  2102: Tau
+  2103: RV_none
+
+  2105: mkdir nonempty_dir2 0o777
+  2106: Tau
+  2107: RV_none
+
+  2109: open_close nonempty_dir2/f1.txt [O_CREAT;O_WRONLY] 0o666
+  2110: Tau
+  2111: RV_none
+
+  2113: open nonempty_dir2/f2.txt [O_CREAT;O_WRONLY] 0o666
+  2114: Tau
+  2115: RV_num(3)
+
+  2117: write! (FD 3) "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exer" 167
+  2118: Tau
+  2119: RV_num(167)
+
+  2121: close (FD 3)
+  2122: Tau
+  2123: RV_none
+
+  2125: mkdir nonempty_dir2/d2 0o777
+  2126: Tau
+  2127: RV_none
+
+  2129: mkdir nonempty_dir2/d2/d3 0o777
+  2130: Tau
+  2131: RV_none
+
+  2133: symlink f1.txt nonempty_dir1/sl_f1.txt
+  2134: Tau
+  2135: RV_none
+
+  2137: symlink ../f1.txt nonempty_dir1/d2/sl_dotdot_f1.txt
+  2138: Tau
+  2139: RV_none
+
+  2141: symlink no_such_target nonempty_dir1/d2/sl_no_such_target
+  2142: Tau
+  2143: RV_none
+
+  2145: symlink ../d2 nonempty_dir1/d2/sl_dotdot_d2
+  2146: Tau
+  2147: RV_none
+
+  2149: symlink ../../nonempty_dir1/d2/f3.txt nonempty_dir2/d2/sl_f3.txt
+  2150: Tau
+  2151: RV_none
+
+  2153: link empty_dir1 nonempty_dir1/d2/sl_dotdot_f1.txt/
+  2154: Tau
+  2155: EEXIST
+
+Error:   2155: EEXIST
+   unexpected results: EEXIST
+   allowed are only: EPERM, ENOTDIR
+   continuing execution with EPERM, ENOTDIR
+
+Note that this behaviour only happens on a symlink

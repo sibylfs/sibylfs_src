@@ -1,0 +1,66 @@
+<h1 id="name">NAME</h1>
+<blockquote>
+<p>truncate - truncate a file to a specified length</p>
+</blockquote>
+<h1 id="synopsis">SYNOPSIS</h1>
+<blockquote>
+<p>#include <unistd.h></p>
+<p>int truncate(const char *path, off_t length);</p>
+</blockquote>
+<h1 id="description">DESCRIPTION</h1>
+<pre><code>&gt; The truncate() function shall cause the regular file named by path to have a size which shall be equal to length bytes.
+
+&gt; If the file previously was larger than length, the extra data is discarded. If the file was previously shorter than length, its size is increased, and the extended area appears as if it were zero-filled.
+
+&gt; The application shall ensure that the process has write permission for the file.
+
+&gt; [XSI] [Option Start] If the request would cause the file size to exceed the soft file size limit for the process, the request shall fail and the implementation shall generate the SIGXFSZ signal for the process. [Option End]
+
+&gt; The truncate() function shall not modify the file offset for any open file descriptions associated with the file. Upon successful completion, if the file size is changed, truncate() shall mark for update the last data modification and last file status change timestamps of the file, and the S_ISUID and S_ISGID bits of the file mode may be cleared.</code></pre>
+<h1 id="return-value">RETURN VALUE</h1>
+<pre><code>Upon successful completion, truncate() shall return 0. Otherwise, -1 shall be returned, and errno set to indicate the error.</code></pre>
+<h1 id="timestamps">TIMESTAMPS</h1>
+<blockquote>
+<p>Upon successful completion, if the file size is changed, truncate() shall mark for update the last data modification and last file status change timestamps of the file, and the S_ISUID and S_ISGID bits of the file mode may be cleared.</p>
+</blockquote>
+<p>TRUNCATE_TS</p>
+<h1 id="errors">ERRORS</h1>
+<pre><code>&gt; The truncate() function shall fail if:
+
+&gt; [EINTR]
+&gt;     A signal was caught during execution.
+&gt; [EINVAL]
+&gt;     The length argument was less than 0.</code></pre>
+<p>EINVAL:1</p>
+<pre><code>&gt; [EFBIG] or [EINVAL]
+&gt;     The length argument was greater than the maximum file size.
+&gt; [EIO]
+&gt;     An I/O error occurred while reading from or writing to a file system.
+
+&gt; [EACCES]
+&gt;     A component of the path prefix denies search permission, </code></pre>
+<p>EACCES:1</p>
+<pre><code>&gt; or write permission is denied on the file.</code></pre>
+<p>EACCES:2</p>
+<pre><code>&gt; [EISDIR]
+&gt;     The named file is a directory.</code></pre>
+<p>EISDIR:1</p>
+<pre><code>&gt; [ELOOP]
+&gt;     A loop exists in symbolic links encountered during resolution of the path argument.
+&gt; [ENAMETOOLONG]
+&gt;     The length of a component of a pathname is longer than {NAME_MAX}.
+&gt; [ENOENT]
+&gt;     A component of path does not name an existing file or path is an empty string.</code></pre>
+<p>ENOENT:1</p>
+<pre><code>&gt; [ENOTDIR]
+&gt;     A component of the path prefix names an existing file that is neither a directory nor a symbolic link to a directory, or the path argument contains at least one non- &lt;slash&gt; character and ends with one or more trailing &lt;slash&gt; characters and the last pathname component names an existing file that is neither a directory nor a symbolic link to a directory.
+&gt; [EROFS]
+&gt;     The named file resides on a read-only file system.
+
+
+&gt; The truncate() function may fail if:
+
+&gt; [ELOOP]
+&gt;     More than {SYMLOOP_MAX} symbolic links were encountered during resolution of the path argument.
+&gt; [ENAMETOOLONG]
+&gt;     The length of a pathname exceeds {PATH_MAX}, or pathname resolution of a symbolic link produced an intermediate result with a length that exceeds {PATH_MAX}.</code></pre>

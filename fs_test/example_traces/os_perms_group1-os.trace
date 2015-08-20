@@ -1,0 +1,135 @@
+# create two processes that are not root,
+# make sure they have different user ids, but
+# the user of the second process 3 belongs to the right group
+# moreover set umask of process 2 so it can create
+# directories with write permission for the group
+
+create Pid 2 User_id 2 Group_id 2
+create Pid 3 User_id 3 Group_id 3
+
+Pid 2 -> umask 0o000
+Tau
+Pid 2 <- RV_file_perm(0o022)
+
+Pid 2 -> add_user_to_group User_id 3 Group_id 2
+Tau
+Pid 2 <- -
+
+# create dirs with group access permissions options for rwx
+Pid 2 -> mkdir /tmp_dir_gwx/ ----wx---
+Tau
+Pid 2 <- -
+
+Pid 2 -> mkdir /tmp_dir_gw/ ----w----
+Tau
+Pid 2 <- -
+
+Pid 2 -> mkdir /tmp_dir_gx/ -----x---
+Tau
+Pid 2 <- -
+
+# creating a subdir requieres both w or x permission
+Pid 3 -> mkdir /tmp_dir_gwx/d1 ---------
+Tau
+Pid 3 <- -
+
+Pid 3 -> mkdir /tmp_dir_gw/d1 ---------
+Tau
+Pid 3 <- EACCES
+
+Pid 3 -> mkdir /tmp_dir_gx/d1 ---------
+Tau
+Pid 3 <- EACCES
+
+# trying to access files in dirs without search permissions does not work
+Pid 3 -> open /tmp_dir_gw/f-nonexist.txt [O_RDONLY]
+Tau
+Pid 3 <- EACCES
+
+# creating files with permissions and trying to open them again 
+# with various openflags
+Pid 2 -> mkdir /tmp_dir_uwx/ -wx--x---
+Tau
+Pid 2 <- -
+
+Pid 2 -> open /tmp_dir_uwx/f1rwx.txt [O_CREAT;O_RDWR] ---rwx---
+Tau
+Pid 2 <- -
+
+Pid 3 -> open /tmp_dir_uwx/f1rwx.txt [O_RDONLY]
+Tau
+Pid 3 <- -
+
+Pid 3 -> open /tmp_dir_uwx/f1rwx.txt [O_WRONLY]
+Tau
+Pid 3 <- -
+
+Pid 3 -> open /tmp_dir_uwx/f1rwx.txt [O_RDWR]
+Tau
+Pid 3 <- -
+
+Pid 3 -> open /tmp_dir_uwx/f1rwx.txt [O_EXEC]
+Tau
+Pid 3 <- -
+
+Pid 2 -> open /tmp_dir_uwx/f1r.txt [O_CREAT;O_RDWR] ---r-----
+Tau
+Pid 2 <- -
+
+Pid 3 -> open /tmp_dir_uwx/f1r.txt [O_RDONLY]
+Tau
+Pid 3 <- -
+
+Pid 3 -> open /tmp_dir_uwx/f1r.txt [O_WRONLY]
+Tau
+Pid 3 <- EACCES
+
+Pid 3 -> open /tmp_dir_uwx/f1r.txt [O_RDWR]
+Tau
+Pid 3 <- EACCES
+
+Pid 3 -> open /tmp_dir_uwx/f1r.txt [O_EXEC]
+Tau
+Pid 3 <- EACCES
+
+Pid 2 -> open /tmp_dir_uwx/f1w.txt [O_CREAT;O_RDWR] ----w----
+Tau
+Pid 2 <- -
+
+Pid 3 -> open /tmp_dir_uwx/f1w.txt [O_RDONLY]
+Tau
+Pid 3 <- EACCES
+
+Pid 3 -> open /tmp_dir_uwx/f1w.txt [O_WRONLY]
+Tau
+Pid 3 <- -
+
+Pid 3 -> open /tmp_dir_uwx/f1w.txt [O_RDWR]
+Tau
+Pid 3 <- EACCES
+
+Pid 3 -> open /tmp_dir_uwx/f1w.txt [O_EXEC]
+Tau
+Pid 3 <- EACCES
+
+Pid 2 -> open /tmp_dir_uwx/f1x.txt [O_CREAT;O_RDWR] -----x---
+Tau
+Pid 2 <- -
+
+Pid 3 -> open /tmp_dir_uwx/f1x.txt [O_RDONLY]
+Tau
+Pid 3 <- EACCES
+
+Pid 3 -> open /tmp_dir_uwx/f1x.txt [O_WRONLY]
+Tau
+Pid 3 <- EACCES
+
+Pid 3 -> open /tmp_dir_uwx/f1x.txt [O_RDWR]
+Tau
+Pid 3 <- EACCES
+
+Pid 3 -> open /tmp_dir_uwx/f1x.txt [O_EXEC]
+Tau
+Pid 3 <- -
+
+

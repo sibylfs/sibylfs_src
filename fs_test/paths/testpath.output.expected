@@ -1,0 +1,105 @@
+        @type trace
+     2: mkdir "/tmp/" 0o000
+        Tau
+        RV_none
+     3: mkdir "/tmp/d1" 0o000
+        Tau
+        RV_none
+     4: mkdir "/tmp/d1/empty_dir1" 0o000
+        Tau
+        RV_none
+     5: mkdir "/tmp/d1/empty_dir2" 0o000
+        Tau
+        RV_none
+     6: mkdir "/tmp/d1/nonempty_dir1" 0o000
+        Tau
+        RV_none
+     7: open_close "/tmp/d1/nonempty_dir1/f1.txt" [O_CREAT;O_RDWR] 0o000
+        Tau
+        RV_none
+     8: open_close "/tmp/d1/nonempty_dir1/f2.txt" [O_CREAT;O_RDWR] 0o000
+        Tau
+        RV_none
+     9: mkdir "/tmp/d1/nonempty_dir1/d2" 0o000
+        Tau
+        RV_none
+    10: open_close "/tmp/d1/nonempty_dir1/d2/f3.txt" [O_CREAT;O_RDWR] 0o000
+        Tau
+        RV_none
+    11: open_close "/tmp/d1/nonempty_dir1/d2/f4.txt" [O_CREAT;O_RDWR] 0o000
+        Tau
+        RV_none
+    12: mkdir "/tmp/d1/nonempty_dir1/d2/d3" 0o000
+        Tau
+        RV_none
+    13: mkdir "/tmp/d1/nonempty_dir1/d2/d4" 0o000
+        Tau
+        RV_none
+    14: mkdir "/tmp/d1/nonempty_dir2" 0o000
+        Tau
+        RV_none
+    15: open_close "/tmp/d1/nonempty_dir2/f1.txt" [O_CREAT;O_RDWR] 0o000
+        Tau
+        RV_none
+    16: open_close "/tmp/d1/nonempty_dir2/f2.txt" [O_CREAT;O_RDWR] 0o000
+        Tau
+        RV_none
+    17: mkdir "/tmp/d1/nonempty_dir2/d2" 0o000
+        Tau
+        RV_none
+    18: open_close "/tmp/d1/nonempty_dir2/d2/f3.txt" [O_CREAT;O_RDWR] 0o000
+        Tau
+        RV_none
+    19: open_close "/tmp/d1/nonempty_dir2/d2/f4.txt" [O_CREAT;O_RDWR] 0o000
+        Tau
+        RV_none
+    20: mkdir "/tmp/d1/nonempty_dir2/d2/d3" 0o000
+        Tau
+        RV_none
+    21: mkdir "/tmp/d1/nonempty_dir2/d2/d4" 0o000
+        Tau
+        RV_none
+    22: mkdir "/tmp/d2" 0o000
+        Tau
+        RV_none
+    23: open_close "/tmp/d2/f5.txt" [O_CREAT;O_RDWR] 0o000
+        Tau
+        RV_none
+    24: symlink "/tmp" "/link_to_tmp"
+        Tau
+        RV_none
+    25: symlink "../d2" "/tmp/d1/rel_link_to_d2"
+        Tau
+        RV_none
+    26: symlink "f5.txt" "/tmp/d2/link_to_f5.txt"
+        Tau
+        RV_none
+    27: dump-result "/"
+           "/"|D|0
+           "/link_to_tmp"|L|"/tmp"
+           "/tmp"|D|1
+           "/tmp/d1"|D|2
+           "/tmp/d1/rel_link_to_d2"|L|"../d2"
+           "/tmp/d1/empty_dir1"|D|3
+           "/tmp/d1/empty_dir2"|D|4
+           "/tmp/d1/nonempty_dir1"|D|5
+           "/tmp/d1/nonempty_dir1/f1.txt"|F|6|0|"da39a3ee5e6b4b0d3255bfef95601890afd80709"
+           "/tmp/d1/nonempty_dir1/f2.txt"|F|7|0|"da39a3ee5e6b4b0d3255bfef95601890afd80709"
+           "/tmp/d1/nonempty_dir1/d2"|D|8
+           "/tmp/d1/nonempty_dir1/d2/f3.txt"|F|9|0|"da39a3ee5e6b4b0d3255bfef95601890afd80709"
+           "/tmp/d1/nonempty_dir1/d2/f4.txt"|F|10|0|"da39a3ee5e6b4b0d3255bfef95601890afd80709"
+           "/tmp/d1/nonempty_dir1/d2/d3"|D|11
+           "/tmp/d1/nonempty_dir1/d2/d4"|D|12
+           "/tmp/d1/nonempty_dir2"|D|13
+           "/tmp/d1/nonempty_dir2/f1.txt"|F|14|0|"da39a3ee5e6b4b0d3255bfef95601890afd80709"
+           "/tmp/d1/nonempty_dir2/f2.txt"|F|15|0|"da39a3ee5e6b4b0d3255bfef95601890afd80709"
+           "/tmp/d1/nonempty_dir2/d2"|D|16
+           "/tmp/d1/nonempty_dir2/d2/f3.txt"|F|17|0|"da39a3ee5e6b4b0d3255bfef95601890afd80709"
+           "/tmp/d1/nonempty_dir2/d2/f4.txt"|F|18|0|"da39a3ee5e6b4b0d3255bfef95601890afd80709"
+           "/tmp/d1/nonempty_dir2/d2/d3"|D|19
+           "/tmp/d1/nonempty_dir2/d2/d4"|D|20
+           "/tmp/d2"|D|21
+           "/tmp/d2/f5.txt"|F|22|0|"da39a3ee5e6b4b0d3255bfef95601890afd80709"
+           "/tmp/d2/link_to_f5.txt"|L|"f5.txt"
+        end dump-result
+All tests pass.

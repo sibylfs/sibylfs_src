@@ -1,0 +1,9 @@
+# processing file 'example_traces/simple_dump-int.trace' ...
+        @type trace
+     1: open_close "rebel_zero" [O_CREAT] <rw------->
+        Tau
+        RV_none
+     2: dump-result /
+           "/"|D|0
+           "/rebel_zero"|F|0|0|"0"
+        end dump-result

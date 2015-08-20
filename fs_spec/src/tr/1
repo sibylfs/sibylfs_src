@@ -1,0 +1,2 @@
+rename /tmp_dir_1194/d1/nonempty_dir1/f1.txt/ /tmp_dir_1194/d1/nonexist_dir1/nonexist_dir3
+[ENOENT]

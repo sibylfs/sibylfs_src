@@ -1,0 +1,12 @@
+# processing file 'example_traces/interp_warn_state_mixed-int.trace' ...
+        @type trace
+     2: open "/foo" [O_RDONLY;O_EXCL]
+# 
+# Error:      2: open "/foo" [O_RDONLY;O_EXCL]
+#    special states found:
+#      - OS_special (Undefined, "open: O_EXCL, no O_CREAT, posix/open.md D:1")
+#    continuing with normal result states
+        Tau
+        ENOENT
+# Warning: trace caused problems
+# processing file 'example_traces/interp_warn_state_mixed-int.trace' failed

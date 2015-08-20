@@ -1,0 +1,17 @@
+########################################################################
+# depend
+
+# .depend is not generated automatically; needs to be rebuilt when
+# files change
+
+all: depend .depend.linear
+
+include Makefile.common
+
+depend: srcs
+	$(OCAMLDEP) -one-line *.ml *.mli >.depend
+
+.depend.linear: srcs
+	$(OCAMLDEP) -sort *.ml *.mli >.depend.linear
+
+-include Makefile.srcs

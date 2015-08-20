@@ -1,0 +1,144 @@
+        #####################################
+        # Test 10
+        #####################################
+   274: mkdir /test_dir_0010 0o777
+        Tau
+        RV_none
+
+   275: chdir /test_dir_0010
+        Tau
+        RV_none
+
+   276: mkdir empty_dir1 0o777
+        Tau
+        RV_none
+
+   277: mkdir empty_dir2 0o777
+   Tau
+   RV_none
+
+   278: mkdir nonempty_dir1 0o777
+        Tau
+        RV_none
+
+   279: open_close nonempty_dir1/f1.txt [O_WRONLY;O_CREAT] 0o666
+   Tau
+        RV_none
+
+   280: symlink f1.txt nonempty_dir1/f2.txt
+        Tau
+        RV_none
+
+   281: mkdir nonempty_dir1/d2 0o777
+        Tau
+        RV_none
+
+   282: open nonempty_dir1/d2/f3.txt [O_WRONLY;O_CREAT] 0o666
+        Tau
+        RV_num(3)
+
+   283: write! (FD 3) "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor inc" 83
+        Tau
+        RV_num(83)
+
+   284: close (FD 3)
+        Tau
+        RV_none
+
+   285: symlink ../f1.txt nonempty_dir1/d2/f4_sl.txt
+        Tau
+        RV_none
+
+   286: symlink no_such_target nonempty_dir1/d2/broken_sl
+        Tau
+        RV_none
+
+   287: mkdir nonempty_dir1/d2/d3 0o777
+        Tau
+        RV_none
+
+   288: symlink ../d2 nonempty_dir1/d2/d4_sl
+        Tau
+        RV_none
+
+   289: mkdir nonempty_dir2 0o777
+        Tau
+        RV_none
+
+   290: open_close nonempty_dir2/f1.txt [O_WRONLY;O_CREAT] 0o666
+        Tau
+        RV_none
+
+   291: open nonempty_dir2/f2.txt [O_WRONLY;O_CREAT] 0o666
+        Tau
+        RV_num(3)
+
+   292: write! (FD 3) "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exer" 167
+        Tau
+        RV_num(167)
+
+   293: close (FD 3)
+        Tau
+        RV_none
+
+   294: mkdir nonempty_dir2/d2 0o777
+        Tau
+        RV_none
+
+   295: symlink ../../nonempty_dir1/d2/f3.txt nonempty_dir2/d2/f3_sl.txt
+        Tau
+        RV_none
+
+   296: mkdir nonempty_dir2/d2/d3 0o777
+        Tau
+        RV_none
+
+   297: unlink nonempty_dir1/d2/broken_sl/
+        Tau
+        ENOTDIR
+
+Error:    297: unlink nonempty_dir1/d2/broken_sl/
+               Tau
+               ENOTDIR
+   unexpected results: ENOTDIR
+   allowed are only: ENOENT
+   continuing execution with ENOENT
+
+   298: dump-result /test_dir_0010
+           /test_dir_0010|D|3678110
+           /test_dir_0010/empty_dir1|D|3678119
+           /test_dir_0010/empty_dir2|D|3678120
+           /test_dir_0010/nonempty_dir1|D|3678121
+           /test_dir_0010/nonempty_dir2|D|3678130
+           /test_dir_0010/nonempty_dir1/d2|D|3678124
+           /test_dir_0010/nonempty_dir1/f1.txt|F|3678122|0|da39a3ee5e6b4b0d3255bfef95601890afd80709
+           /test_dir_0010/nonempty_dir1/f2.txt|L|f1.txt
+           /test_dir_0010/nonempty_dir1/d2/broken_sl|L|no_such_target
+           /test_dir_0010/nonempty_dir1/d2/d3|D|3678128
+           /test_dir_0010/nonempty_dir1/d2/d4_sl|L|../d2
+           /test_dir_0010/nonempty_dir1/d2/f3.txt|F|3678125|83|4b535f836f6006423fc132a59e78dfcc4fe6292f
+           /test_dir_0010/nonempty_dir1/d2/f4_sl.txt|L|../f1.txt
+           /test_dir_0010/nonempty_dir2/d2|D|3678133
+           /test_dir_0010/nonempty_dir2/f1.txt|F|3678131|0|da39a3ee5e6b4b0d3255bfef95601890afd80709
+           /test_dir_0010/nonempty_dir2/f2.txt|F|3678132|167|d09f4e47c22373e56c2369633ac3dcb71d598601
+           /test_dir_0010/nonempty_dir2/d2/d3|D|3678135
+           /test_dir_0010/nonempty_dir2/d2/f3_sl.txt|L|../../nonempty_dir1/d2/f3.txt
+        end dump-result
+
+--
+
+here broken_sl contains the string "no_such_link"; we get a ENOTDIR from POSIX but expect ENOENT; 
+
+the spec gives ENOENT: spec sees the link, and the slash, and tries to follow the symlink; the components ns is then "no_such_link"::"", and there is no directory, but we are on the last component, so we return RR_none which triggers the ENOENT
+
+under POSIX(Linux) we get ENOTDIR: this seems reasonable because the trailing slash on the "no_such_link" might force the path to be resolved; however, POSIX doc only allows ENOTDIR for the path prefix; so this looks like Linux specific behaviour; except that unlink.md ENOTDIR may apply: 
+
+> the path argument contains at least one non- <slash>
+>         character and ends with one or more trailing <slash>
+>         characters and the last pathname component names an existing
+>         file that is neither a directory nor a symbolic link to a
+>         directory.
+
+here the last component names an existing file (a symlink) that is not a link to a directory; the problem here is that according to path resolution, we have already processed the last component as a symlink, and got the path "no_such_link/"
+
+so really this is ENOTDIR if trailing slash, and last component symlink, and symlink resolved to none; we approximate this currently by just checking for trailing slash and none (which be ENOENT if last component is not a symlink); the problem is that POSIX uses the phrase "a component ... does/does not name an existing file", and it is unclear whether for symlinks this means the link, or the target of the link; often POSIX seems to mean the link (eg unlink.md ENOTDIR:2) but is it not clear

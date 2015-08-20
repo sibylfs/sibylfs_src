@@ -1,0 +1,71 @@
+# adhoc_close_tests: adhoc tests to check behaviour of close in various situations
+#
+# initialization
+mkdir /tmp_dir_0/ 0
+mkdir /tmp_dir_0/d1 0
+mkdir /tmp_dir_0/d1/empty_dir1 0
+mkdir /tmp_dir_0/d1/empty_dir2 0
+mkdir /tmp_dir_0/d1/nonempty_dir1 0
+open_close /tmp_dir_0/d1/nonempty_dir1/f1.txt [O_RDWR;O_CREAT] 0
+open_close /tmp_dir_0/d1/nonempty_dir1/f2.txt [O_RDWR;O_CREAT] 0
+pwrite /tmp_dir_0/d1/nonempty_dir1/f2.txt 0 "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit an" 875
+mkdir /tmp_dir_0/d1/nonempty_dir1/d2 0
+open_close /tmp_dir_0/d1/nonempty_dir1/d2/f3.txt [O_RDWR;O_CREAT] 0
+pwrite /tmp_dir_0/d1/nonempty_dir1/d2/f3.txt 0 "Lorem ipsum dolor sit a" 23
+open_close /tmp_dir_0/d1/nonempty_dir1/d2/f4.txt [O_RDWR;O_CREAT] 0
+pwrite /tmp_dir_0/d1/nonempty_dir1/d2/f4.txt 0 "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse " 2978
+mkdir /tmp_dir_0/d1/nonempty_dir1/d2/d3 0
+mkdir /tmp_dir_0/d1/nonempty_dir1/d2/d4 0
+mkdir /tmp_dir_0/d1/nonempty_dir2 0
+open_close /tmp_dir_0/d1/nonempty_dir2/f1.txt [O_RDWR;O_CREAT] 0
+open_close /tmp_dir_0/d1/nonempty_dir2/f2.txt [O_RDWR;O_CREAT] 0
+pwrite /tmp_dir_0/d1/nonempty_dir2/f2.txt 0 "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidat" 367
+mkdir /tmp_dir_0/d1/nonempty_dir2/d2 0
+open_close /tmp_dir_0/d1/nonempty_dir2/d2/f3.txt [O_RDWR;O_CREAT] 0
+open_close /tmp_dir_0/d1/nonempty_dir2/d2/f4.txt [O_RDWR;O_CREAT] 0
+pwrite /tmp_dir_0/d1/nonempty_dir2/d2/f4.txt 0 "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis" 4177
+mkdir /tmp_dir_0/d1/nonempty_dir2/d2/d3 0
+mkdir /tmp_dir_0/d1/nonempty_dir2/d2/d4 0
+#
+# close on an fd that was never used
+close (FD 3)
+# and again
+close (FD 4)
+#
+# open a normal file, and close
+open /tmp_dir_0/d1/nonempty_dir1/f1.txt [O_RDWR] 0
+close (FD 3)
+#
+# open a normal file, and close twice
+open /tmp_dir_0/d1/nonempty_dir1/f1.txt [O_RDWR] 0
+close (FD 3)
+close (FD 3)
+#
+# open and close a recently closed fd
+open /tmp_dir_0/d1/nonempty_dir1/f1.txt [O_RDWR] 0
+close (FD 3)
+open /tmp_dir_0/d1/nonempty_dir1/f1.txt [O_RDWR] 0
+close (FD 3)
+#
+# multiple overlapping opens
+open /tmp_dir_0/d1/nonempty_dir1/f1.txt [O_RDWR] 0
+open /tmp_dir_0/d1/nonempty_dir1/f2.txt [O_RDWR] 0
+close (FD 3)
+open /tmp_dir_0/d1/nonempty_dir1/f1.txt [O_RDWR] 0
+close (FD 4)
+close (FD 3)
+#
+# opening a directory
+open /tmp_dir_0/d1 [O_RDWR] 0
+close (FD 3)
+open /tmp_dir_0/d1/ [O_RDWR] 0
+close (FD 3)
+#
+# closing stdin, stdout and stderr
+close (FD 0)
+# FIXME we can't close stdout because we are using it to return results of tests!
+#close (FD 1)
+# FIXME we probably shouldn't close stderr either
+close (FD 2)
+open /tmp_dir_0/d1/nonempty_dir1/f1.txt [O_RDWR] 0
+close (FD 0)

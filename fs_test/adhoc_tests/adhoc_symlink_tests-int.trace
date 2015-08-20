@@ -1,0 +1,185 @@
+# adhoc_link_tests
+
+# initialization
+
+mkdir /dir_1 0o777
+mkdir /dir_1/dir_11 0o777
+mkdir /dir_2 0o777
+
+open /dir_1/f1.txt [O_RDWR;O_CREAT] 0o666
+write (FD 3) "content of /dir_1/f1.txt" 24
+close (FD 3)
+
+open /dir_1/f2.txt [O_RDWR;O_CREAT] 0o666
+write (FD 3) "content of /dir_1/f2.txt" 24 
+close (FD 3)
+
+open /dir_2/f1.txt [O_RDWR;O_CREAT] 0o666
+write (FD 3) "content of /dir_2/f1.txt" 24 
+close (FD 3)
+
+
+###################################################
+# simple tests, that mimic common use-cases
+###################################################
+
+# create a symlink to an existing file an read the file
+# through the symlink
+
+symlink /dir_1/f1.txt /symlink_1
+open /symlink_1 []
+pread (FD 3) 1000 0
+close (FD 3)
+
+# try two indirections
+symlink /symlink_1 /symlink_2
+open /symlink_2 []
+pread (FD 3) 1000 0
+close (FD 3)
+
+# remove symlink 1 and read symlink 2
+unlink /symlink_1
+open /symlink_2 []
+pread (FD 3) 1000 0
+close (FD 3)
+
+# now try symbolic links to a directory
+symlink /dir_1 /symlink_1
+
+open /symlink_1/f1.txt []
+pread (FD 3) 1000 0
+close (FD 3)
+
+open /symlink_2/f1.txt []
+pread (FD 3) 1000 0
+close (FD 3)
+
+# renaming of symbolic links renames links not pointed to files
+rename /symlink_2 /symlink_2b
+open /symlink_2b/f1.txt []
+pread (FD 3) 1000 0
+close (FD 3)
+
+open /dir_1/f1.txt []
+pread (FD 3) 1000 0
+close (FD 3)
+
+open /symlink_2/f1.txt []
+pread (FD 3) 1000 0
+close (FD 3)
+
+
+# try relative symbolic links
+symlink f2.txt /dir_1/symlink_f2.txt
+open /dir_1/symlink_f2.txt []
+pread (FD 3) 1000 0
+close (FD 3)
+
+symlink ../dir_2/f1.txt /dir_1/symlink_d2_f1.txt
+open /dir_1/symlink_d2_f1.txt []
+pread (FD 3) 1000 0
+close (FD 3)
+
+# read the content of symbolic links
+readlink /symlink_1
+readlink /symlink_1/
+readlink /no_such_link
+readlink /symlink_1b
+readlink /symlink_1b/
+readlink /dir_1/symlink_f2.txt
+readlink /dir_1/symlink_d2_f1.txt
+
+# cleanup
+unlink /symlink_1
+unlink /symlink_2b
+unlink /dir_1/symlink_f2.txt
+unlink /dir_1/symlink_d2_f1.txt
+
+
+###################################################
+# testing for corners
+###################################################
+
+# linking to non-existing dirs is OK
+symlink /no_such_dir/ /slink_no_such1
+symlink /no_such_file /slink_no_such2
+chdir /slink_no_such1
+unlink /slink_no_such1
+unlink /slink_no_such2
+
+# existing files and dirs canot be overriden by symlink
+symlink /dir_1 /dir_2
+symlink /dir_1 /dir_1/f1.txt
+symlink /dir_1 /dir_1/symlink.txt
+symlink /dir_2 /dir_1/symlink.txt
+unlink /dir_1/symlink.txt
+
+# the new link name must not end with a slash
+symlink xyz /slink_1
+symlink xyz /slink_2/
+unlink /slink_1
+
+# cyclic links can be created, but raise ELOOP when followed
+symlink /cyclic_link1 /cyclic_link2
+symlink /cyclic_link2 /cyclic_link1
+chdir /cyclic_link1
+unlink /cyclic_link1
+unlink /cyclic_link2
+
+# playing around with trailing slashes
+symlink /dir_1/f1.txt /filelink
+symlink /dir_1 /dirlink
+
+open_close /filelink []
+open_close /filelink []
+
+chdir /dirlink
+chdir /dirlink/
+open_close f1.txt []
+unlink /dirlink
+unlink /filelink
+chdir /
+
+# follow a symlink to a dir and then go to parent dir
+symlink /dir_1/dir_11 /dirlink
+chdir /dirlink
+chdir ..
+# we should be in /dir_1 now, not /, so we can read f1.txt
+open_close f1.txt []
+open_close dir_1/f1.txt []
+unlink /dirlink
+
+
+###################################################
+# whether a symbolic link that occurs as the last
+# component of a resolved path is followed depends
+# on the command, so test it for all commands
+###################################################
+
+symlink /dir_1 /dir_link
+symlink /dir_1/f1.txt /file_link
+
+link /dir_1 /dir_3
+link /dir_link /dir_4
+link /dir_1/f1.txt /f1.txt
+link /file_link /f2.txt
+
+mkdir /dir_link 0o777
+mkdir /file_link 0o777
+mkdir /dir_1 0o777
+mkdir /dir_1/f1.txt 0o777
+
+symlink /dir_5 /new_dir_link
+mkdir /new_dir_link 0o777
+
+symlink /f_5 /new_file_link_1
+symlink /f_6 /new_file_link_2
+open_close /new_file_link_1 [O_RDWR;O_CREAT] 0o666
+symlink xyz /new_file_link_2
+
+stat /dir_link
+stat /file_link
+
+truncate /file_link 0
+stat /file_link
+

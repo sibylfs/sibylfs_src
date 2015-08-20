@@ -1,0 +1,5 @@
+
+Fatal error:      2: mkdir "/foo" 0o10000
+   special states found:
+     - OS_special (Implementation_defined, "mkdir: additional file permission bits")
+   no normal result states

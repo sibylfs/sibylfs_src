@@ -1,0 +1,9 @@
+Error: error while dumping fs-state: Dump.Dump_error("ls_path")
+
+Error:      2: dump "/gone"
+   execution of dump failed
+Error: error while dumping fs-state: Dump.Dump_error("ls_path")
+
+Error:      3: dump "/not_there"
+   execution of dump failed
+Warning: trace caused problems

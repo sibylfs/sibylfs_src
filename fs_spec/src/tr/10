@@ -1,0 +1,3 @@
+OS_CALL(Pid 1,link /tmp_dir_32// /tmp_dir_32//d1/nonempty_dir1/f1.txt/)
+[EEXIST]
+

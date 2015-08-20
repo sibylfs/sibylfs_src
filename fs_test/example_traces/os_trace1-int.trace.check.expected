@@ -1,0 +1,44 @@
+# processing file 'example_traces/os_trace1-int.trace.interp.expected-check.trace' ...
+        # processing file 'example_traces/os_trace1-int.trace' ...
+        @type trace
+
+     4: mkdir "/tmp_dir_1490/" 0o000
+     5: Tau
+     6: RV_none
+
+     8: mkdir "/tmp_dir_1490/d1" 0o000
+     9: Tau
+    10: RV_none
+
+    12: mkdir "/tmp_dir_1490/d1/empty_dir1" 0o000
+    13: Tau
+    14: RV_none
+
+    16: mkdir "/tmp_dir_1490/d1/empty_dir2" 0o000
+    17: Tau
+    18: RV_none
+
+    20: mkdir "/tmp_dir_1490/d1/nonempty_dir1" 0o000
+    21: Tau
+    22: RV_none
+
+    24: open "/tmp_dir_1490/d1/nonempty_dir1/f1.txt" [O_CREAT;O_RDWR] 0o000
+    25: Tau
+    26: RV_num(3)
+
+    28: open "/tmp_dir_1490/d1/nonempty_dir1/f1.txt" [O_RDWR]
+    29: Tau
+    30: RV_num(4)
+
+    32: stat "/tmp_dir_1490/d1/nonempty_dir1/f1.txt"
+    33: Tau
+    34: RV_stat { st_dev=2049; st_ino=6; st_kind=S_IFREG; st_perm=0o000; st_nlink=2; st_uid=0; st_gid=0; st_rdev=0; st_size=0; }
+
+        # stat a non-existing file
+    37: stat "/tmp_dir_1490/d1/nosuchdir/non.txt"
+    38: Tau
+    39: ENOENT
+
+
+
+# trace accepted

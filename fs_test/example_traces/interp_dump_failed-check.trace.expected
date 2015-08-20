@@ -1,0 +1,5 @@
+# processing file 'example_traces/interp_dump_failed-check.trace' ...
+# 
+# Fatal error: File "example_traces/interp_dump_failed-check.trace", line 3, characters 5-15:
+# dump not allowed in trace
+# processing file 'example_traces/interp_dump_failed-check.trace' failed

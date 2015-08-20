@@ -1,0 +1,75 @@
+# demonstrating state explosion problem
+# create 3 processes and let them all write to a file
+# with and without returns in the middle.
+
+
+# initialisation
+
+create Pid 2 User_id 0 Group_id 0
+create Pid 3 User_id 0 Group_id 0
+
+
+# start on empty file and write something
+Pid 1 -> open f1.txt [O_RDWR;O_CREAT] 0o666
+Tau
+Pid 1 <- RV_num(3)
+
+Pid 2 -> open f1.txt [O_RDWR;O_CREAT] 0o666
+Tau
+Pid 2 <- RV_num(3)
+
+Pid 3 -> open f1.txt [O_RDWR;O_CREAT] 0o666
+Tau
+Pid 3 <- RV_num(3)
+
+
+# with return statements, it is fast
+
+Pid 1 -> write (FD 3) "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789" 100
+Tau
+Pid 1 <- RV_num(10)
+Pid 2 -> write (FD 3) "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789" 100
+Tau
+Pid 2 <- RV_num(15)
+Pid 3 -> write (FD 3) "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789" 100
+Tau
+Pid 3 <- RV_num(80)
+
+
+# without return we run into state explosion problems
+Pid 1 -> write (FD 3) "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789" 100
+Tau
+Pid 2 -> write (FD 3) "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789" 100
+Tau
+Pid 3 -> write (FD 3) "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789" 100
+Tau
+Pid 1 <- RV_num(10)
+Pid 2 <- RV_num(15)
+Pid 3 <- RV_num(80)
+
+
+# too loose return statements also lead to state-explosion
+Pid 1 -> write (FD 3) "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789" 100
+Tau
+Pid 1 <- {RV_num(0);RV_num(1);RV_num(2);RV_num(3);RV_num(4);RV_num(5);RV_num(6);RV_num(7);RV_num(8);RV_num(9);RV_num(10);RV_num(11);RV_num(12);RV_num(13);RV_num(14);RV_num(15);RV_num(16);RV_num(17);RV_num(18);RV_num(19)}
+Pid 2 -> write (FD 3) "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789" 100
+Tau
+Pid 2 <- -
+Pid 3 -> write (FD 3) "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789" 100
+Tau
+Pid 3 <- -
+
+
+# cleaning up
+Pid 1 -> close (FD 3)
+Tau
+Pid 1 <- RV_none
+
+Pid 2 -> close (FD 3)
+Tau
+Pid 2 <- RV_none
+
+Pid 3 -> close (FD 3)
+Tau
+Pid 3 <- RV_none
+

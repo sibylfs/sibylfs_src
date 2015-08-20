@@ -1,0 +1,44 @@
+(******************************************************************************)
+(* This file contains high level properties of the specifition in             *)
+(* It is used to tranlate these properties to various backend such that       *)
+(* they can be proved with these backends                                     *)
+(******************************************************************************)
+
+
+open import Bool Maybe Maybe_extra Basic_classes Tuple Num List List_extra Word Function_extra
+open import T_fs_spec T_fs_prelude 
+open Resolve Finset Fs_operations Fs_types 
+
+#ifdef aspect_perms
+open Fs_permissions
+
+(* -------------------------------------------------------------------------- *)
+(* Permissions                                                                *)
+(* -------------------------------------------------------------------------- *)
+
+lemma S_IRWXU_eq : (S_IRWXU = combine_file_perms [S_IRUSR; S_IWUSR; S_IXUSR])
+lemma S_IRWXG_eq : (S_IRWXG = combine_file_perms [S_IRGRP; S_IWGRP; S_IXGRP])
+lemma S_IRWXO_eq : (S_IRWXO = combine_file_perms [S_IROTH; S_IWOTH; S_IXOTH])
+
+lemma dest_file_perm_simp : forall p. File_perm (dest_file_perm p) = p
+
+(* some sanity checks *)
+lemma set_unset_file_perms_0 : forall p. set_file_perms p (File_perm 0O0000) = p
+lemma set_unset_file_perms_1 : forall p. unset_file_perms p (File_perm 0) = p
+lemma set_unset_file_perms_2 : forall p. set_file_perms (File_perm 0) p = p
+lemma set_unset_file_perms_3 : forall p. unset_file_perms (File_perm 0) p = File_perm 0
+lemma set_unset_file_perms_4 : forall p1 p2. (set_file_perms (unset_file_perms p1 p2) p2 = set_file_perms p1 p2)
+
+(* usual lemmata I had in mind while defining it *)
+theorem check_file_perms_refl : forall p. check_file_perms p p
+theorem check_file_perms_trans : forall p1 p2 p3. check_file_perms p1 p2 --> check_file_perms p2 p3 --> check_file_perms p1 p3
+theorem check_file_perms_antisym : forall p1 p2. check_file_perms p1 p2 --> check_file_perms p2 p1 --> (p1 = p2)
+
+theorem check_file_perms_set : forall p1 p2 p3. check_file_perms p2 p3 --> check_file_perms (set_file_perms p1 p2) p3 
+theorem check_file_perms_unset : forall p1 p2 p3. ((dest_file_perm p2) land (dest_file_perm p3) <> 0) --> 
+   not (check_file_perms (unset_file_perms p1 p2) p3)
+
+theorem set_file_perms_combine : forall p1 p2 p3. set_file_perms (set_file_perms p1 p2) p3 = set_file_perms p1 (combine_file_perms [p2;p3])
+theorem unset_file_perms_combine : forall p1 p2 p3. unset_file_perms (unset_file_perms p1 p2) p3 = unset_file_perms p1 (combine_file_perms [p2;p3])
+
+#endif

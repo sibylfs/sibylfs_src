@@ -1,0 +1,24 @@
+OS_CALL(Pid 1,link /tmp_dir_47// /tmp_dir_47//d1/nonexist_dir1/)
+[ENOENT]
+
+This looks like a reasonable path error to return. At the moment, we
+are not clear about whether path resolution should look at the last
+component or not.
+
+However, the specification of link says (and none apply):
+
+## [ENOENT] reconciled
+
+> A component of either path prefix does not exist; 
+
+ENOENT:1
+
+> the file named by path1 does not exist; 
+
+ENOENT:2
+
+> or path1 or path2 points to an empty string.
+
+ENOENT:3
+
+So it looks like this is Linux specific behaviour.

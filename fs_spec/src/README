@@ -1,0 +1,101 @@
+# Overview
+
+The core spec is written in Lem with CPPO preprocessing. 
+This consists of the following files:
+
+    t_fs_init.lem
+    t_fs_prelude.lem t_list_array.lem
+    t_fs_spec.lem_cppo
+    t_dir_heap.lem_cppo
+
+The files in the second line depend on the file in the first line;
+t_fs_spec.lem depends on the previous files and t_dir_heap on all.
+Files with the ending cppo need preprocessing via cppo. This preprocessing
+is able to include or exclude aspects of the precification like permissions
+or timing. 
+
+There are also files stating high-level properties of the specification:
+
+    t_fs_spec_errors_raised.lem_cppo
+    t_fs_spec_properties.lem
+    t_fs_spec_properties_perms.lem_cppo
+
+Lem is used to generate Ocaml, Isabelle/HOL and HOL4 output from the model.
+
+# Generating Output
+
+Gnu make is used to generate the various output formats from Lem.
+
+## OCaml
+Run `make lem_ocaml` to generate OCaml output. Afterwards, check the output and
+if it is OK, run `make copy_lem_over_ml` to make it productive.
+
+## Isabelle/HOL
+Run `make lem_isa` to generate Isabelle output. Afterwards, check the output and
+if it is OK, run `make lem_isa_copy` to make it productive.
+
+## HOL
+Run `make lem_hol` to generate HOL4 output
+
+## Lem
+All other targets generate Lem code automatically. In order to only run cppo and
+generate Lem-code execute `make only_lem`.
+
+## Aspects
+By default, all aspects are turned on. The variable `CPPO_ARGS` can be used to set 
+the aspects. As an example, the following calls of `lem_ocaml` might be useful. The variable
+works for Isabelle and HOL as well, though.
+
+	make lem_ocaml # all aspects
+	make CPPO_ARGS="-D aspect_perms" lem_ocaml # use aspect "aspect_perms"
+	make CPPO_ARGS="-U aspect_perms" lem_ocaml # don't use aspect "aspect_perms"
+
+in combination with `lem_only` the command cppo argument `-n` might be useful as well. It turns off
+source annotations and is therefore suitable when looking at the resulting Lem code without the connection
+to its source.
+
+
+# OCaml harness
+The OCaml output is currently then renamed e.g. t_fs_init.ml is
+renamed to fs_init.ml
+
+The .ml files use the Lem-generated OCaml files. For example
+
+    fs_spec_extras.ml
+
+is a wrapper around these files.
+
+Parsing and pretty-printing support for operations:
+
+    fs_parser.ml fs_printer.ml
+
+Other support libraries:
+
+    tr_base64.ml tr_file.ml tr_list.ml tr_stream.ml
+
+Files related to interfacing the spec with the underlying unix
+filesystem:
+
+    unix_impl.ml unix_impl_readonly.ml 
+    dynarray.ml
+
+To see the dependencies between files, type: make .depend
+
+There are also two subdirectories:
+
+    posix - commented posix definitions
+
+    tr - "traces" of behaviour to illustrate why the specification is
+    how it is
+
+
+# Interactive use
+
+If you have installed from source, you may be able to interactively
+load the modules in an OCaml top-level.
+
+  * Build the .ml files from the Lem sources.
+
+  * Start an ocaml session.
+
+  * Look at the instructions in the file `.interactive`

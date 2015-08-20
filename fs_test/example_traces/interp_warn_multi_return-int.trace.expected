@@ -1,0 +1,22 @@
+# processing file 'example_traces/interp_warn_multi_return-int.trace' ...
+        @type trace
+     2: open "f1.txt" [O_CREAT;O_RDWR] 0o600
+        Tau
+        RV_num(3)
+     3: write! (FD 3) "0123456789" 10
+        Tau
+        RV_num(10)
+     4: pread (FD 3) 100 0
+# 
+# Warning:      4: pread (FD 3) 100 0
+#    more than one possible result value
+#    randomly continuing execution with RV_bytes("")
+#         possible results:         {RV_bytes("0123456789");RV_bytes("012345678");RV_bytes("01234567");RV_bytes("0123456");RV_bytes("012345");RV_bytes("01234");RV_bytes("0123");RV_bytes("012");RV_bytes("01");RV_bytes("0");RV_bytes("")}
+        Tau
+        RV_bytes("")
+     5: close (FD 3)
+        Tau
+        RV_none
+     6: unlink "f1.txt"
+        Tau
+        RV_none

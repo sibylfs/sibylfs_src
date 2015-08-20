@@ -1,0 +1,14 @@
+This directory contains annotated copies of the Open Group online
+version of the POSIX specification 2013 Edition, available here:
+http://pubs.opengroup.org/onlinepubs/9699919799/
+
+This allows us to internally comment on the POSIX spec, and provide
+references to particular sentences or paragraphs in POSIX. For
+example, we use references like `posix/rename.md ENOENT:2` which
+refers to the rename.md file in this directory, at the ENOENT:2 label.
+
+In order to make these references public, we need to map references
+like `posix/rename.md ENOENT:2` to page and line numbers in the
+official C138.pdf (2013 version) of the spec published by the Open
+Group. The mapping will be maintained in the file C138_references.txt
+

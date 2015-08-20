@@ -1,0 +1,25 @@
+Pid 1 -> mkdir /tmp_dir_1490/ 0o777
+
+# Pid 1 can be omitted 
+mkdir /tmp_dir_1490/d1 0o777
+
+# Other processes have to be always mentioned 
+create Pid 2 (User_id 0) (Group_id 0)
+Pid 2 -> mkdir /tmp_dir_1490/d1/empty_dir1 0o777
+
+mkdir /tmp_dir_1490/d1/empty_dir2 0o777
+
+Pid 1 -> mkdir /tmp_dir_1490/d1/nonempty_dir1 0o777
+
+open /tmp_dir_1490/d1/nonempty_dir1/f1.txt [O_CREAT;O_RDWR] 0o666
+
+open /tmp_dir_1490/d1/nonempty_dir1/f1.txt [O_RDWR]
+
+write (FD 4) "01234" 5
+
+Pid 1 -> stat /tmp_dir_1490/d1/nonempty_dir1/f1.txt
+
+# stat a non-existing file
+Pid 1 -> stat /tmp_dir_1490/d1/nosuchdir/non.txt/
+
+

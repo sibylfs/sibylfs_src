@@ -1,0 +1,52 @@
+OS_CALL(Pid 1,mkdir /tmp_dir_111/ 0o000)
+None1
+OS_CALL(Pid 1,mkdir /tmp_dir_111/empty_dir 0o000)
+None1
+OS_CALL(Pid 1,mkdir /tmp_dir_111/nonempty_dir 0o000)
+None1
+OS_CALL(Pid 1,open_close /tmp_dir_111/nonempty_dir/f1.txt [O_RDWR;O_CREAT] 0o000)
+None1
+OS_CALL(Pid 1,open_close /tmp_dir_111/nonempty_dir/f2.txt [O_RDWR;O_CREAT] 0o000)
+None1
+OS_CALL(Pid 1,pwrite /tmp_dir_111/nonempty_dir/f2.txt 0 "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit an" 875)
+Int1(875)
+OS_CALL(Pid 1,open /tmp_dir_111/ [O_RDONLY;O_CREAT] 0o000)
+[EISDIR]
+
+
+the trailing slash is not necessary:
+
+OS_CALL(Pid 1,mkdir /tmp_dir_751/ 0o000)
+None1
+OS_CALL(Pid 1,mkdir /tmp_dir_751/empty_dir 0o000)
+None1
+OS_CALL(Pid 1,mkdir /tmp_dir_751/nonempty_dir 0o000)
+None1
+OS_CALL(Pid 1,open_close /tmp_dir_751/nonempty_dir/f1.txt [O_RDWR;O_CREAT] 0o000)
+None1
+OS_CALL(Pid 1,open_close /tmp_dir_751/nonempty_dir/f2.txt [O_RDWR;O_CREAT] 0o000)
+None1
+OS_CALL(Pid 1,pwrite /tmp_dir_751/nonempty_dir/f2.txt 0 "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit an" 875)
+Int1(875)
+OS_CALL(Pid 1,open /tmp_dir_751/empty_dir [O_RDONLY;O_CREAT] 0o000)
+[EISDIR]
+
+
+and the same happens with a non-dir file with a trailing slash (although here presumably it must be an ENOTDIR for the last component):
+
+OS_CALL(Pid 1,mkdir /tmp_dir_8320/ 0o000)
+None1
+OS_CALL(Pid 1,mkdir /tmp_dir_8320/empty_dir 0o000)
+None1
+OS_CALL(Pid 1,mkdir /tmp_dir_8320/nonempty_dir 0o000)
+None1
+OS_CALL(Pid 1,open_close /tmp_dir_8320/nonempty_dir/f1.txt [O_RDWR;O_CREAT] 0o000)
+None1
+OS_CALL(Pid 1,open_close /tmp_dir_8320/nonempty_dir/f2.txt [O_RDWR;O_CREAT] 0o000)
+None1
+OS_CALL(Pid 1,pwrite /tmp_dir_8320/nonempty_dir/f2.txt 0 "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit an" 875)
+Int1(875)
+OS_CALL(Pid 1,open /tmp_dir_8320/nonempty_dir/f1.txt/ [O_RDONLY;O_APPEND;O_CLOEXEC;O_CREAT;O_DIRECTORY;O_EXCL;O_NOFOLLOW;O_TRUNC] 0o000)
+[EISDIR]
+OS_CALL(Pid 1,close (FD 3))
+[EBADF]

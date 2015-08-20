@@ -1,0 +1,8 @@
+# processing file 'example_traces/simple_dump-int.trace.interp.expected-check.trace' ...
+        # processing file 'example_traces/simple_dump-int.trace' ...
+        @type trace
+     3: dump-result "/"
+           "/"|D|0
+        end dump-result
+
+# trace accepted

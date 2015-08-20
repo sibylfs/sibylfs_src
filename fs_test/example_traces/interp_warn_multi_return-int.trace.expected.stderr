@@ -1,0 +1,5 @@
+
+Warning:      4: pread (FD 3) 100 0
+   more than one possible result value
+   randomly continuing execution with RV_bytes("")
+        possible results:         {RV_bytes("0123456789");RV_bytes("012345678");RV_bytes("01234567");RV_bytes("0123456");RV_bytes("012345");RV_bytes("01234");RV_bytes("0123");RV_bytes("012");RV_bytes("01");RV_bytes("0");RV_bytes("")}

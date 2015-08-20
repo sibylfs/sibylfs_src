@@ -1,0 +1,24 @@
+mkdir /tmp_dir_37/ 0
+mkdir /tmp_dir_37/d1 0
+mkdir /tmp_dir_37/d1/empty_dir1 0
+mkdir /tmp_dir_37/d1/empty_dir2 0
+mkdir /tmp_dir_37/d1/nonempty_dir1 0
+open /tmp_dir_37/d1/nonempty_dir1/f1.txt [O_CREAT]
+open /tmp_dir_37/d1/nonempty_dir1/f2.txt [O_CREAT]
+mkdir /tmp_dir_37/d1/nonempty_dir1/d2 0
+open /tmp_dir_37/d1/nonempty_dir1/d2/f3.txt [O_CREAT]
+open /tmp_dir_37/d1/nonempty_dir1/d2/f4.txt [O_CREAT]
+mkdir /tmp_dir_37/d1/nonempty_dir1/d2/d3 0
+mkdir /tmp_dir_37/d1/nonempty_dir1/d2/d4 0
+mkdir /tmp_dir_37/d1/nonempty_dir2 0
+open /tmp_dir_37/d1/nonempty_dir2/f1.txt [O_CREAT]
+open /tmp_dir_37/d1/nonempty_dir2/f2.txt [O_CREAT]
+mkdir /tmp_dir_37/d1/nonempty_dir2/d2 0
+open /tmp_dir_37/d1/nonempty_dir2/d2/f3.txt [O_CREAT]
+open /tmp_dir_37/d1/nonempty_dir2/d2/f4.txt [O_CREAT]
+mkdir /tmp_dir_37/d1/nonempty_dir2/d2/d3 0
+mkdir /tmp_dir_37/d1/nonempty_dir2/d2/d4 0
+stat "The following may give EINVAL, but is expected to give ENOTDIR"
+rename /tmp_dir_37/ /tmp_dir_37/d1/nonempty_dir1/f1.txt/
+stat "The following must not give EINVAL, and shall give ENOTDIR"
+rename /tmp_dir_37/d1/nonempty_dir2 /tmp_dir_37/d1/nonempty_dir1/f1.txt/

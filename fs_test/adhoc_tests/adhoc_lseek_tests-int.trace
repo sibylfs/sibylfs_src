@@ -1,0 +1,136 @@
+# Tests for lseek
+
+
+##############################################
+# reads combined with lseek
+##############################################
+
+# initialise a file with some text
+open f1.txt [O_WRONLY;O_TRUNC;O_CREAT] 0o666
+write (FD 3) "0123456789" 10
+close (FD 3)
+
+open f1.txt []
+
+# read 2 bytes and then 2 again
+read (FD 3) 2
+read (FD 3) 2
+
+# jump back to beginning
+lseek (FD 3) 0 SEEK_SET
+read (FD 3) 2
+
+# jump to absolute position 4
+lseek (FD 3) 4 SEEK_SET
+read (FD 3) 2
+
+# jump after end
+lseek (FD 3) 5 SEEK_END
+read (FD 3) 2
+
+# jump after end
+lseek (FD 3) 5 SEEK_END
+read (FD 3) 2
+
+# jump 2 before end
+lseek (FD 3) -2 SEEK_END
+read (FD 3) 2
+
+# 2 back and try again
+lseek (FD 3) -2 SEEK_CUR
+read (FD 3) 2
+
+# jump just to zero
+lseek (FD 3) -10 SEEK_CUR
+read (FD 3) 2
+
+# jump too far back (negative resulting offset)
+lseek (FD 3) -10 SEEK_CUR
+read (FD 3) 2
+
+# use wrong whence
+lseek (FD 3) 0 5
+read (FD 3) 2
+
+# check position
+lseek (FD 3) 0 SEEK_CUR
+lseek (FD 3) 0 SEEK_CUR
+
+close (FD 3)
+
+# use closed file-descriptor
+lseek (FD 3) 0 SEEK_CUR
+
+# use non-existing file-descriptor
+lseek (FD 4) 0 SEEK_CUR
+
+
+##############################################
+# write and lseek
+##############################################
+
+# jump after end of file should do nothing by itself
+open f1.txt [O_WRONLY;O_TRUNC] 0o666
+lseek (FD 3) 5 SEEK_SET
+close (FD 3)
+
+open f1.txt [O_RDONLY] 
+read (FD 3) 100
+close (FD 3)
+
+
+# jump after end of file, then write adds 0s
+open f1.txt [O_WRONLY;O_TRUNC] 0o666
+lseek (FD 3) 5 SEEK_SET
+write (FD 3) "0123456789" 10
+close (FD 3)
+
+open f1.txt [O_RDONLY] 
+read (FD 3) 100
+close (FD 3)
+
+
+# write then jump back and write, jump back, read
+open f1.txt [O_RDWR;O_TRUNC] 0o666
+write (FD 3) "0123456789" 10
+lseek (FD 3) -2 SEEK_CUR
+write (FD 3) "XX" 2
+lseek (FD 3) -6 SEEK_CUR
+read (FD 3) 2
+write (FD 3) "YY" 2
+close (FD 3)
+
+open f1.txt [O_RDONLY] 
+read (FD 3) 100
+close (FD 3)
+
+
+##############################################
+# lseek on dirs is not properly supported and 
+# therefore not tested carefully
+##############################################
+
+mkdir d1 0o777
+open_close d1/f1.txt [O_WRONLY;O_CREAT] 0o666
+open_close d1/f2.txt [O_WRONLY;O_CREAT] 0o666
+open_close d1/f3.txt [O_WRONLY;O_CREAT] 0o666
+
+
+open d1 [O_RDONLY]
+lseek (FD 3) 0 SEEK_CUR
+read (FD 3) 10
+
+lseek (FD 3) 4 SEEK_CUR
+read (FD 3) 10
+
+# the following fail with a oveflow
+lseek (FD 3) 0 SEEK_END 
+lseek (FD 3) -2000 SEEK_END 
+
+lseek (FD 3) 0 SEEK_SET
+read (FD 3) 10
+
+lseek (FD 3) 10 SEEK_SET
+read (FD 3) 10
+
+close (FD 3)

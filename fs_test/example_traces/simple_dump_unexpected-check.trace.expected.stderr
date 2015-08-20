@@ -1,0 +1,12 @@
+
+        "/"|D|0
+
+
+Error:      3: dump-result "/"
+           "/"|D|0
+           "/oooOOOOOoooo"|D|1
+        end dump-result
+   
+   comparison of dump-results failed:
+      unexpected entry: /oooOOOOOoooo
+

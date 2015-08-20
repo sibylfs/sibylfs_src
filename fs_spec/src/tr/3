@@ -1,0 +1,38 @@
+rename /tmp_dir_306/d1/nonempty_dir1/f1.txt /tmp_dir_306/d1/nonexist_dir1/
+[ENOTDIR]
+
+POSIX says
+
+    [ENOTDIR] [CX] A component of either path prefix names an existing
+    file that is neither a directory nor a symbolic link to a directory;
+    
+NA
+    
+    or the old argument names a directory and the new argument names a
+    non-directory file;
+
+NA
+
+    or the old argument contains at least one non-
+    <slash> character and ends with one or more trailing <slash>
+    characters and the last pathname component names an existing file that
+    is neither a directory nor a symbolic link to a directory;
+
+NA
+
+    or the old
+    argument names an existing non-directory file and the new argument
+    names a nonexistent file, contains at least one non- <slash>
+    character, and ends with one or more trailing <slash> characters; 
+
+Yes, this is applicable
+
+FIXME note the requirement that "the new argument ... contains at least one non-<slash> character. This implies that
+
+rename f1.txt nonexist_dir1/ should not fail with ENOTDIR
+
+    or
+    the new argument names an existing non-directory file, contains at
+    least one non- <slash> character, and ends with one or more trailing
+    <slash> characters.
+

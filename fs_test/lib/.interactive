@@ -1,0 +1,70 @@
+#use "topfind";;
+#require "unix";;
+#require "bigarray";;
+#require "str";;
+#require "sha";;
+#require "num";;
+
+#require "sexplib";;
+#require "sexplib.syntax";;
+#require "sexplib.top";;
+#camlp4o;;
+
+#require "bytes";;
+#require "cmdliner";;
+#require "fd-send-recv";;
+
+(*
+#require "cow";;  (* stops "let lexer = " bindings *)
+#require "cow.syntax";;
+*)
+
+#directory "../../src_ext/lem/ocaml-lib/_build";;
+#load "extract.cma";;
+
+#directory "../../fs_spec/build";;
+#load "fs_spec_lib.cma";;
+
+(* 
+
+Maybe try: 
+
+#load "fs_check_lib.cma";;
+
+at the moment this fails with the error:
+
+Camlp4: Uncaught exception: Symtable.Error (Tag1 ("unix_lseek_int_command"))
+
+because the syscall_stubs.c aren't available to the top-loop
+
+NB order of following from: ocamlfind ocamldep -package sexplib,sexplib.syntax,cow,cow.syntax -syntax camlp4o -sort *.ml , then remove those that depend on syscall
+*)
+
+#mod_use "diff.ml";;
+#mod_use "fs_path.ml";;
+#mod_use "posix_agent.ml";;
+#mod_use "stat.ml";;
+#mod_use "dump.ml";;
+#mod_use "checklib_shared_types.ml";;
+#mod_use "fs_ast.ml";;
+#mod_use "fs_lr_parser.ml";;  (* not with cow *)
+#mod_use "fs_lexer.ml";;
+#mod_use "trace.ml";;
+#mod_use "checkLib.ml";;
+
+(* 
+
+#load "diff.cmo";;
+#load "fs_path.cmo";;
+#load "posix_agent.cmo";;
+#load "stat.cmo";;
+#load "dump.cmo";;
+#load "checklib_shared_types.cmo";;
+#load "fs_ast.cmo";;
+#load "fs_lr_parser.cmo";;
+#load "fs_lexer.cmo";;
+#load "trace.cmo";;
+#load "checkLib.cmo";;
+
+*)
+

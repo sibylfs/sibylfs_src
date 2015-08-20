@@ -1,0 +1,75 @@
+<h1 id="description">Description</h1>
+<blockquote>
+<p>The unlink() function shall remove a link to a file. If path names a symbolic link, unlink() shall remove the symbolic link named by path and shall not affect any file or directory named by the contents of the symbolic link. Otherwise, unlink() shall remove the link named by the pathname pointed to by path and shall decrement the link count of the file referenced by the link.</p>
+<p>When the file's link count becomes 0 and no process has the file open, the space occupied by the file shall be freed and the file shall no longer be accessible. If one or more processes have the file open when the last link is removed, the link shall be removed before unlink() returns, but the removal of the file contents shall be postponed until all references to the file are closed.</p>
+<p>The path argument shall not name a directory unless the process has appropriate privileges and the implementation supports using unlink() on directories.</p>
+</blockquote>
+<h1 id="timestamps">TIMESTAMPS</h1>
+<blockquote>
+<p>Upon successful completion, unlink() shall mark for update the last data modification and last file status change timestamps of the parent directory.</p>
+</blockquote>
+<p>UNLINK_TS:1</p>
+<blockquote>
+<p>Also, if the file's link count is not 0, the last file status change timestamp of the file shall be marked for update.</p>
+</blockquote>
+<p>UNLINK_TS:2</p>
+<h1 id="errors">ERRORS</h1>
+<blockquote>
+<p>These functions shall fail and shall not unlink the file if:</p>
+</blockquote>
+<blockquote>
+<pre><code>[EACCES]
+    Search permission is denied for a component of the path prefix, or </code></pre>
+</blockquote>
+<p>EACCES:1</p>
+<blockquote>
+<pre><code>    write permission is denied on the directory containing the directory entry to be removed.</code></pre>
+</blockquote>
+<p>EACCES:2</p>
+<blockquote>
+<pre><code>[EBUSY]
+    The file named by the path argument cannot be unlinked
+    because it is being used by the system or another process
+    and the implementation considers this an error.</code></pre>
+</blockquote>
+<blockquote>
+<pre><code>[ELOOP]
+    A loop exists in symbolic links encountered during resolution of the path argument.</code></pre>
+</blockquote>
+<blockquote>
+<pre><code>[ENAMETOOLONG]
+    The length of a component of a pathname is longer than {NAME_MAX}.</code></pre>
+</blockquote>
+<blockquote>
+<pre><code>[ENOENT]
+    A component of path does not name an existing file or path
+    is an empty string.</code></pre>
+</blockquote>
+<p>ENOENT:1</p>
+<blockquote>
+<pre><code>[ENOTDIR]
+    A component of the path prefix names an existing file that
+    is neither a directory nor a symbolic link to a directory,
+    or the path argument contains at least one non- &lt;slash&gt;
+    character and ends with one or more trailing &lt;slash&gt;
+    characters and the last pathname component names an existing
+    file that is neither a directory nor a symbolic link to a
+    directory.
+
+[EPERM] 
+    The file named by path is a directory, and either the
+    calling process does not have appropriate privileges, or the
+    implementation prohibits using unlink() on directories.</code></pre>
+</blockquote>
+<p>EPERM:1</p>
+<blockquote>
+<pre><code>[EPERM] or [EACCES]
+    The S_ISVTX flag is set on the directory containing the file
+    referred to by the path argument and the process does not
+    satisfy the criteria specified in XBD Directory Protection.</code></pre>
+</blockquote>
+<p>EPERM:2 EACCES:3</p>
+<blockquote>
+<pre><code>[EROFS]
+    The directory entry to be unlinked is part of a read-only file system.</code></pre>
+</blockquote>

@@ -1,0 +1,417 @@
+(******************************************************************************)
+(* This file contains high level properties of the specifition in             *)
+(* It is used to tranlate these properties to various backend such that       *)
+(* they can be proved with these backends                                     *)
+(******************************************************************************)
+
+
+open import Bool Maybe Maybe_extra Basic_classes Tuple Num List List_extra Word Assert_extra
+
+open import T_fs_spec T_fs_prelude 
+
+open Resolve Finset The_monad Fs_operations Fs_types Os_transition_system
+
+
+
+(* -------------------------------------------------------------------------- *)
+(* auxiliary definitions for testing the os transition system                 *)
+(* -------------------------------------------------------------------------- *)
+val os_set_trans : forall 'dir_ref 'file_ref 'impl.
+     finset (os_state_or_special 'dir_ref 'file_ref 'impl) ->
+     os_label ->
+     finset (os_state_or_special 'dir_ref 'file_ref 'impl)
+let os_set_trans s0 lbl = (
+  let ss = s0 in
+  let f1 s = (match s with
+    | OS_normal s -> (os_trans s lbl)
+    | OS_special(ss,s) -> (failwith "check: os_set_trans: attempt to transition from special state")
+  end) in
+  let ss' = finset_bigunion_image f1 ss in
+  ss')
+
+
+(* -------------------------------------------------------------------------- *)
+(* simple things for datatypes                                                *)
+(* -------------------------------------------------------------------------- *)
+
+lemma is_dir_file_ref_entry_neg : (forall e. is_dir_ref_entry e = not (is_file_ref_entry e)) 
+
+val is_RR_dir : forall 'dir_ref 'inode_ref. ty_resolve_relative_result 'dir_ref 'inode_ref -> bool
+let is_RR_dir x = match x with
+  | RR_dir _ -> true
+  | _ -> false
+ end
+
+val is_RR_file : forall 'dir_ref 'inode_ref. ty_resolve_relative_result 'dir_ref 'inode_ref -> bool
+let is_RR_file x = match x with
+  | RR_file _ -> true
+  | _ -> false
+ end
+
+val is_RR_none : forall 'dir_ref 'inode_ref. ty_resolve_relative_result 'dir_ref 'inode_ref -> bool
+let is_RR_none x = match x with
+  | RR_none _ -> true
+  | _ -> false
+ end
+
+val is_RR_error : forall 'dir_ref 'inode_ref. ty_resolve_relative_result 'dir_ref 'inode_ref -> bool
+let is_RR_error x = match x with
+  | RR_error _ -> true
+  | _ -> false
+ end
+
+val get_RN_error_err : forall 'dir_ref 'file_ref. res_name 'dir_ref 'file_ref -> error
+let get_RN_error_err rn = match rn with
+  | (RN_error(e, _)) -> e
+  | _ -> failwith "get_RN_error_err"
+end
+
+val get_RN_dir_dir_ref : forall 'dir_ref 'file_ref. res_name 'dir_ref 'file_ref -> 'dir_ref
+let get_RN_dir_dir_ref rn = match rn with
+  | (RN_dir(d0_ref, _)) -> d0_ref
+  | _ -> failwith "get_RN_dir_dir_ref"
+end
+
+val get_res_name_errors : forall 'dir_ref 'file_ref. res_name 'dir_ref 'file_ref -> list error 
+let get_res_name_errors rn = match rn with
+  | (RN_error(e,_)) -> [e]
+  | _ -> []
+end
+
+val is_EOS_error : error_or_special -> bool
+let is_EOS_error ros = match ros with EOS_error _ -> true | _ -> false end
+
+val is_EOS_special : error_or_special -> bool
+let is_EOS_special ros = match ros with EOS_special _ -> true | _ -> false end
+
+val is_EOS_impossible : error_or_special -> bool
+let is_EOS_impossible ros = match ros with 
+  | (EOS_special (Impossible, _)) -> true 
+  | _ -> false end
+
+val dest_EOS_error : error_or_special -> error
+let dest_EOS_error eos = match eos with
+  | EOS_error e -> e
+  | _ -> failwith "dest_EOS_error"
+end
+
+val dest_EOS_special : error_or_special -> (monad_special_state * string)
+let dest_EOS_special eos = match eos with
+  | EOS_special sm -> sm
+  | _ -> failwith "dest_EOS_special"
+end
+
+lemma error_or_special_to_state_cases : forall c s e.
+  (is_Normal_state (error_or_special_to_state s c) = false)  &&
+  (is_Error_state (error_or_special_to_state s c) = is_EOS_error c) &&
+  (is_Error_state_err e (error_or_special_to_state s c) = (c = EOS_error e)) &&
+  (is_Special_state (error_or_special_to_state s c) = is_EOS_special c) &&
+  (is_Impossible_state (error_or_special_to_state s c) = is_EOS_impossible c)
+
+lemma in_get_res_name_errors_simp : forall e rn. 
+ (elem e (get_res_name_errors rn)) <->
+ (is_RN_error rn && (e = (get_RN_error_err rn)))
+
+(* -------------------------------------------------------------------------- *)
+(* Monad stuff                                                                *)
+(* -------------------------------------------------------------------------- *)
+
+(* monad laws *)
+theorem fsm_bind_left_identity : (forall m x. fsm_return x >>= m = m x)
+theorem fsm_bind_right_identity : (forall m. (m >>= fsm_return) = m)
+theorem fsm_bind_assoc : (forall m1 m2 m3. ((m1 >>= m2) >>= m3) = (m1 >>= (fun s -> (m2 s >>= m3))))
+
+(* some useful rewrites for dest_fsmonad and run_fsmonad *)
+lemma fsm_bind_process_single_state_fsm_return : (fsm_bind_process_single_state fsm_return = finset_singleton)
+lemma dest_fsmonad_run_equiv : (run_fsmonad = dest_fsmonad)
+lemma dest_fsmonad_simp : (forall m. Fsmonad (dest_fsmonad m) = m)
+lemma run_fsmonad_simp :  (forall m. Fsmonad (fun s -> run_fsmonad m s) = m)
+
+lemma monad_state_cases :
+  (forall st. is_Normal_state st || is_Special_state st || is_Error_state st) &&
+  (forall st. not (is_Normal_state st && is_Error_state st)) &&
+  (forall st. not (is_Normal_state st && is_Special_state st)) &&
+  (forall st. not (is_Error_state st && is_Special_state st)) &&
+  (forall st. is_Impossible_state st --> is_Special_state st) &&
+  (forall st e. is_Error_state_err e st --> is_Error_state st) &&
+  (forall st e1 e2. is_Error_state_err e1 st --> is_Error_state_err e2 st --> (e1 = e2))
+
+
+(* ---------------- *)
+(* raise / special  *)
+(* ---------------- *)
+
+lemma fsm_return_alt_def : forall x. fsm_return x = fsm_normal (fun s -> (s, x))
+lemma fsm_return_alt2_def : forall x. fsm_return x = fsm_returns [x]
+lemma fsm_raise_alt_def : forall e. fsm_raise e = fsm_raises [e]
+lemma fsm_special_alt_def : forall ss m. fsm_special ss m = fsm_specials [(ss, m)]
+lemma fsm_raises_specials_alt_def : forall cs.  cs <> [] --> 
+   fsm_raises_specials cs = fsm_cond_raises_specials (map (fun c -> (c, true)) cs)
+lemma fsm_normal_alt_def :  forall f. fsm_normal f = (fsm_normals (fun (s, _) -> f s) [()])
+
+lemma fsm_raises_specials_bind  : (forall cs m'. ((fsm_raises_specials cs) >>= m') = (fsm_raises_specials cs))
+lemma fsm_raises_bind   : (forall es m. ((fsm_raises es) >>= m) = fsm_raises es)
+lemma fsm_specials_bind  : (forall sms m'. ((fsm_specials sms) >>= m') = (fsm_specials sms))
+
+(* common binds *)
+lemma fsm_do_nothing_alt_def : (fsm_do_nothing = fsm_return dummy_return_value)
+lemma fsm_do_nothing_bind : forall m. ((fsm_do_nothing >>= m) = m dummy_return_value)
+lemma fsm_get_state_bind : forall m. ((fsm_get_state >>= (fun s -> m)) = m)
+lemma dest_fsmonad_fsm_get_state_bind : (forall m s0.
+  (dest_fsmonad (fsm_get_state >>= m) s0) = dest_fsmonad (m s0) s0)
+
+lemma fsm_get_state_fsm_get_state_bind : (forall m. 
+   (fsm_get_state >>= (fun s0 -> fsm_get_state >>= (fun s1 -> m s0 s1))) =
+   (fsm_get_state >>= (fun s0 -> m s0 s0)))
+
+lemma fsm_normal_bind_fsm_normal : forall f f'.
+  ((fsm_normal f >>= (fun s -> fsm_normal (f' s))) = 
+   fsm_normal (fun s -> let s' = f s in (f' (snd s') (fst s'))))
+
+lemma fsm_put_state_alt_def : (forall s. fsm_put_state s = fsm_put_state_return s RV_none)
+
+lemma fsm_normal_binds : (
+  (forall f. (fsm_get_state >>= (fun s -> fsm_return (f s))) = fsm_normal (fun s -> (s, f s))) &&
+  (forall f1 f2. (fsm_get_state >>= (fun s -> fsm_put_state_return (f1 s) (f2 s))) = 
+                 fsm_normal (fun s -> (f1 s, f2 s))) &&
+  (forall s x f1 f2. (fsm_put_state_return s x >>= (fun s -> fsm_put_state_return (f1 s) (f2 s))) = fsm_put_state_return (f1 x) (f2 x)) &&
+  (forall s x f. (fsm_put_state_return s x >>= (fun s -> fsm_return (f s))) = fsm_put_state_return s (f x))
+)
+
+lemma fsm_returns_bind_return : forall rv f. (
+   (fsm_returns rv >>= (fun r -> fsm_return (f r))) =
+   (fsm_returns (map f rv))
+)
+
+lemma fsm_normal_bind_returns : forall f rl. (
+  (fsm_normal f >>= (fun r -> fsm_returns rl)) =
+  (fsm_normals (fun (s, x) -> (fst (f s), x)) rl)
+)
+
+lemma fsm_normals_bind_normals :  forall rv f. rv <> [] --> (
+  (fsm_returns rv >>= (fun r -> fsm_normal (f r))) =
+  (fsm_normals (fun (s0, v) -> f v s0) rv)
+)
+
+
+(* nondeterminism *)
+lemma fsm_choice_empty : 
+  (forall m. fsm_choice fsm_empty m = m) &&
+  (forall m. fsm_choice fsm_empty m = m)
+
+lemma dest_fsmonad_fsm_choice : forall m1 m2 s.
+  (dest_fsmonad (fsm_choice m1 m2) s =
+   finset_union (dest_fsmonad m1 s) (dest_fsmonad m2 s))
+
+lemma fsm_choice_comm : forall m1 m2. fsm_choice m1 m2 = fsm_choice m2 m1
+lemma fsm_choice_assoc : forall m1 m2 m3. fsm_choice m1 (fsm_choice m2 m3) = 
+   fsm_choice (fsm_choice m1 m2) m3
+lemma fsm_choice_idem : forall m1. fsm_choice m1 m1 = m1
+
+
+lemma fsm_choice_bind_1 : forall m1 m2 m3.
+  ((fsm_choice m1 m2) >>= m3) = fsm_choice (m1 >>= m3) (m2 >>= m3)
+
+lemma fsm_choice_bind_2 : forall m1 m2 m3.
+  ((m1 >>= (fun x -> (fsm_choice (m2 x) (m3 x))))) = 
+  (fsm_choice (m1 >>= m2) (m1 >>= m3))
+
+lemma fsm_choice_fsm_raises_specials_combine : forall cs1 cs2.
+   (fsm_choice (fsm_raises_specials cs1) (fsm_raises_specials cs2)) =
+    (fsm_raises_specials (cs1 ++ cs2))
+
+
+(* enforce that a monad does not change the state *)
+
+lemma fsm_preserve_state_idem : forall m. fsm_preserve_state (fsm_preserve_state m) = fsm_preserve_state m
+lemma fsm_preserve_state_fsm_get_state : fsm_preserve_state fsm_get_state = fsm_get_state
+lemma fsm_preserve_state_return : forall x. fsm_preserve_state (fsm_return x) = fsm_return x
+lemma fsm_preserve_state_fsm_do_nothing : fsm_preserve_state fsm_do_nothing = fsm_do_nothing
+lemma fsm_preserve_state_fsm_cond_raises_specials : forall cs. fsm_preserve_state (fsm_cond_raises_specials cs) = (fsm_cond_raises_specials cs)
+
+lemma fsm_preserve_state_eq_alt_1: forall m s0 s1 x. (
+  (fsm_preserve_state m = m) -->
+  (finset_mem (Normal_state (s1, x)) (run_fsmonad m s0)) -->
+  (s1 = s0))
+
+lemma fsm_preserve_state_eq_alt_2: forall m.
+(forall s0 s1 x. finset_mem (Normal_state (s1, x)) (run_fsmonad m s0) --> (s0 = s1)) -->
+(fsm_preserve_state m = m)
+
+lemma fsm_preserve_state_eq_alt_def: forall m.
+(fsm_preserve_state m = m) =
+(forall s0 s1 x. finset_mem (Normal_state (s1, x)) (run_fsmonad m s0) --> (s0 = s1))
+
+lemma fsm_preserve_state_fsm_get_state_over_bind : forall m1 m2.
+   (fsm_preserve_state m1 = m1) -->
+   ((fsm_get_state >>= (fun s0 -> m1 >>= (fun x -> m2 s0 x))) =
+    (m1 >>= (fun x -> fsm_get_state >>= (fun s0 -> m2 s0 x))))
+
+lemma fsm_preserve_state_bind : forall m1 m2. 
+    (fsm_preserve_state m1 = m1) -->
+    ((fsm_preserve_state (m1 >>= (fun x -> m2 x))) = 
+     (m1 >>= (fun x -> fsm_preserve_state (m2 x))))
+
+lemma preverve_state_fsm_choice : forall m1 m2.
+  fsm_preserve_state (fsm_choice m1 m2) = fsm_choice (fsm_preserve_state m1) (fsm_preserve_state m2)
+
+
+
+lemma fsm_parallel_comp_comm : forall m1 m2. (m1 <|||> m2) = ((m2 <|||> m1) >>= (fun (x2, x1) -> fsm_return (x1, x2)))
+
+lemma fsm_parallel_comp_assoc : forall m1 m2 m3. 
+  (fsm_preserve_state m1 = m1) -->
+  (fsm_preserve_state m2 = m2) -->
+  (fsm_preserve_state m3 = m3) -->
+  ((m1 <|||> (m2 <|||> m3)) = (((m1 <|||> m2) <|||> m3) >>= (fun ((x1, x2), x3) -> fsm_return (x1, (x2, x3)))))
+
+lemma fsm_preverve_state_parallel_comp_drop : forall m1 m2. fsm_preserve_state (m1 ||| m2) = (m1 ||| m2)
+lemma fsm_parallel_comp_drop_comm : forall m1 m2. (m1 ||| m2) = (m2 ||| m1)
+lemma fsm_parallel_comp_drop_assoc : forall m1 m2 m3. ((m1 ||| (m2 ||| m3)) = ((m1 ||| m2) ||| m3))
+
+
+
+lemma fsm_cond_raises_specials_cons_false : forall eos ceos.
+   fsm_cond_raises_specials ((eos, false) :: ceos) =
+   fsm_cond_raises_specials ceos
+
+lemma fsm_cond_raises_specials_nil :
+  fsm_cond_raises_specials [] = fsm_do_nothing
+
+(* Simplifying parallel composition *)
+
+lemma fsm_parallel_comp_drop_simp_1 : (fsm_do_nothing ||| fsm_do_nothing) = fsm_do_nothing
+lemma fsm_parallel_comp_drop_simp_2 : forall cs. (fsm_do_nothing ||| fsm_cond_raises_specials cs) = fsm_cond_raises_specials cs
+lemma fsm_parallel_comp_drop_simp_3 : forall cs. (fsm_cond_raises_specials cs ||| fsm_do_nothing) = fsm_cond_raises_specials cs
+lemma fsm_parallel_comp_drop_simp_4 : forall cs1 cs2. (fsm_cond_raises_specials cs1 ||| fsm_cond_raises_specials cs2) = fsm_cond_raises_specials (cs1 ++ cs2)
+
+lemma fsm_parallel_comp_drop_simp_5 : forall cs. cs <> [] --> ((fsm_do_nothing ||| fsm_raises_specials cs) = fsm_raises_specials cs)
+lemma fsm_parallel_comp_drop_simp_6 : forall cs. cs <> [] --> ((fsm_raises_specials cs ||| fsm_do_nothing) = fsm_raises_specials cs)
+lemma fsm_parallel_comp_drop_simp_7 : forall cs1 cs2. cs1 <> [] --> cs2 <> [] --> 
+  (fsm_raises_specials cs1 ||| fsm_raises_specials cs2) =  fsm_raises_specials (cs1 ++ cs2)
+
+lemma fsm_parallel_comp_drop_simp_8a : forall m cs es.
+  ((m ||| fsm_specials cs) = (m ||| fsm_raises_specials (map EOS_special cs))) &&
+  ((fsm_specials cs ||| m) = (fsm_raises_specials (map EOS_special cs) ||| m)) &&
+  ((fsm_raises es ||| m) = (fsm_raises_specials (map EOS_error es) ||| m)) &&
+  ((m ||| fsm_raises es) = (m ||| fsm_raises_specials (map EOS_error es))) 
+
+lemma fsm_parallel_comp_drop_simp_8b : forall m sbs bes.
+  ((m ||| fsm_cond_specials sbs) = (m ||| fsm_cond_raises_specials (map (fun (sm, y) -> (EOS_special sm, y)) sbs))) &&
+  ((fsm_cond_specials sbs ||| m) = (fsm_cond_raises_specials (map (fun (sm, y) -> (EOS_special sm, y)) sbs) ||| m)) &&
+  ((m ||| fsm_cond_raises bes) = (m ||| fsm_cond_raises_specials (map (fun (e, y) -> (EOS_error e, y)) bes))) &&
+  ((fsm_cond_raises bes ||| m) = (fsm_cond_raises_specials (map (fun (e, y) -> (EOS_error e, y)) bes) ||| m))
+
+lemma fsm_parallel_comp_drop_simp_9 : forall m e b ss m'.
+   ((m ||| fsm_cond_raise e b) = (m ||| fsm_cond_raises_specials [(EOS_error e, b)])) &&
+   ((fsm_cond_raise e b ||| m) = (fsm_cond_raises_specials [(EOS_error e, b)] ||| m)) &&
+   ((m ||| fsm_cond_special ss m' b) = (m ||| fsm_cond_raises_specials [(EOS_special (ss, m'), b)])) &&
+   ((fsm_cond_special ss m' b ||| m) = (fsm_cond_raises_specials [(EOS_special (ss, m'), b)] ||| m))
+
+lemma fsm_parallel_comp_drop_simp_10 : forall cs cbs.
+(cs <> [] --> (fsm_raises_specials cs ||| fsm_cond_raises_specials cbs) = 
+               (fsm_cond_raises_specials (map (fun c -> (c, true)) cs)  ||| fsm_cond_raises_specials cbs)) &&
+(cs <> [] --> (fsm_cond_raises_specials cbs ||| fsm_raises_specials cs) = 
+               (fsm_cond_raises_specials cbs ||| fsm_cond_raises_specials (map (fun c -> (c, true)) cs)))
+
+lemma fsm_parallel_comp_drop_simp_11 : forall m1 m2.
+  (((fsm_get_state >>= (fun s0 -> m1 s0)) ||| m2) = (fsm_get_state >>= (fun s0 -> (m1 s0 ||| m2))))
+
+lemma fsm_parallel_comp_drop_simp_12 : forall m1 m2.
+  ((m1 ||| (fsm_get_state >>= (fun s0 -> m2 s0))) = (fsm_get_state >>= (fun s0 -> (m1 ||| m2 s0))))
+
+lemma fsm_parallel_comp_drop_simp_13 : (forall c m1_t m1_f m2_t m2_f. 
+ ((if c then m1_t else m1_f) ||| (if c then m2_t else m2_f)) =
+ (if c then m1_t ||| m2_t else m1_f ||| m2_f)
+)
+
+lemma fsm_cond_raise_special_false : (
+  (forall e. fsm_cond_raise e false = fsm_do_nothing) &&
+  (forall ss m. fsm_cond_special ss m false = fsm_do_nothing)
+)
+
+
+lemma fsm_cond_raises_specials_bind : forall cbs m.
+(fsm_cond_raises_specials cbs >>= m) = 
+ (if (any snd cbs) then 
+   fsm_cond_raises_specials cbs 
+ else 
+   m dummy_return_value)
+
+lemma fsm_cond_raises_specials_if : (forall c cs1 cs2.
+   (if c then
+      fsm_cond_raises_specials cs1
+    else
+      fsm_cond_raises_specials cs2) =
+    fsm_cond_raises_specials ((List.map (fun (eos, c') -> (eos, c && c')) cs1) ++ 
+                          (List.map (fun (eos, c') -> (eos, (not c) && c')) cs2)))
+
+
+lemma fsm_cond_raises_specials_if_expands_1 :
+  (forall c cs. (if c then fsm_do_nothing else fsm_cond_raises_specials cs) =
+    fsm_cond_raises_specials (map (fun (eos, c') -> (eos, not c && c')) cs)) &&
+  (forall c cs. (if c then fsm_cond_raises_specials cs else fsm_do_nothing) =
+    fsm_cond_raises_specials (map (fun (eos, c') -> (eos, c && c')) cs))
+
+lemma fsm_cond_raises_specials_if_expands_2 : 
+  (forall c bes m. (if c then fsm_cond_raises bes else m) = 
+   (if c then fsm_cond_raises_specials (map (fun (e, b) -> (EOS_error e, b)) bes) else m)) &&
+  (forall c e b m. (if c then fsm_cond_raise e b else m) = 
+   (if c then fsm_cond_raises_specials [(EOS_error e, b)] else m)) &&
+  (forall c e m. (if c then fsm_raise e else m) = 
+   (if c then fsm_cond_raises_specials [(EOS_error e, true)] else m)) &&
+  (forall c bsms m. (if c then fsm_cond_specials bsms else m) = 
+   (if c then fsm_cond_raises_specials (map (fun (sm, b) -> (EOS_special sm, b)) bsms) else m)) &&
+  (forall c ss m' b m. (if c then fsm_cond_special ss m' b else m) = 
+   (if c then fsm_cond_raises_specials [(EOS_special(ss, m'), b)] else m)) &&
+  (forall c ss m' m. (if c then fsm_special ss m' else m) = 
+   (if c then fsm_cond_raises_specials [(EOS_special(ss, m'), true)] else m)) &&
+
+  (forall c ssm m. (ssm <> []) -->  
+   ((if c then fsm_specials ssm else m) = 
+    (if c then fsm_cond_raises_specials (map (fun sm -> (EOS_special sm, true)) ssm) else m))) &&
+  (forall c eoss m. (eoss <> []) --> (
+   (if c then fsm_raises_specials eoss else m) = 
+   (if c then fsm_cond_raises_specials (map (fun eo -> (eo, true)) eoss) else m))) &&
+  (forall c es m. (es <> []) --> 
+   ((if c then fsm_raises es else m) = 
+   (if c then fsm_cond_raises_specials (map (fun e -> (EOS_error e, true)) es) else m))) &&
+  (forall c bes m.  (if c then m else fsm_cond_raises bes) = 
+   (if c then m else fsm_cond_raises_specials (map (fun (e, b) -> (EOS_error e, b)) bes))) &&
+  (forall c e b m. (if c then m else fsm_cond_raise e b) = 
+   (if c then m else fsm_cond_raises_specials [(EOS_error e, b)])) &&
+  (forall c e m. (if c then m else fsm_raise e) = 
+   (if c then m else fsm_cond_raises_specials [(EOS_error e, true)])) &&
+  (forall c bsms m. (if c then m else fsm_cond_specials bsms) = 
+   (if c then m else fsm_cond_raises_specials (map (fun (sm, b) -> (EOS_special sm, b)) bsms))) &&
+  (forall c ss m' b m. (if c then m else fsm_cond_special ss m' b) = 
+   (if c then m else fsm_cond_raises_specials [(EOS_special(ss, m'), b)])) &&
+  (forall c ss m' m. (if c then m else fsm_special ss m') = 
+   (if c then m else fsm_cond_raises_specials [(EOS_special(ss, m'), true)])) &&
+
+  (forall c ssm m. (ssm <> []) -->  
+   ((if c then m else fsm_specials ssm) = 
+    (if c then m else fsm_cond_raises_specials (map (fun sm -> (EOS_special sm, true)) ssm)))) &&
+  (forall c eoss m. (eoss <> []) --> (
+   (if c then m else fsm_raises_specials eoss) = 
+   (if c then m else fsm_cond_raises_specials (map (fun eo -> (eo, true)) eoss)))) &&
+  (forall c es m. (es <> []) --> 
+   ((if c then m else fsm_raises es) = 
+   (if c then m else fsm_cond_raises_specials (map (fun e -> (EOS_error e, true)) es))))
+
+
+
+lemma error_or_special_to_state_11 : forall s c1 c2.
+  ((error_or_special_to_state s c1) = (error_or_special_to_state s c2)) = (c1 = c2)
+
+lemma fsm_raises_specials_neq_fsm_do_nothing : forall cs.
+  (fsm_do_nothing <> fsm_raises_specials cs) &&
+  (fsm_raises_specials cs <> fsm_do_nothing)
+
+lemma fsm_raises_specials_eq : forall cs1 cs2.
+ (fsm_raises_specials cs1 = fsm_raises_specials cs2) = 
+ (Set.fromList cs1 = Set.fromList cs2)
+
+lemma fsm_cond_raises_specials_eq : forall cbs1 cbs2.
+  (fsm_cond_raises_specials cbs1 = fsm_cond_raises_specials cbs2) = 
+  (Set.fromList (filter snd cbs1) = Set.fromList (filter snd cbs2))

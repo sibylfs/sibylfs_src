@@ -1,0 +1,2 @@
+OS_CALL(Pid 1,open /tmp_dir_0/nonempty_dir/f3.txt [O_RDWR;O_CREAT])
+Int1(4)

@@ -1,0 +1,148 @@
+<h1 id="name">NAME</h1>
+<blockquote>
+<p>link, linkat - link one file to another file relative to two directory file descriptors</p>
+</blockquote>
+<h1 id="synopsis">SYNOPSIS</h1>
+<pre><code>#include &lt;unistd.h&gt;
+
+int link(const char *path1, const char *path2);
+int linkat(int fd1, const char *path1, int fd2,
+       const char *path2, int flag);</code></pre>
+<h1 id="description">DESCRIPTION</h1>
+<p>PARA: The link() function shall create a new link (directory entry) for the existing file, path1.</p>
+<p>PARA: The path1 argument points to a pathname naming an existing file. The path2 argument points to a pathname naming the new directory entry to be created. The link() function shall atomically create a new link for the existing file and the link count of the file shall be incremented by one.</p>
+<p>PARA: If path1 names a directory, link() shall fail unless the process has appropriate privileges and the implementation supports using link() on directories.</p>
+<p>PARA: If path1 names a symbolic link, it is implementation-defined whether link() follows the symbolic link, or creates a new link to the symbolic link itself.</p>
+<p>PARA: If link() fails, no link shall be created and the link count of the file shall remain unchanged.</p>
+<p>PARA: The implementation may require that the calling process has permission to access the existing file.</p>
+<p>PARA: The linkat() function shall be equivalent to the link() function except that symbolic links shall be handled as specified by the value of flag (see below) and except in the case where either path1 or path2 or both are relative paths. In this case a relative path path1 is interpreted relative to the directory associated with the file descriptor fd1 instead of the current working directory and similarly for path2 and the file descriptor fd2. If the file descriptor was opened without O_SEARCH, the function shall check whether directory searches are permitted using the current permissions of the directory underlying the file descriptor. If the file descriptor was opened with O_SEARCH, the function shall not perform the check.</p>
+<p>PARA: Values for flag are constructed by a bitwise-inclusive OR of flags from the following list, defined in <fcntl.h>:</p>
+<p>PARA: AT_SYMLINK_FOLLOW If path1 names a symbolic link, a new link for the target of the symbolic link is created.</p>
+<p>PARA: If linkat() is passed the special value AT_FDCWD in the fd1 or fd2 parameter, the current working directory shall be used for the respective path argument. If both fd1 and fd2 have value AT_FDCWD, the behavior shall be identical to a call to link(), except that symbolic links shall be handled as specified by the value of flag.</p>
+<p>PARA: If the AT_SYMLINK_FOLLOW flag is clear in the flag argument and the path1 argument names a symbolic link, a new link is created for the symbolic link path1 and not its target.</p>
+<h1 id="return-value">RETURN VALUE</h1>
+<blockquote>
+<p>Upon successful completion, these functions shall return 0. Otherwise, these functions shall return -1 and set errno to indicate the error.</p>
+</blockquote>
+<h1 id="timestamps">TIMESTAMPS</h1>
+<blockquote>
+<p>Upon successful completion, link() shall mark for update the last file status change timestamp of the file.</p>
+</blockquote>
+<p>LINK_TS:1</p>
+<blockquote>
+<p>Also, the last data modification and last file status change timestamps of the directory that contains the new entry shall be marked for update.</p>
+</blockquote>
+<p>LINK_TS:2</p>
+<h1 id="errors">ERRORS</h1>
+<blockquote>
+<p>These functions shall fail if:</p>
+</blockquote>
+<h2 id="eacces-perms">[EACCES] perms</h2>
+<blockquote>
+<p>A component of either path prefix denies search permission,</p>
+</blockquote>
+<p>EACCES:1</p>
+<blockquote>
+<p>or the requested link requires writing in a directory that denies write permission,</p>
+</blockquote>
+<p>EACCES:2</p>
+<blockquote>
+<p>or the calling process does not have permission to access the existing file and this is required by the implementation.</p>
+</blockquote>
+<p>EACCES:3</p>
+<h2 id="eexist-reconciled">[EEXIST] reconciled</h2>
+<blockquote>
+<p>The path2 argument resolves to an existing directory entry or refers to a symbolic link.</p>
+</blockquote>
+<p>EEXIST:1</p>
+<p>Note that &quot;existing directory entry&quot; means a file, directory or other.</p>
+<h2 id="eloop-symlinks">[ELOOP] symlinks</h2>
+<blockquote>
+<p>A loop exists in symbolic links encountered during resolution of the path1 or path2 argument.</p>
+</blockquote>
+<p>Symlinks</p>
+<h2 id="emlink-limits">[EMLINK] limits</h2>
+<blockquote>
+<p>The number of links to the file named by path1 would exceed {LINK_MAX}.</p>
+</blockquote>
+<p>limits</p>
+<h2 id="enametoolong-limits">[ENAMETOOLONG] limits</h2>
+<blockquote>
+<p>The length of a component of a pathname is longer than {NAME_MAX}.</p>
+</blockquote>
+<p>limits</p>
+<h2 id="enoent-reconciled">[ENOENT] reconciled</h2>
+<blockquote>
+<p>A component of either path prefix does not exist;</p>
+</blockquote>
+<p>ENOENT:1</p>
+<blockquote>
+<p>the file named by path1 does not exist;</p>
+</blockquote>
+<p>ENOENT:2</p>
+<blockquote>
+<p>or path1 or path2 points to an empty string.</p>
+</blockquote>
+<p>ENOENT:3</p>
+<h2 id="enospc-space">[ENOSPC] space</h2>
+<blockquote>
+<p>The directory to contain the link cannot be extended.</p>
+</blockquote>
+<h2 id="enotdir-reconciled">[ENOTDIR] reconciled</h2>
+<blockquote>
+<p>A component of either path prefix names an existing file that is neither a directory nor a symbolic link to a directory,</p>
+</blockquote>
+<p>ENOTDIR:1</p>
+<blockquote>
+<p>or the path1 argument contains at least one non- <slash> character and ends with one or more trailing <slash> characters and the last pathname component names an existing file that is neither a directory nor a symbolic link to a directory,</p>
+</blockquote>
+<p>ENOTDIR:3</p>
+<blockquote>
+<p>or the path1 argument names an existing non-directory file and the path2 argument names a nonexistent file, contains at least one non- <slash> character, and ends with one or more trailing <slash> characters.</p>
+</blockquote>
+<p>ENOTDIR:4</p>
+<h2 id="eperm-reconciled">[EPERM] reconciled</h2>
+<blockquote>
+<p>The file named by path1 is a directory and either the calling process does not have appropriate privileges</p>
+</blockquote>
+<p>EPERM:1 Reading the rationale, I think these appropriate privilegdes are there to allow superusers on some systems to create hard links, while prohibiting it for all other users.</p>
+<blockquote>
+<p>or the implementation prohibits using link() on directories.</p>
+</blockquote>
+<p>EPERM:2</p>
+<h2 id="erofs-rofs">[EROFS] rofs</h2>
+<blockquote>
+<p>The requested link requires writing in a directory on a read-only file system.</p>
+</blockquote>
+<p>rofs</p>
+<h2 id="exdev-exdev">[EXDEV] exdev</h2>
+<blockquote>
+<p>The link named by path2 and the file named by path1 are on different file systems and the implementation does not support links between file systems.</p>
+</blockquote>
+<p>exdev</p>
+<h2 id="exdev-exdev-1">[EXDEV] exdev</h2>
+<blockquote>
+<p>[OB XSR] path1 refers to a named STREAM.</p>
+</blockquote>
+<blockquote>
+<p>The linkat() function shall fail if:</p>
+</blockquote>
+<h2 id="ebadf-at">[EBADF] *at</h2>
+<blockquote>
+<p>The path1 or path2 argument does not specify an absolute path and the fd1 or fd2 argument, respectively, is neither AT_FDCWD nor a valid file descriptor open for reading or searching.</p>
+</blockquote>
+<h2 id="enotdir-at">[ENOTDIR] *at</h2>
+<blockquote>
+<p>The path1 or path2 argument is not an absolute path and fd1 or fd2, respectively, is a file descriptor associated with a non-directory file.</p>
+<p>These functions may fail if:</p>
+</blockquote>
+<h2 id="eloop-symlinks-1">[ELOOP] symlinks</h2>
+<blockquote>
+<p>More than {SYMLOOP_MAX} symbolic links were encountered during resolution of the path1 or path2 argument.</p>
+</blockquote>
+<h2 id="enametoolong-limits-1">[ENAMETOOLONG] limits</h2>
+<blockquote>
+<p>The length of a pathname exceeds {PATH_MAX}, or pathname resolution of a symbolic link produced an intermediate result with a length that exceeds {PATH_MAX}.</p>
+</blockquote>
+<h2 id="local-variables">Local variables</h2>
+<p>Local Variables: mode: hi-lock mode: outline-minor outline-regexp: &quot;^ *[#]+ &quot; End:</p>

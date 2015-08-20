@@ -1,0 +1,37 @@
+ 2.12. Shell Execution Environment
+
+A shell execution environment consists of the following:
+
+    Open files inherited upon invocation of the shell, plus open files controlled by exec
+
+    Working directory as set by cd
+
+    File creation mask set by umask
+
+    Current traps set by trap
+
+    Shell parameters that are set by variable assignment (see the set special built-in) or from the System Interfaces volume of POSIX.1-2008 environment inherited by the shell when it begins (see the export special built-in)
+
+    Shell functions; see Function Definition Command
+
+    Options turned on at invocation or by set
+
+    Process IDs of the last commands in asynchronous lists known to this shell environment; see Asynchronous Lists
+
+    Shell aliases; see Alias Substitution
+
+Utilities other than the special built-ins (see Special Built-In Utilities) shall be invoked in a separate environment that consists of the following. The initial value of these objects shall be the same as that for the parent shell, except as noted below.
+
+    Open files inherited on invocation of the shell, open files controlled by the exec special built-in plus any modifications, and additions specified by any redirections to the utility
+
+    Current working directory
+
+    File creation mask
+
+    If the utility is a shell script, traps caught by the shell shall be set to the default values and traps ignored by the shell shall be set to be ignored by the utility; if the utility is not a shell script, the trap actions (default or ignore) shall be mapped into the appropriate signal handling actions for the utility
+
+    Variables with the export attribute, along with those explicitly exported for the duration of the command, shall be passed to the utility environment variables
+
+The environment of the shell process shall not be changed by the utility unless explicitly specified by the utility description (for example, cd and umask).
+
+A subshell environment shall be created as a duplicate of the shell environment, except that signal traps that are not being ignored shall be set to the default action. Changes made to the subshell environment shall not affect the shell environment. Command substitution, commands that are grouped with parentheses, and asynchronous lists shall be executed in a subshell environment. Additionally, each command of a multi-command pipeline is in a subshell environment; as an extension, however, any or all commands in a pipeline may be executed in the current environment. All other commands shall be executed in the current shell environment.

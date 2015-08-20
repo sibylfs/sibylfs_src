@@ -1,0 +1,377 @@
+> 3.2 Absolute Pathname
+> 
+> A pathname beginning with a single or more than two <slash> characters; see also Pathname.
+
+Note "more than two", so //a/f.txt is not an absolute pathname
+
+--
+
+> 3.40 Basename
+> 
+> The final, or only, filename in a pathname.
+
+--
+
+> 3.129 Directory
+> 
+> A file that contains directory entries. No two directory entries in the same directory have the same name.
+
+Directory entries map a filename to a file. This is saying that you can't have two directory entries which map the same filename.
+
+--
+
+> 3.130 Directory Entry (or Link)
+> 
+> An object that associates a filename with a file. Several directory entries can associate names with the same file.
+
+--
+
+> 3.131 Directory Stream
+> 
+> A sequence of all the directory entries in a particular directory. An open directory stream may be implemented using a file descriptor.
+
+--
+
+> 3.136 Dot
+> 
+> In the context of naming files, the filename consisting of a single <period> character ( '.' ).
+> 
+> Note:
+> In the context of shell special built-in utilities, see dot in XCU Special Built-In Utilities.
+> Pathname Resolution is defined in detail in Pathname Resolution.
+
+--
+
+> 3.137 Dot-Dot
+> 
+> The filename consisting solely of two <period> characters ( ".." ).
+> 
+> Note:
+> Pathname Resolution is defined in detail in Pathname Resolution .
+
+--
+
+> 3.144 Empty Directory
+> 
+> A directory that contains, at most, directory entries for dot and dot-dot, and has exactly one link to it (other than its own dot entry, if one exists), in dot-dot. No other links to the directory may exist. It is unspecified whether an implementation can ever consider the root directory to be empty.
+
+Note unspecified root directory empty.
+
+--
+
+
+> 3.164 File
+> 
+> An object that can be written to, or read from, or both. A file has certain attributes, including access permissions and type. File types include regular file, character special file, block special file, FIFO special file, symbolic link, socket, and directory. Other types of files may be supported by the implementation.
+> 
+
+--
+
+> 3.166 File Descriptor
+> 
+> A per-process unique, non-negative integer used to identify an open file for the purpose of file access. The value of a newly-created file descriptor is from zero to {OPEN_MAX}-1. A file descriptor can have a value greater than or equal to {OPEN_MAX} if the value of {OPEN_MAX} has decreased (see sysconf) since the file descriptor was opened. File descriptors may also be used to implement message catalog descriptors and directory streams; see also Open File Description.
+> 
+> Note:
+> {OPEN_MAX} is defined in detail in <limits.h>.
+
+--
+
+
+
+> 3.170 Filename
+> 
+> PARA: A sequence of bytes consisting of 1 to {NAME_MAX} bytes used
+> to name a file. 
+
+
+> The bytes composing the name shall not contain the
+> <NUL> or <slash> characters. 
+
+> In the context of a pathname, each
+> filename shall be followed by a <slash> or a <NUL> character;
+
+<NUL> for end of string
+
+> elsewhere, a filename followed by a <NUL> character forms a string
+> (but not necessarily a character string). 
+
+> The filenames dot and
+> dot-dot have special meaning. 
+
+> A filename is sometimes referred to as
+> a "pathname component". See also Pathname.
+
+A filename is a "short name", or a "pathname component"
+
+> 
+> Note:
+> 
+> Pathname Resolution is defined in detail in Pathname Resolution .
+
+--
+
+> 3.171 Filename String
+> 
+> A string consisting of a filename followed by a <NUL> character.
+
+--
+
+> 3.172 File Offset
+> 
+> The byte position in the file where the next I/O operation begins. Each open file description associated with a regular file, block special file, or directory has a file offset. A character special file that does not refer to a terminal device may have a file offset. There is no file offset specified for a pipe or FIFO.
+> 
+
+
+--
+
+> 3.176 File Serial Number
+> 
+> A per-file system unique identifier for a file.
+
+--
+
+> 3.177 File System
+> 
+> A collection of files and certain of their attributes. It provides a name space for file serial numbers referring to those files.
+> 
+
+--
+
+> 3.180 First Open (of a File)
+> 
+> When a process opens a file that is not currently an open file within any process.
+
+
+--
+
+> 3.192 Hard Link
+> 
+> The relationship between two directory entries that represent the same file; see also Directory Entry (or Link). The result of an execution of the ln utility (without the -s option) or the link() function. This term is contrasted against symbolic link; see also Symbolic Link.
+> 
+
+--
+
+> 3.205 Last Close (of a File)
+> 
+> When a process closes a file, resulting in the file not being an open file within any process.
+
+--
+
+> 3.208 Link
+> 
+> See Directory Entry in Directory Entry (or Link).
+
+--
+
+> 3.209 Link Count
+> 
+> The number of directory entries that refer to a particular file.
+
+--
+
+> 3.253 Open File
+> 
+> A file that is currently associated with a file descriptor.
+
+So a closed file does not have a file descriptor
+
+--
+
+> 3.254 Open File Description
+> 
+> A record of how a process or group of processes is accessing a file. Each file descriptor refers to exactly one open file description, but an open file description can be referred to by more than one file descriptor. The file offset, file status, and file access modes are attributes of an open file description.
+> 
+
+--
+
+
+> 3.264 Parent Directory
+> 
+> When discussing a given directory, the directory that both contains a directory entry for the given directory and is represented by the pathname dot-dot in the given directory.
+
+So even with directory links, there is only one parent directory
+
+> 
+> When discussing other types of files, a directory containing a directory entry for the file under discussion.
+> 
+> This concept does not apply to dot and dot-dot.
+> 
+
+--
+
+
+--
+
+> 3.267 Pathname
+> 
+> PARA: A string that is used to identify a file. 
+
+> In the context of
+> POSIX.1-2008, a pathname may be limited to {PATH_MAX} bytes,
+> including the terminating null byte. 
+
+> It has optional beginning
+> <slash> characters, followed by zero or more filenames separated by
+> <slash> characters. 
+
+> A pathname can optionally contain one or more
+> trailing <slash> characters. 
+
+> Multiple successive <slash> characters
+> are considered to be the same as one <slash>, except for the case of
+> exactly two leading <slash> characters.
+
+Note distinction of two leading slash characters.
+
+>
+> Note:
+>
+> If a pathname consists of only bytes corresponding to characters
+> from the portable filename character set (see Portable Filename
+> Character Set), <slash> characters, and a single terminating <NUL>
+> character, the pathname will be usable as a character string in all
+> supported locales; otherwise, the pathname might only be a string
+> (rather than a character string). Additionally, since the
+> single-byte encoding of the <slash> character is required to be the
+> same across all locales and to not occur within a multi-byte
+> character, references to a <slash> character within a pathname are
+> well-defined even when the pathname is not a character
+> string. However, this property does not necessarily hold for the
+> remaining characters within the portable filename character set.
+> 
+> Pathname Resolution is defined in detail in Pathname Resolution.
+
+--
+
+> 3.268 Pathname Component
+> 
+> See Filename in Filename.
+
+--
+
+> 3.269 Path Prefix
+> 
+> PARA: The part of a pathname up to, but not including, the last component and any trailing <slash> characters, unless the pathname consists entirely of <slash> characters, in which case the path prefix is '/' for a pathname containing either a single <slash> or three or more <slash> characters, and '//' for the pathname //. 
+
+Note special handling of //
+
+> The path prefix of a pathname containing no <slash> characters is empty, but is treated as referring to the current working directory.
+
+Note cwd
+
+> 
+> Note:
+>
+> The term is used both in the sense of identifying part of a pathname that forms the prefix and of joining a non-empty path prefix to a filename to form a pathname. In the latter case, the path prefix need not have a trailing <slash> (in which case the joining is done with a <slash> character).
+> 
+
+Note joining of a path prefix and a filename - if prefix doesn't end in /, then one gets added
+
+--
+
+> 3.276 Portable Character Set
+> 
+> The collection of characters that are required to be present in all locales supported by conforming systems.
+> 
+> Note:
+> The Portable Character Set is defined in detail in Portable Character Set.
+> This term is contrasted against the smaller portable filename character set; see also Portable Filename Character Set.
+> 
+--
+
+> 3.277 Portable Filename
+> 
+> A filename consisting only of characters from the portable filename character set.
+> 
+> Note:
+> Applications should avoid using filenames that have the <hyphen> character as the first character since this may cause problems when filenames are passed as command line arguments.
+> 
+--
+
+> 3.278 Portable Filename Character Set
+> 
+> The set of characters from which portable filenames are constructed.
+> 
+> A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+> a b c d e f g h i j k l m n o p q r s t u v w x y z
+> 0 1 2 3 4 5 6 7 8 9 . _ -
+> 
+> The last three characters are the <period>, <underscore>, and <hyphen> characters, respectively. See also Pathname.
+
+Note this does not include space
+
+--
+
+> 3.306 Read-Only File System
+> 
+> A file system that has implementation-defined characteristics restricting modifications.
+> 
+> Note:
+> File Times Update is described in detail in File Times Update.
+
+--
+
+> 3.319 Regular File
+> 
+> A file that is a randomly accessible sequence of bytes, with no further structure imposed by the system.
+
+--
+
+> 3.320 Relative Pathname
+> 
+> A pathname not beginning with a <slash> character.
+> 
+> Note:
+> Pathname Resolution is defined in detail in Pathname Resolution .
+
+--
+
+> 
+> 3.326 Root Directory
+> 
+> A directory, associated with a process, that is used in pathname resolution for pathnames that begin with a <slash> character.
+> 
+
+--
+
+> 3.375 Symbolic Link
+> 
+> A type of file with the property that when the file is encountered during pathname resolution, a string stored by the file is used to modify the pathname resolution. The stored string has a length of {SYMLINK_MAX} bytes or fewer.
+> 
+> Note:
+> Pathname Resolution is defined in detail in Pathname Resolution .
+> 
+
+--
+(@Andrea: last line regards the transferring of time information during the read/write ops.)
+> 3.378 Synchronized I/O Data Integrity Completion
+> 
+>For read, when the operation has been completed or diagnosed if unsuccessful. The read is complete only when an image of the data has been successfully transferred to the requesting process. If there were any pending write requests affecting the data to be read at the time that the synchronized read operation was requested, these write requests are successfully transferred prior to reading the data.
+>
+>For write, when the operation has been completed or diagnosed if unsuccessful. The write is complete only when the data specified in the write request is successfully transferred and all file system information required to retrieve the data is successfully transferred.
+>
+>File attributes that are not necessary for data retrieval (access time, modification time, status change time) need not be successfully transferred prior to returning to the calling process.
+> 
+
+--
+@Andrea
+> 3.379 Synchronized I/O File Integrity Completion
+> 
+>Identical to a synchronized I/O data integrity completion with the addition that all file attributes relative to the I/O operation (including access time, modification time, status change time) are successfully transferred prior to returning to the calling process.
+>
+
+--
+
+> 3.441 Working Directory (or Current Working Directory)
+> 
+> A directory, associated with a process, that is used in pathname resolution for pathnames that do not begin with a <slash> character.
+> 
+
+--
+
+> 3.443 Write
+> 
+> To output characters to a file, such as standard output or standard error. Unless otherwise stated, standard output is the default output destination for all uses of the term "write''; see the distinction between display and write in Display.
+> 
+
+pathname resolution

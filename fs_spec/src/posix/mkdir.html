@@ -1,0 +1,114 @@
+<h1 id="name">NAME</h1>
+<blockquote>
+<p>mkdir, mkdirat - make a directory relative to directory file descriptor</p>
+</blockquote>
+<h1 id="synopsis">SYNOPSIS</h1>
+<pre><code>#include &lt;sys/stat.h&gt;
+
+int mkdir(const char *path, mode_t mode);
+int mkdirat(int fd, const char *path, mode_t mode);</code></pre>
+<h1 id="description">DESCRIPTION</h1>
+<blockquote>
+<p>The mkdir() function shall create a new directory with name path. The file permission bits of the new directory shall be initialized from mode. These file permission bits of the mode argument shall be modified by the process' file creation mask.</p>
+<p>When bits in mode other than the file permission bits are set, the meaning of these additional bits is implementation-defined.</p>
+<p>The directory's user ID shall be set to the process' effective user ID. The directory's group ID shall be set to the group ID of the parent directory or to the effective group ID of the process. Implementations shall provide a way to initialize the directory's group ID to the group ID of the parent directory. Implementations may, but need not, provide an implementation-defined way to initialize the directory's group ID to the effective group ID of the calling process.</p>
+<p>PARA: The newly created directory shall be an empty directory.</p>
+</blockquote>
+<blockquote>
+<p>PARA: If path names a symbolic link, mkdir() shall fail and set errno to [EEXIST].</p>
+</blockquote>
+<blockquote>
+<p>PARA: The mkdirat() function shall be equivalent to the mkdir() function except in the case where path specifies a relative path. In this case the newly created directory is created relative to the directory associated with the file descriptor fd instead of the current working directory. If the file descriptor was opened without O_SEARCH, the function shall check whether directory searches are permitted using the current permissions of the directory underlying the file descriptor. If the file descriptor was opened with O_SEARCH, the function shall not perform the check.</p>
+</blockquote>
+<blockquote>
+<p>PARA: If mkdirat() is passed the special value AT_FDCWD in the fd parameter, the current working directory shall be used and the behavior shall be identical to a call to mkdir().</p>
+</blockquote>
+<h1 id="return-value">RETURN VALUE</h1>
+<blockquote>
+<p>Upon successful completion, these functions shall return 0. Otherwise, these functions shall return -1 and set errno to indicate the error. If -1 is returned, no directory shall be created.</p>
+</blockquote>
+<h1 id="timestamps">TIMESTAMPS</h1>
+<blockquote>
+<p>Upon successful completion, mkdir() shall mark for update the last data access, last data modification, and last file status change timestamps of the directory.</p>
+</blockquote>
+<p>MKDIR_TS:1</p>
+<blockquote>
+<p>Also, the last data modification and last file status change timestamps of the directory that contains the new entry shall be marked for update.</p>
+</blockquote>
+<p>MKDIR_TS:2</p>
+<h1 id="errors">ERRORS</h1>
+<blockquote>
+<p>These functions shall fail if:</p>
+</blockquote>
+<h2 id="eacces-perms">[EACCES] perms</h2>
+<blockquote>
+<p>Search permission is denied on a component of the path prefix,</p>
+</blockquote>
+<p>EACCES:1</p>
+<blockquote>
+<p>or write permission is denied on the parent directory of the directory to be created.</p>
+</blockquote>
+<p>EACCES:2</p>
+<h2 id="eexist-reconciled">[EEXIST] reconciled</h2>
+<blockquote>
+<p>The named file exists.</p>
+</blockquote>
+<p>EEXIST:1</p>
+<h2 id="eloop-symlinks">[ELOOP] symlinks</h2>
+<blockquote>
+<p>A loop exists in symbolic links encountered during resolution of the path argument.</p>
+</blockquote>
+<h2 id="emlink-link-count">[EMLINK] link count</h2>
+<blockquote>
+<p>The link count of the parent directory would exceed {LINK_MAX}.</p>
+</blockquote>
+<h2 id="enametoolong-limits">[ENAMETOOLONG] limits</h2>
+<blockquote>
+<p>The length of a component of a pathname is longer than {NAME_MAX}.</p>
+</blockquote>
+<h2 id="enoent-reconciled-posix-spec-error">[ENOENT] reconciled, POSIX spec error</h2>
+<blockquote>
+<p>A component of the path prefix specified by path does not name an existing directory</p>
+</blockquote>
+<p>ENOENT:4</p>
+<p>compared to link and rename, this clause matches a component of the prefix that names a file (link and mkdir both raise ENOTDIR in this case). This is almost certainly an error in the POSIX spec - ENOTDIR is error raised in all other cases.</p>
+<blockquote>
+<p>or path is an empty string.</p>
+</blockquote>
+<p>ENOENT:3</p>
+<h2 id="enospc-space">[ENOSPC] space</h2>
+<blockquote>
+<p>The file system does not contain enough space to hold the contents of the new directory or to extend the parent directory of the new directory.</p>
+</blockquote>
+<h2 id="enotdir-reconciled">[ENOTDIR] reconciled</h2>
+<blockquote>
+<p>A component of the path prefix names an existing file that is neither a directory nor a symbolic link to a directory.</p>
+</blockquote>
+<h2 id="erofs-rofs">[EROFS] rofs</h2>
+<blockquote>
+<p>The parent directory resides on a read-only file system.</p>
+</blockquote>
+<blockquote>
+<p>In addition, the mkdirat() function shall fail if:</p>
+</blockquote>
+<h2 id="ebadf-at">[EBADF] *at</h2>
+<blockquote>
+<p>The path argument does not specify an absolute path and the fd argument is neither AT_FDCWD nor a valid file descriptor open for reading or searching.</p>
+</blockquote>
+<h2 id="enotdir-at">[ENOTDIR] *at</h2>
+<blockquote>
+<p>The path argument is not an absolute path and fd is a file descriptor associated with a non-directory file.</p>
+</blockquote>
+<blockquote>
+<p>These functions may fail if:</p>
+</blockquote>
+<h2 id="eloop-symlinks-1">[ELOOP] symlinks</h2>
+<blockquote>
+<p>More than {SYMLOOP_MAX} symbolic links were encountered during resolution of the path argument.</p>
+</blockquote>
+<h2 id="enametoolong-limits-1">[ENAMETOOLONG] limits</h2>
+<blockquote>
+<p>The length of a pathname exceeds {PATH_MAX}, or pathname resolution of a symbolic link produced an intermediate result with a length that exceeds {PATH_MAX}.</p>
+</blockquote>
+<h2 id="local-variables">Local variables</h2>
+<p>Local Variables: mode: hi-lock mode: outline-minor outline-regexp: &quot;^ *[#]+ &quot; End:</p>

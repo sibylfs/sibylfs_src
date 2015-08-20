@@ -1,0 +1,2 @@
+rename /tmp_dir_1106/d1/nonexist_dir1 /tmp_dir_1106/d1/nonempty_dir1/f1.txt/nonexist4
+[ENOTDIR]

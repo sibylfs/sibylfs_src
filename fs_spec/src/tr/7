@@ -1,0 +1,52 @@
+rename /tmp_dir_25/ /tmp_dir_25/d1/nonempty_dir1/f1.txt/
+[EINVAL]
+
+posix says:
+
+    [EINVAL]
+    [CX] [Option Start] The old pathname names an ancestor directory of the new pathname, or either pathname argument contains a final component that is dot or dot-dot. [Option End]
+
+
+NB this behaviour seems unreasonable because .../f1.txt/ doesn't
+exist, and so doesn't have a canonical path, so we can't really check
+subdir relationship.
+
+Presumably the Linux implementation starts working down the path
+/tmp_dir_25/d1/nonempty_dir1/f1.txt/ and stops after /tmp_dir_25/d1
+because it knows that the target, *if it resolves*, will be a subdir
+of the source (except that the path may contain .. entries, so it
+eventually doesn't resolve to a subdir). So this short-cuts proper
+evaluation of the path. This suggests that good tests would be
+
+rename /tmp_dir_25/ /tmp_dir_25/d1/nonempty_dir1/f1.txt/../../../.. (which maybe looks like a rename of tmp_dir_25 onto itself, which might succeed, but which should fail with ENOTDIR)
+
+rename /tmp_dir_25/ /tmp_dir_25/d1/.. (which maybe looks like a rename of root onto root, which should succeed)
+
+rename /tmp_dir_25/ /tmp_dir_25/d1/nonempty_dir1/f1.txt/nonexist_file
+
+
+--
+
+However, elsewhere (base_definitions/ch_4_general_concepts path
+resolution) posix says that if attempting to move a directory, and the
+last component is to be created, then the last component is not
+resolved. So in this case the error returned would be OK, since f1.txt/
+isn't actually looked at.
+
+
+--
+
+../posix/rename ENOTDIR:5 seems to capture this case pretty clearly:
+
+ENOTDIR:5    or
+    the new argument names an existing non-directory file, contains at
+    least one non- <slash> character, and ends with one or more trailing
+    <slash> characters.
+
+--
+
+but problem is to rule out EINVAL, rather than rule in ENOTDIR
+
+--
+
+summary: not completely clear if posix/rename EINVAL:1 applies; ENOTDIR:5 certainly does apply but that is not enough to rule out EINVAL

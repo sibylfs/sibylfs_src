@@ -1,0 +1,173 @@
+<h1 id="name">NAME</h1>
+<blockquote>
+<p>symlink, symlinkat - make a symbolic link relative to directory file descriptor</p>
+</blockquote>
+<h1 id="synopsis">SYNOPSIS</h1>
+<blockquote>
+<p>#include <unistd.h></p>
+</blockquote>
+<blockquote>
+<p>int symlink(const char <em>path1, const char </em>path2); int symlinkat(const char <em>path1, int fd, const char </em>path2);</p>
+</blockquote>
+<h1 id="description">DESCRIPTION</h1>
+<blockquote>
+<pre><code>The symlink() function shall create a symbolic link called path2
+that contains the string pointed to by path1 (path2 is the name of
+the symbolic link created, path1 is the string contained in the
+symbolic link).</code></pre>
+</blockquote>
+<blockquote>
+<pre><code>The string pointed to by path1 shall be treated only as a
+character string and shall not be validated as a pathname.</code></pre>
+</blockquote>
+<blockquote>
+<pre><code>If the symlink() function fails for any reason other than [EIO],
+any file named by path2 shall be unaffected.</code></pre>
+</blockquote>
+<blockquote>
+<pre><code>If path2 names a symbolic link, symlink() shall fail and set errno
+to [EEXIST].</code></pre>
+</blockquote>
+<blockquote>
+<pre><code>The symbolic link&#39;s user ID shall be set to the process&#39; effective
+user ID. The symbolic link&#39;s group ID shall be set to the group ID
+of the parent directory or to the effective group ID of the
+process. Implementations shall provide a way to initialize the
+symbolic link&#39;s group ID to the group ID of the parent
+directory. Implementations may, but need not, provide an
+implementation-defined way to initialize the symbolic link&#39;s group
+ID to the effective group ID of the calling process.</code></pre>
+</blockquote>
+<blockquote>
+<pre><code>The values of the file mode bits for the created symbolic link are
+unspecified. All interfaces specified by POSIX.1-2008 shall behave
+as if the contents of symbolic links can always be read, except
+that the value of the file mode bits returned in the st_mode field
+of the stat structure is unspecified.</code></pre>
+</blockquote>
+<blockquote>
+<pre><code>The symlinkat() function shall be equivalent to the symlink()
+function except in the case where path2 specifies a relative
+path. In this case the symbolic link is created relative to the
+directory associated with the file descriptor fd instead of the
+current working directory. If the file descriptor was opened
+without O_SEARCH, the function shall check whether directory
+searches are permitted using the current permissions of the
+directory underlying the file descriptor. If the file descriptor
+was opened with O_SEARCH, the function shall not perform the
+check.</code></pre>
+</blockquote>
+<blockquote>
+<pre><code>If symlinkat() is passed the special value AT_FDCWD in the fd
+parameter, the current working directory shall be used and the
+behavior shall be identical to a call to symlink().</code></pre>
+</blockquote>
+<h1 id="return-value">RETURN VALUE</h1>
+<blockquote>
+<pre><code>Upon successful completion, these functions shall return 0. Otherwise, these functions shall return -1 and set errno to indicate the error.</code></pre>
+</blockquote>
+<h1 id="timestamps">TIMESTAMPS</h1>
+<blockquote>
+<pre><code>Upon successful completion, symlink() shall mark for update the
+last data access, last data modification, and last file status
+change timestamps of the symbolic link.</code></pre>
+</blockquote>
+<p>SYMLINK_TS:1</p>
+<blockquote>
+<pre><code>Also, the last data modification and last file status change
+timestamps of the directory that contains the new entry shall be
+marked for update.</code></pre>
+</blockquote>
+<p>SYMLINK_TS:2</p>
+<h1 id="errors">ERRORS</h1>
+<blockquote>
+<pre><code>These functions shall fail if:</code></pre>
+</blockquote>
+<blockquote>
+<pre><code>[EACCES]
+    Write permission is denied in the directory where the symbolic
+    link is being created</code></pre>
+</blockquote>
+<p>EACCES:1</p>
+<blockquote>
+<pre><code>    or search permission is denied for a
+    component of the path prefix of path2.</code></pre>
+</blockquote>
+<p>EACCES:2</p>
+<blockquote>
+<pre><code>[EEXIST]
+    The path2 argument names an existing file.</code></pre>
+</blockquote>
+<p>EEXISTS:1</p>
+<blockquote>
+<pre><code>[EIO]
+    An I/O error occurs while reading from or writing to the file system.</code></pre>
+</blockquote>
+<blockquote>
+<pre><code>[ELOOP]
+    A loop exists in symbolic links encountered during resolution of the path2 argument.</code></pre>
+</blockquote>
+<blockquote>
+<pre><code>[ENAMETOOLONG]
+    The length of a component of the pathname specified by the
+    path2 argument is longer than {NAME_MAX} or the length of the
+    path1 argument is longer than {SYMLINK_MAX}.</code></pre>
+</blockquote>
+<blockquote>
+<pre><code>[ENOENT]
+    A component of the path prefix of path2 does not name an
+    existing file or path2 is an empty string.</code></pre>
+</blockquote>
+<blockquote>
+<pre><code>[ENOSPC]
+    The directory in which the entry for the new symbolic link is
+    being placed cannot be extended because no space is left on
+    the file system containing the directory, or the new symbolic
+    link cannot be created because no space is left on the file
+    system which shall contain the link, or the file system is out
+    of file-allocation resources.</code></pre>
+</blockquote>
+<blockquote>
+<pre><code>[ENOTDIR]
+    A component of the path prefix of path2 names an existing file
+    that is neither a directory nor a symbolic link to a
+    directory.</code></pre>
+</blockquote>
+<blockquote>
+<pre><code>[EROFS]
+    The new symbolic link would reside on a read-only file system.</code></pre>
+</blockquote>
+<blockquote>
+<pre><code>The symlinkat() function shall fail if:</code></pre>
+</blockquote>
+<blockquote>
+<pre><code>[EACCES]
+    fd was not opened with O_SEARCH and the permissions of the
+    directory underlying fd do not permit directory searches.</code></pre>
+</blockquote>
+<blockquote>
+<pre><code>[EBADF]
+    The path2 argument does not specify an absolute path and the
+    fd argument is neither AT_FDCWD nor a valid file descriptor
+    open for reading or searching.</code></pre>
+</blockquote>
+<blockquote>
+<pre><code>[ENOTDIR]
+    The path2 argument is not an absolute path and fd is a file
+    descriptor associated with a non-directory file.</code></pre>
+</blockquote>
+<blockquote>
+<pre><code>These functions may fail if:</code></pre>
+</blockquote>
+<blockquote>
+<pre><code>[ELOOP]
+    More than {SYMLOOP_MAX} symbolic links were encountered during
+    resolution of the path2 argument.</code></pre>
+</blockquote>
+<blockquote>
+<pre><code>[ENAMETOOLONG]
+    The length of the path2 argument exceeds {PATH_MAX} or
+    pathname resolution of a symbolic link in the path2 argument
+    produced an intermediate result with a length that exceeds
+    {PATH_MAX}.</code></pre>
+</blockquote>

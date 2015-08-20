@@ -1,0 +1,111 @@
+<h1 id="name">NAME</h1>
+<p>rmdir - remove a directory</p>
+<h1 id="synopsis">SYNOPSIS</h1>
+<pre><code>#include &lt;unistd.h&gt;
+
+int rmdir(const char *path);</code></pre>
+<h1 id="description">DESCRIPTION</h1>
+<blockquote>
+<p>The rmdir() function shall remove a directory whose name is given by path. The directory shall be removed only if it is an empty directory.</p>
+<p>If the directory is the root directory or the current working directory of any process, it is unspecified whether the function succeeds, or whether it shall fail and set errno to [EBUSY].</p>
+<p>If path names a symbolic link, then rmdir() shall fail and set errno to [ENOTDIR].</p>
+<p>If the path argument refers to a path whose final component is either dot or dot-dot, rmdir() shall fail.</p>
+<p>If the directory's link count becomes 0 and no process has the directory open, the space occupied by the directory shall be freed and the directory shall no longer be accessible. If one or more processes have the directory open when the last link is removed, the dot and dot-dot entries, if present, shall be removed before rmdir() returns and no new entries may be created in the directory, but the directory shall not be removed until all references to the directory are closed.</p>
+<p>If the directory is not an empty directory, rmdir() shall fail and set errno to [EEXIST] or [ENOTEMPTY].</p>
+</blockquote>
+<h1 id="return-value">RETURN VALUE</h1>
+<blockquote>
+<p>Upon successful completion, the function rmdir() shall return 0. Otherwise, -1 shall be returned, and errno set to indicate the error. If -1 is returned, the named directory shall not be changed.</p>
+</blockquote>
+<h1 id="timestamps">TIMESTAMPS</h1>
+<blockquote>
+<p>Upon successful completion, rmdir() shall mark for update the last data modification and last file status change timestamps of the parent directory.</p>
+</blockquote>
+<p>RMDIR_TS</p>
+<h1 id="errors">ERRORS</h1>
+<blockquote>
+<p>The rmdir() function shall fail if:</p>
+</blockquote>
+<h2 id="eacces">[EACCES]</h2>
+<blockquote>
+<p>Search permission is denied on a component of the path prefix, or</p>
+</blockquote>
+<p>EACCES:1</p>
+<blockquote>
+<p>write permission is denied on the parent directory of the directory to be removed.</p>
+</blockquote>
+<p>EACCES:2</p>
+<h2 id="ebusy-fixme-may-not-be-multiprocs-posix-unclear-reconciled">[EBUSY] FIXME may not be multiprocs; POSIX unclear; reconciled</h2>
+<blockquote>
+<p>The directory to be removed is currently in use by the system or some process and the implementation considers this to be an error.</p>
+</blockquote>
+<p>EBUSY:1</p>
+<p>Implementation dependent behaviour</p>
+<p>May not be multiprocs if the process itself is using the directory e.g. because path resolution went into the directory (And back out again via .., say)</p>
+<h2 id="eexist-or-enotempty-reconciled">[EEXIST] or [ENOTEMPTY] reconciled</h2>
+<blockquote>
+<p>The path argument names a directory that is not an empty directory,</p>
+</blockquote>
+<p>EEXIST:1</p>
+<blockquote>
+<p>or there are hard links to the directory other than dot or a single entry in dot-dot.</p>
+</blockquote>
+<p>Dir links</p>
+<h2 id="einval-dot-paths">[EINVAL] dot paths</h2>
+<blockquote>
+<p>The path argument contains a last component that is dot.</p>
+</blockquote>
+<h2 id="eio-eio">[EIO] eio</h2>
+<blockquote>
+<p>A physical I/O error has occurred.</p>
+</blockquote>
+<h2 id="eloop-symlinks">[ELOOP] symlinks</h2>
+<blockquote>
+<p>A loop exists in symbolic links encountered during resolution of the path argument.</p>
+</blockquote>
+<h2 id="enametoolong-limits">[ENAMETOOLONG] limits</h2>
+<blockquote>
+<p>The length of a component of a pathname is longer than {NAME_MAX}.</p>
+</blockquote>
+<h2 id="enoent-reconciled">[ENOENT] reconciled</h2>
+<blockquote>
+<p>A component of path does not name an existing file,</p>
+</blockquote>
+<p>ENOENT:2</p>
+<p>Note that this doesn't cover the case where a component names a non-directory file.</p>
+<blockquote>
+<p>or the path argument names a nonexistent directory</p>
+</blockquote>
+<p>ENOENT:1</p>
+<blockquote>
+<p>or points to an empty string.</p>
+</blockquote>
+<p>ENOENT:3</p>
+<h2 id="enotdir-reconciled">[ENOTDIR] reconciled</h2>
+<blockquote>
+<p>A component of path names an existing file that is neither a directory nor a symbolic link to a directory.</p>
+</blockquote>
+<p>ENOTDIR:1</p>
+<h2 id="eperm-or-eacces-perms">[EPERM] or [EACCES] perms</h2>
+<p>EPERM:1 EACCES:3</p>
+<blockquote>
+<h2>[XSI] The S_ISVTX flag is set on the directory containing the file</h2>
+<p>referred to by the path argument and the process does not satisfy the criteria specified in XBD Directory Protection.</p>
+</blockquote>
+<h2 id="erofs-rofs">[EROFS] rofs</h2>
+<blockquote>
+<p>The directory entry to be removed resides on a read-only file system.</p>
+</blockquote>
+<blockquote>
+<p>The rmdir() function may fail if:</p>
+</blockquote>
+<h2 id="eloop-symlinks-1">[ELOOP] symlinks</h2>
+<blockquote>
+<p>More than {SYMLOOP_MAX} symbolic links were encountered during resolution of the path argument.</p>
+</blockquote>
+<h2 id="enametoolong-limits-1">[ENAMETOOLONG] limits</h2>
+<blockquote>
+<p>The length of a pathname exceeds {PATH_MAX}, or pathname resolution of a symbolic link produced an intermediate result with a length that exceeds {PATH_MAX}.</p>
+</blockquote>
+<h2 id="local-variables">Local variables</h2>
+<p>Local Variables: mode: hi-lock mode: outline-minor outline-regexp: &quot;^ *[#]+ &quot; End:</p>

@@ -1,0 +1,19 @@
+http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/errno.h.html
+
+> The <errno.h> header shall define the following macros which shall
+> expand to integer constant expressions with type int, distinct
+> positive values (except as noted below)" --
+> http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/errno.h.html
+
+Note also that the ints must be positive.
+
+Later we have:
+
+> EAGAIN may be same as EWOULDBLOCK
+> ENOTSUP may be same as EOPNOTSUPP
+
+There is a question: what does it mean when a function specifies that
+a given error message may be returned, and another error message with
+the same representation may be returned under different (mutually
+disjoint) conditions?
+

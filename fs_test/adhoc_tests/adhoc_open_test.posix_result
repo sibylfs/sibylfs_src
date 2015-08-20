@@ -1,0 +1,33 @@
+# test for open with more than one file access mode
+#
+OS_CALL(Pid 1,mkdir /tmp_dir_0/ 0o000)
+None1
+OS_CALL(Pid 1,mkdir /tmp_dir_0/empty_dir 0o000)
+None1
+OS_CALL(Pid 1,mkdir /tmp_dir_0/nonempty_dir 0o000)
+None1
+OS_CALL(Pid 1,open_close /tmp_dir_0/nonempty_dir/f1.txt [O_RDWR;O_CREAT] 0o000)
+None1
+OS_CALL(Pid 1,open_close /tmp_dir_0/nonempty_dir/f2.txt [O_RDWR;O_CREAT] 0o000)
+None1
+OS_CALL(Pid 1,pwrite /tmp_dir_0/nonempty_dir/f2.txt 0 "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit an" 875)
+Int1(875)
+OS_CALL(Pid 1,open /tmp_dir_0/nonempty_dir/f1.txt [O_RDWR;O_WRONLY] 0o000)
+Int1(3)
+#
+# test open with create flag but no mode argument
+OS_CALL(Pid 1,open /tmp_dir_0/nonempty_dir/f3.txt [O_RDWR;O_CREAT])
+Int1(4)
+# stat /tmp_dir_0/nonempty_dir/f3.txt
+#
+# on ext4 under linux we get e.g. 
+#
+# $ ls -al /tmp/tmp2/tmp_dir_0/nonempty_dir/f3.txt 
+# ---x------ 1 tr61 tr61 0 Apr  7 16:05 /tmp/tmp2/tmp_dir_0/nonempty_dir/f3.txt
+#
+# ie the file is executable, but that is all
+OS_CALL(Pid 1,close (FD 4))
+None1
+#
+# the following causes an error in posix; persumably the permission error can't be mapped for some reason 
+#open /tmp_dir_0/nonempty_dir/f3.txt [O_RDWR;O_CREAT]

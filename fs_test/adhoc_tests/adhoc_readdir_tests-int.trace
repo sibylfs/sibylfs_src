@@ -1,0 +1,59 @@
+# adhoc_readdir_tests
+#
+# initialization
+mkdir /empty_dir 0o777
+mkdir /non_empty_dir 0o777
+
+open_close /non_empty_dir/f1.txt [O_RDWR;O_CREAT] 0o666
+open_close /non_empty_dir/f2.txt [O_RDWR;O_CREAT] 0o666
+open_close /non_empty_dir/f3.txt [O_RDWR;O_CREAT] 0o666
+open_close /non_empty_dir/f4.txt [O_RDWR;O_CREAT] 0o666
+open_close /non_empty_dir/f5.txt [O_RDWR;O_CREAT] 0o666
+
+
+# the read tests
+
+opendir /empty_dir
+readdir (DH 1)
+readdir (DH 1)
+readdir (DH 1)
+readdir (DH 1)
+closedir (DH 1)
+
+
+opendir /non_empty_dir
+readdir (DH 1)
+unlink /non_empty_dir/f3.txt
+readdir (DH 1)
+readdir (DH 1)
+readdir (DH 1)
+open_close /non_empty_dir/f6.txt [O_RDWR;O_CREAT] 0o666
+readdir (DH 1)
+readdir (DH 1)
+readdir (DH 1)
+readdir (DH 1)
+readdir (DH 1)
+readdir (DH 1)
+readdir (DH 1)
+readdir (DH 1)
+rewinddir (DH 1)
+readdir (DH 1)
+readdir (DH 1)
+readdir (DH 1)
+readdir (DH 1)
+readdir (DH 1)
+readdir (DH 1)
+readdir (DH 1)
+readdir (DH 1)
+readdir (DH 1)
+closedir (DH 1)
+
+
+opendir /no_such_dir
+readdir (DH 1)
+closedir (DH 1)
+
+
+
+
+

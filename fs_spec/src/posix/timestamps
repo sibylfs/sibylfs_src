@@ -1,0 +1,323 @@
+# 3.376 Synchronized Input and Output
+
+>A determinism and robustness improvement mechanism to enhance the data input and output mechanisms,
+>so that an application can ensure that the data being manipulated is physically present on secondary mass storage devices.
+
+# 3.377 Synchronized I/O Completion
+
+>The state of an I/O operation that has either been successfully transferred or diagnosed as unsuccessful.
+
+# 3.378 Synchronized I/O Data Integrity Completion
+
+>For read, when the operation has been completed or diagnosed if unsuccessful.
+>The read is complete only when an image of the data has been successfully transferred to the requesting process.
+>If there were any pending write requests affecting the data to be read at the time that the synchronized read operation was requested,
+>these write requests are successfully transferred prior to reading the data.
+>
+>For write, when the operation has been completed or diagnosed if unsuccessful.
+>The write is complete only when the data specified in the write request is successfully transferred and all file system information required to retrieve the data is successfully transferred.
+
+>File attributes that are not necessary for data retrieval (access time, modification time, status change time)
+>need not be successfully transferred prior to returning to the calling process.
+
+#3.379 Synchronized I/O File Integrity Completion
+
+>Identical to a synchronized I/O data integrity completion with the addition that
+>all file attributes relative to the I/O operation (including access time, modification time, status change time)
+>are successfully transferred prior to returning to the calling process.
+
+In 3.371 "successfully transferred" is defined as:
+
+>For a write operation to a regular file, when the system ensures that all data written
+>is readable on any subsequent open of the file (even one that follows a system or power failure)
+>in the absence of a failure of the physical storage medium.
+>
+>For a read operation, when an image of the data on the physical storage medium is available to the requesting process.
+
+Synchronised behaviour is used for specialised implementations of file systems.
+
+--
+
+#4.8 File Times Update
+
+>Each file has three distinct associated timestamps: the time of last data access,
+
+tr61: this is not correct - read-write locks are talking about
+something else; the question is: is file data the data in the file, or
+can it refer e.g. to file metadata as well?
+
+ag91: right, so data is the file data, while file metadata are defined in POSIX as file status.
+This can be inferred by the comments of stat fields corresponding to the timestamps.
+
+>the time of last data modification, and the time the file status last changed.
+
+tr61: what is file status, exactly? is it really all the fields in the
+stat structure?
+
+ag91: File status represents the set of information returned by
+the stat() operation on a file -> file status = file metadata.
+
+>These values are returned in the file characteristics structure struct stat, as described in <sys/stat.h>.
+
+Stat structure is so defined [here](http://pubs.opengroup.org/onlinepubs/9699919799/).
+
+>The <sys/stat.h> header shall define the stat structure, which shall include at least the following members:
+>
+>dev_t st_dev            Device ID of device containing file. 
+>
+>ino_t st_ino            File serial number. 
+>
+>mode_t st_mode          Mode of file (see below). 
+>
+>nlink_t st_nlink        Number of hard links to the file. 
+>
+>uid_t st_uid            User ID of file. 
+>
+>gid_t st_gid            Group ID of file. 
+>
+>[XSI][Option Start]
+>
+>dev_t st_rdev           Device ID (if file is character or block special). 
+>
+>off_t st_size           For regular files, the file size in bytes. 
+>                        For symbolic links, the length in bytes of the 
+>                        pathname contained in the symbolic link. 
+>
+>[SHM]
+>                        For a shared memory object, the length in bytes. 
+>
+>[TYM]
+>                        For a typed memory object, the length in bytes. 
+>
+>                        For other file types, the use of this field is 
+>                        unspecified. 
+>
+>struct timespec st_atim Last data access timestamp. 
+>
+>struct timespec st_mtim Last data modification timestamp. 
+>
+>struct timespec st_ctim Last file status change timestamp. 
+>
+>[XSI]
+>blksize_t st_blksize    A file system-specific preferred I/O block size 
+>                        for this object. In some file system types, this 
+>                        may vary from file to file. 
+>
+>blkcnt_t st_blocks      Number of blocks allocated for this object. 
+
+This is also the data that must be returned by a successful stat() call.
+
+
+>
+>Each function or utility in POSIX.1-2008 that reads or writes data (even if the data does not change)
+>or performs an operation to change file status (even if the file status does not change)
+>indicates which of the appropriate timestamps shall be marked for update.
+>If an implementation of such a function or utility marks for update one of these timestamps
+>in a place or time not specified by POSIX.1-2008, this shall be documented,
+>except that any changes caused by pathname resolution need not be documented.
+
+Does this mean that an implementation can mark timestamps for update
+whenever it likes, as long as it is documented?
+
+What changes can be caused by pathname resolution?
+
+>For the other functions or utilities in POSIX.1-2008
+>(those that are not explicitly required to read or write file data or change file status,
+>but that in some implementations happen to do so), the effect is unspecified.
+
+2 types of functions (reading/writing vs not-reading/not-writing
+functions). What are these two groups of functions? (go through and
+classify each operation as to whether it does or doesn't)
+
+What does "happen to do so" mean?
+
+>
+>An implementation may update timestamps that are marked for update immediately,
+>or it may update such timestamps periodically.
+
+marked at period, not update when set but when period occurs
+
+>At the point in time when an update occurs, any marked timestamps
+>shall be set to the current time and the update marks shall be
+>cleared.  All timestamps that are marked for update shall be updated
+>when the file ceases to be open by any process or before a fstat(),
+>fstatat(), fsync(), futimens(), lstat(), stat(), utime(),
+>utimensat(), or utimes()
+
+we must check when a file ceases to be open and why ?? are updated
+
+>is successfully performed on the file. 
+
+Note that we only have to check when the stat call is successful.
+
+>Other times at which updates are done are unspecified.
+>Marks for update, and updates themselves, shall not be done for files on read-only file systems;
+>see Read-Only File System.
+>
+>The resolution of timestamps of files in a file system is implementation-defined,
+>but shall be no coarser than one-second resolution.
+>The three timestamps shall always have values that are supported by the file system.
+>Whenever any of a file's timestamps are to be set to a value V according to the rules of the preceding paragraphs of this section,
+>the implementation shall immediately set the timestamp to the greatest value supported by the file system that is not greater than V.
+
+--
+
+# Operations' update-timestamps policy
+
+tr61: for the following, I think you are looking in the wrong place. I
+believe you looked at "shell and utilities", but you should be looking
+at "system interfaces"
+ag91: right, mv and touch were intruders; added timestamps requirements for symlink readlink and open operations
+
+##link
+>Upon successful completion, link() shall mark for update the last file status change timestamp of the file.
+>Also, the last data modification and last file status change timestamps of the directory that contains the new entry shall be marked for update.
+
+##unlink
+>Upon successful completion, unlink() shall mark for update the last data modification and
+>last file status change timestamps of the parent directory.
+>Also, if the file's link count is not 0, the last file status change timestamp of the file shall be marked for update.
+
+##mkdir
+>Upon successful completion, mkdir() shall mark for update the last data access,
+>last data modification, and last file status change timestamps of the directory.
+>Also, the last data modification and last file status change timestamps of
+>the directory that contains the new entry shall be marked for update.
+
+#rm
+refer to rmdir or unlink
+
+#rmdir
+>Upon successful completion, rmdir() shall mark for update the last data modification and
+>last file status change timestamps of the parent directory.
+
+#write
+>Upon successful completion, where nbyte is greater than 0, write() shall mark for update
+>the last data modification and last file status change timestamps of the file,
+>and if the file is a regular file, the S_ISUID and S_ISGID bits of the file mode may be cleared.
+
+#rename
+>Upon successful completion, rename() shall mark for update the last data modification and last file status change timestamps of the parent directory of each file.
+
+ a rename marks for update both dirs, but a stat on one doesn't force
+the other timestamp to be identical (interesting - rename is not
+atomic as far as timestamps are concerned)
+
+#open
+
+>If O_CREAT is set and the file did not previously exist, upon successful completion,
+>open() shall mark for update the last data access, last data modification,
+>and last file status change timestamps of the file and the last data modification and last file status change timestamps of the parent directory.
+>
+>If O_TRUNC is set and the file did previously exist, upon successful completion,
+>open() shall mark for update the last data modification and last file status change timestamps of the file.
+
+#readlink
+
+>Upon successful completion, readlink() shall mark for update the last data access timestamp of the symbolic link.
+
+#symlink
+
+>Upon successful completion, symlink() shall mark for update the last data access,
+>last data modification, and last file status change timestamps of the symbolic link.
+>Also, the last data modification and last file status change timestamps of the directory that contains the new entry shall be marked for update.
+
+#stat
+The stat() function shall update any time-related fields (as described in XBD File Times Update), before writing into the stat structure.
+
+#fsync
+>The fsync() function shall request that all data for the open
+>file descriptor named by fildes is to be transferred to the storage
+>device associated with the file described by fildes. The nature of the
+>transfer is implementation-defined. The fsync() function shall not
+>return until the system has completed that action or until an error is
+>detected. PARA [SIO] If _POSIX_SYNCHRONIZED_IO is defined, the fsync()
+>function shall force all currently queued I/O operations associated
+>with the file indicated by file descriptor fildes to the synchronized
+>I/O completion state. All I/O operations shall be completed as defined
+>for synchronized I/O file integrity completion.
+
+>fsync rationale - If _POSIX_SYNCHRONIZED_IO is not defined, the
+>wording relies heavily on the conformance document to tell the user
+>what can be expected from the system. It is explicitly intended that a
+>null implementation is permitted. This could be valid in the case
+>where the system cannot assure non-volatile storage under any
+>circumstances or when the system is highly fault-tolerant and the
+>functionality is not required. In the middle ground between these
+>extremes, fsync() might or might not actually cause data to be written
+>where it is safe from a power failure. The conformance document should
+>identify at least that one configuration exists (and how to obtain
+>that configuration) where this can be assured for at least some files
+>that the user can select to use for critical data. It is not intended
+>that an exhaustive list is required, but rather sufficient information
+>is provided so that if critical data needs to be saved, the user can
+>determine how the system is to be configured to allow the data to be
+>written to non-volatile storage.
+
+#fdatasync
+>The fdatasync() function shall force all currently queued
+>I/O operations associated with the file indicated by file descriptor
+>fildes to the synchronized I/O completion state. PARA The
+>functionality shall be equivalent to fsync() with the symbol
+>_POSIX_SYNCHRONIZED_IO defined, with the exception that all I/O
+>operations shall be completed as defined for synchronized I/O data
+>integrity completion.
+
+This ties the behaviour of fsync and fdatasync together. Note that
+fsync talks about data, but fdatasync (confusingly) talks about I/O
+operations.
+
+  [ ] What does _POSIX_SYNCHRONIZED_IO etc mean?
+
+ag91:
+In the [FreeBSD/Linux Kernel reference](http://fxr.watson.org/fxr/ident?v=NETBSD20;im=10;i=_POSIX_SYNCHRONIZED_IO)
+it says that when this constant is defined "Synchronized I/O is available":
+according to [Linux System Programming](http://my.safaribooksonline.com/book/operating-systems-and-server-administration/linux/0596009585/advanced-file-i-o/synchronized_comma_synchronous_comma_an) and [Yigit's document pag.8](http://www.cse.yorku.ca/~oz/papers/posix4.ps.gz)
+this constant constraints the behaviour of fsync and fdatasync so that it must be completely
+sure the data are stored on a non volatile medium.
+--
+
+[link](http://www.informit.com/articles/article.aspx?p=23618&seqNum=5) -
+Another system call, fdatasync does the same thing. However, although
+fsync guarantees that the file's modification time will be updated,
+fdatasync does not; it guarantees only that the file's data will be
+written.
+
+this implies that fdatasync is weaker, and also implies that fsync
+must update times, but we don't believe this
+
+  [ ] must fsync update the times on disk? we think not, but then
+  there is no way to force timestamps to disk
+
+ag91: according to [Yigit's document pag.8](http://www.cse.yorku.ca/~oz/papers/posix4.ps.gz)
+"fdatasync flushes modify data only (possibly leaving the control information inconsistent)"
+and
+"fsync flushes data and file control information"
+where I assume the following equivalence:= file control information = file status = file metadata
+
+  [ ] document fsync and fdatasync
+
+timestamps are marked for update
+
+some funs explicitly change the timestamps, others don't
+
+  [ ] which of our operations do change the stamps? which don't?
+
+ag91: I have documented ty_ops operations. It is not clear to me what are the other operations I should check.
+
+may update immediately or periodically (so we need a flag)
+
+  [ ] can an implementation sometimes update immediately and sometimes
+  periodically?
+
+
+timestamp is the stamp when the update occurs, not when it is marked
+
+must track when file ceases to be open by any process (at which point the updates must happen), and must also update before a successful stat
+
+## Local variables
+Local Variables:
+mode: hi-lock
+mode: outline-minor
+outline-regexp: "^ *[#]+ "
+End:

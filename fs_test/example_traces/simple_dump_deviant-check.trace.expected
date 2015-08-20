@@ -1,0 +1,27 @@
+# processing file 'example_traces/simple_dump_deviant-check.trace' ...
+        # processing file 'example_traces/simple_dump-int.trace' ...
+        @type trace
+     3: open_close "rebel_zero" [O_RDONLY;O_CREAT] 0o600
+     4: Tau
+     5: RV_none
+     6: dump-result "/"
+           "/"|D|0
+           "/rebel_zero"|F|0|0|"0"
+        end dump-result
+# 
+#         "/"|D|0
+#         "/rebel_zero"|F|1|0|"da39a3ee5e6b4b0d3255bfef95601890afd80709"
+# 
+# 
+# Error:      6: dump-result "/"
+#            "/"|D|0
+#            "/rebel_zero"|F|0|0|"0"
+#         end dump-result
+#    
+#    comparison of dump-results failed:
+#       differing entry: /rebel_zero
+# 
+# 
+
+# trace not accepted
+# processing file 'example_traces/simple_dump_deviant-check.trace' failed

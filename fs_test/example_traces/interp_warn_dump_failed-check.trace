@@ -1,0 +1,12 @@
+# processing file 'example_traces/interp_warn_dump_failed-int.trace' ...
+        @type trace
+# 
+# Error:      2: dump "/gone"
+#    execution of dump failed
+     2: dump "/gone"
+# 
+# Error:      3: dump "/not_there"
+#    execution of dump failed
+     3: dump "/not_there"
+# Warning: trace caused problems
+# processing file 'example_traces/interp_warn_dump_failed-int.trace' failed

@@ -1,0 +1,20 @@
+# processing file 'example_traces/interleave-check.trace' ...
+        @type trace
+
+     3: Pid 2 -> create (User_id 0) (Group_id 0)
+
+     5: open_close "foo" [O_RDONLY;O_CREAT] 0o600
+     6: Tau
+     7: RV_none
+
+     9: Pid 1 -> unlink "foo"
+    10: Pid 2 -> unlink "foo"
+    11: Tau
+    12: Tau
+    13: Pid 1 <- RV_none
+# 
+# Error:     13: Pid 1 <- RV_none
+#    errors and values mixed in result
+    14: Pid 2 <- ENOENT
+
+# trace accepted

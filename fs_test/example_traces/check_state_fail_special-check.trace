@@ -1,0 +1,9 @@
+@type trace
+
+open_close "file" [O_CREAT] 0o700
+Tau
+RV_none
+
+open_close "file" [O_TRUNC]
+Tau
+RV_none

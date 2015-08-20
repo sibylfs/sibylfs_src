@@ -1,0 +1,18 @@
+ 3.20 Appropriate Privileges
+
+An implementation-defined means of associating privileges with a process with regard to the function calls, function call options, and the commands that need special privileges. There may be zero or more such means. These means (or lack thereof) are described in the conformance document.
+
+3.168 File Mode
+
+An object containing the file mode bits and file type of a file.
+
+Note:
+    File mode bits and file types are defined in detail in <sys/stat.h> .
+
+3.169 File Mode Bits
+
+A file's file permission bits, set-user-ID-on-execution bit (S_ISUID), set-group-ID-on-execution bit (S_ISGID), and, on directories, the restricted deletion flag bit (S_ISVTX).
+
+Note:
+    File Mode Bits are defined in detail in <sys/stat.h>. 
+
