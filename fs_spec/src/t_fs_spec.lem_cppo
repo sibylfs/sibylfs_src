@@ -2095,7 +2095,7 @@ module Resolve = struct
     match cmd with
     | OS_CLOSE _ -> dummy (* coverage:impossible -this command does not use path, so follow_last_symlink is never called on it *)
     | OS_LINK _ -> (
-        if is_mac_os_x_arch env then 
+        if (is_mac_os_x_arch env || is_freebsd_arch env) then 
           true  (* check_exec_adhoc_symlink_tests-int.trace link "/dir_link" "/dir_4" ; mac follows /dir_link and result is EPERM *)  (* coverage:linux:posix:irrelevant *)
         else 
           false) (* coverage:mac_os_x:posix:irrelevant *)
@@ -2819,18 +2819,18 @@ module Fs_operations = struct
             (EEXIST, is_mac_os_x_arch env && isJust fopt && (e = ENOTDIR)) (* tr/27 apparent non-POSIX behaviour - symlink is followed but a different error results *) (* coverage:linux:posix:irrelevant *)
             ]) 
         | RN_file _ -> (fsm_raise EEXIST)  (* posix/link.md EEXIST:1 *)
-        | RN_dir _ -> (fsm_raise EEXIST)  (* posix/link.md EEXIST:1 *)
+        | RN_dir _ -> (fsm_raise EEXIST)   (* posix/link.md EEXIST:1 *)
         | RN_none (d0_ref,n,rp) -> (
             let cwd = rp.rp_cwd in
             let nl = rp.rp_nl in
             let path = CS_Some(Resolve.ty_name_list_to_string nl) in
             let b0 = Resolve.res_name_is_symlink env.env_ops s0 (Resolve.process_path_no_follow_no_trailing_slash env s0 cwd path) in 
-          (if (is_linux_arch env || (is_mac_os_x_arch env && not b0)) && rn_ends_with_slash dpath then 
+          (if (is_linux_arch env || (is_mac_os_x_arch env && not b0) || is_freebsd_arch env) && rn_ends_with_slash dpath then 
               fsm_raise ENOENT (* tr/24, mac hfsplus_loop/link/results/check_exec_link___link_nonempty_dir2__f2.txt___nonexist_2__-int.trace *) 
            else
               fsm_do_nothing)
           ||| ((* a symlink to a non-existing entry on mac is treated as though the path resolved to the symlink itself hfsplus_loop/link/results/check_exec_link___link_empty_dir1_____nonempty_dir1__d2__sl_dotdot_no_such_target-int.trace *)
-                   if is_mac_os_x_arch env && b0 && not (rn_ends_with_slash dpath) then fsm_raise EEXIST else fsm_do_nothing))
+                   if (is_mac_os_x_arch env || is_freebsd_arch env) && b0 && not (rn_ends_with_slash dpath) then fsm_raise EEXIST else fsm_do_nothing))
       end  
     ) ||| (
       match spath with
