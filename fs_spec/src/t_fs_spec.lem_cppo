@@ -3505,13 +3505,18 @@ module Fs_operations = struct
            "nonempty_dir1/d2/sl_dotdot_no_such_target/" gives RV_none, mac_os_x
            non-posix behaviour ignores trailing slash when going via a symlink *)
         |||
-      (fsm_cond_raise ENOENT (is_RN_file rsrc && is_RN_none rdst && rn_ends_with_slash rdst && is_mac_os_x_arch env 
-        && not (
-        let rp = (match rdst with | RN_none(_,_,rp) -> rp end) in     (* coverage:linux:posix:irrelevant *)
-        let cwd = rp.rp_cwd in                                        (* coverage:linux:posix:irrelevant *)
-        let path = CS_Some(Resolve.ty_name_list_to_string rp.rp_nl) in    (* coverage:linux:posix:irrelevant *)
-        Resolve.res_name_is_symlink env.env_ops s0 (Resolve.process_path_no_follow_no_trailing_slash env s0 cwd path))))  (* hfsplus_loop/rename/results/check_exec_rename___rename_nonempty_dir1__d2__f3.txt___nonempty_dir1__nonexist_4__-int.trace hfsplus_loop/rename/results/check_exec_rename___rename_nonempty_dir1__d2__f3.txt___nonempty_dir1__d2__sl_dotdot_no_such_target__-int.trace
-: the path "nonempty_dir1/nonexist_4/" is treated differently to "nonempty_dir1/d2/sl_dotdot_no_such_target/" *)    (* coverage:linux:posix:irrelevant *)
+      (
+        let b0 = (
+          let rp = (match rdst with | RN_none(_,_,rp) -> rp end) in     (* coverage:linux:posix:irrelevant *)
+          let cwd = rp.rp_cwd in                                        (* coverage:linux:posix:irrelevant *)
+          let path = CS_Some(Resolve.ty_name_list_to_string rp.rp_nl) in    (* coverage:linux:posix:irrelevant *)
+          Resolve.res_name_is_symlink env.env_ops s0 (Resolve.process_path_no_follow_no_trailing_slash env s0 cwd path))
+        in 
+        fsm_cond_raise ENOENT (is_RN_file rsrc && is_RN_none rdst && rn_ends_with_slash rdst && (
+            (is_mac_os_x_arch env && not b0) || is_freebsd_arch env))
+      )  (* hfsplus_loop/rename/results/check_exec_rename___rename_nonempty_dir1__d2__f3.txt___nonempty_dir1__nonexist_4__-int.trace hfsplus_loop/rename/results/check_exec_rename___rename_nonempty_dir1__d2__f3.txt___nonempty_dir1__d2__sl_dotdot_no_such_target__-int.trace
+: the path "nonempty_dir1/nonexist_4/" is treated differently to "nonempty_dir1/d2/sl_dotdot_no_such_target/" *)
+(* freebsd non-posix behaviour 2015-08-11_freebsd_ufs2_tmpfs/tmpfs/rename/results/check_exec_rename___rename_nonempty_dir1__d2__f3.txt___nonempty_dir1__d2__sl_dotdot_no_such_target__-int.trace *)
         |||
       (fsm_cond_raise ENOTDIR (is_RN_file rsrc && is_RN_dir rdst && is_linux_arch env && rn_ends_with_slash rdst)) (* coverage:mac_os_x:posix:irrelevant *)
          (* tr/5 even if empty; arguably a Linux bug? Confirmed non-posix behaviour *)
