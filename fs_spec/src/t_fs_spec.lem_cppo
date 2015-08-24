@@ -915,7 +915,7 @@ module Fs_types = struct
   (* the spec is parameterized by various traits, combined to form an "architecture" *)
   type architecture = <|                                                                                                                               (* coverage:sexp *)
     arch_abs_path_slash_slash: bool; (* whether an absolute path can start with a double slash - POSIX has maybe implementation defined *)             (* coverage:sexp *)
-    arch_linux_non_posix: bool; (* Linux specific behaviour that is not POSIX compliant *)                                                             (* coverage:sexp *)
+    arch_linux_non_posix: bool; (* Linux specific behaviour that is not POSIX compliant FIXME not used? *)                                                             (* coverage:sexp *)
     arch_link_directories: bool; (* whether the implementation allows links on dirs; not supported in this spec *)                                     (* coverage:sexp *)
     arch_open_flags_of_int: int_open_flags -> finset open_flag  (*o sexp_opaque o*);                                                                   (* coverage:sexp *)
     arch_int_of_open_flags: finset open_flag -> int_open_flags  (*o sexp_opaque o*);                                                                   (* coverage:sexp *)
@@ -1570,7 +1570,7 @@ module Fs_arch = struct
     arch_int_of_open_flags = freebsd_arch_int_of_open_flags;
     arch_seek_command_of_int = linux_arch_seek_command_of_int;
     arch_int_of_seek_command = linux_arch_int_of_seek_command;
-    arch_allows_dir_read = true;
+    arch_allows_dir_read = false;
     arch_group_from_parent_dir = false; (* for testing perhaps try true as well *)
     arch_allows_removing_from_protected_dir_if_writeable = false;
   |>
@@ -3026,13 +3026,13 @@ module Fs_operations = struct
      finset open_flag -> maybe file_perm -> fsmonad 'impl ret_value
   let fsop_open_checks_flags env rpath oflags mode_opt = (
     (
-      (if (is_linux_arch env || is_mac_os_x_arch env)  then fsm_do_nothing else  (* tr/15 *) (* hfsplus_loop/open/results/check_exec_open___open_nonexist_dir__nonexist2___O_EXCL__O_WRONLY___none___close_3-int.trace *) 
+      (if (is_linux_arch env || is_mac_os_x_arch env || is_freebsd_arch env)  then fsm_do_nothing else  (* tr/15 *) (* hfsplus_loop/open/results/check_exec_open___open_nonexist_dir__nonexist2___O_EXCL__O_WRONLY___none___close_3-int.trace *) 
       (fsm_cond_special Undefined "open: O_EXCL, no O_CREAT, posix/open.md D:1" (* coverage:linux:irrelevant *)
         ((finset_mem O_EXCL oflags) && (* coverage:linux:irrelevant *)
            not ( (* coverage:linux:irrelevant *) finset_mem O_CREAT oflags)))) (* coverage:linux:irrelevant *)
     |||
       (if is_linux_arch env then fsm_do_nothing else  (* tr/16 note this leads to the file being truncated even though the file was opened O_RDONLY FIXME very strange behaviour *)  (* coverage:mac_os_x:posix:irrelevant *)
-       if is_mac_os_x_arch env then 
+       if (is_mac_os_x_arch env || is_freebsd_arch env) then 
          fsm_do_nothing    (* coverage:linux:posix:irrelevant *)
        else (* exec_open___open_broken_sl_____O_APPEND__O_CLOEXEC__O_CREAT__O_DIRECTORY__O_EXCL__O_EXEC__O_NOFOLLOW__O_TRUNC___0666___close_3-int.trace *)
       (fsm_cond_special  (* coverage:linux:irrelevant *)
@@ -3076,12 +3076,12 @@ module Fs_operations = struct
              (* posix/open.md EISDIR:1 *)
         |||
           (let cond = ((finset_mem O_TRUNC oflags) && (is_RN_dir rpath)) in
-          if cond && (is_linux_arch env || is_mac_os_x_arch env) then fsm_raise EISDIR else (* tr/19 hfsplus_loop/open/results/check_exec_open___open_nonempty_dir___O_TRUNC__O_WRONLY___none___close_3-int.trace *)
+          if cond && (is_linux_arch env || is_mac_os_x_arch env || is_freebsd_arch env) then fsm_raise EISDIR else (* tr/19 hfsplus_loop/open/results/check_exec_open___open_nonempty_dir___O_TRUNC__O_WRONLY___none___close_3-int.trace *)
           (fsm_cond_special
              Implementation_defined "open: O_TRUNC, directory, posix/open.md O_TRUNC:3")
              cond)
         |||
-          (if is_linux_arch env then fsm_do_nothing else (* NB Linux has no O_EXEC flag so this case cannot arise *) (* coverage:mac_os_x:posix:irrelevant *)
+          (if is_linux_arch env || is_freebsd_arch env then fsm_do_nothing else (* NB Linux has no O_EXEC flag so this case cannot arise *) (* coverage:mac_os_x:posix:irrelevant *)
           (fsm_cond_special  (* coverage:linux:irrelevant *)
              Unspecified "open: O_EXEC on directory" (* posix/open.md O_EXEC:1 *) (* coverage:linux:irrelevant *)
              ( (* coverage:linux:irrelevant *) finset_mem O_EXEC oflags (* coverage:linux:irrelevant *)
@@ -3100,12 +3100,27 @@ module Fs_operations = struct
         |||
            fsm_cond_raise ELOOP (finset_mem O_NOFOLLOW oflags && Resolve.res_name_is_symlink env.env_ops s0 rpath) (* posix/open.md ELOOP:1 FIXME but for open, path resolution always follows symlinks, so this condition never arises? FIXME look at tests for this; mac non-posix behaviour hfsplus_loop/open/results/check_exec_open___open_f3_sl.txt___O_NOFOLLOW__O_WRONLY___none___close_3-int.trace *)
         |||
+           fsm_cond_raise EMLINK (is_freebsd_arch env && finset_mem O_NOFOLLOW oflags && Resolve.res_name_is_symlink env.env_ops s0 rpath)  (* /2015-08-11_freebsd_ufs2_tmpfs/tmpfs/open/results/check_exec_open___open_broken_sl___O_APPEND__O_CLOEXEC__O_CREAT__O_DIRECTORY__O_EXEC__O_NOFOLLOW__O_TRUNC___0666___det_write_3___9a78211436f6d425ec38f5c4e02270801f3524f8___1___read_3___1___close_3-int.trace FreeBSD non-posix behaviour *)
+        |||
 
      (* O_CREAT *)
           (fsm_cond_raise EEXIST (finset_mem O_EXCL oflags && finset_mem O_CREAT oflags
             && (is_RN_dir rpath || is_RN_file rpath))) (* posix/open.md EEXIST:1 *)
         |||
-          (fsm_cond_raise ENOTDIR (finset_mem O_CREAT oflags && rn_ends_with_slash rpath && not(is_mac_os_x_arch env) )) (* posix/open.md ENOTDIR:2 open cannot be used to create a directory (implicit in posix spec), but this arises even if the directory exists; mac non-posix behaviour hfsplus_loop/open/results/check_exec_open___open_nonempty_dir_____O_CREAT__O_SEARCH___0666___close_3-int.trace *)
+          (fsm_cond_raise ENOTDIR (finset_mem O_CREAT oflags && rn_ends_with_slash rpath && not(is_mac_os_x_arch env || is_freebsd_arch env) )) (* posix/open.md ENOTDIR:2 open cannot be used to create a directory (implicit in posix spec), but this arises even if the directory exists; mac non-posix behaviour hfsplus_loop/open/results/check_exec_open___open_nonempty_dir_____O_CREAT__O_SEARCH___0666___close_3-int.trace *)
+        |||
+          (fsm_cond_raise ENOTDIR (finset_mem O_CREAT oflags && finset_mem O_DIRECTORY oflags && is_RN_none rpath && is_freebsd_arch env))  (* 2015-08-11_freebsd_ufs2_tmpfs/tmpfs/open/results/check_exec_open___open_broken_sl___O_APPEND__O_CLOEXEC__O_CREAT__O_DIRECTORY__O_EXEC__O_TRUNC___0666___det_write_3___9a78211436f6d425ec38f5c4e02270801f3524f8___1___read_3___1___close_3-int.trace freebsd non-posix behaviour FIXME but with this example, the target of the broken symlink gets created anyway, but not as a directory 
+
+FreeBSD man page https://www.freebsd.org/cgi/man.cgi?query=open&sektion=2 has:
+
+ O_DIRECTORY may beused toensure the resulting file descriptor refers to
+ a directory. Thisflag can be used to prevent applications with elevated
+ privilegesfrom opening files which are even unsafe to open with
+ O_RDONLY, such as device nodes.
+
+But this is surely not POSIX, and violates the invariant that a call that returns with an error does not alter the state
+
+*)
         |||
           (fsm_cond_raise EISDIR (is_linux_arch env && finset_mem O_CREAT oflags && (is_RN_dir rpath || rn_ends_with_slash rpath))) (* tr/21 FIXME possible non-posix Linux behaviour *) (* coverage:mac_os_x:posix:irrelevant *)
         |||
@@ -4810,7 +4825,11 @@ module Os_operations = struct
      | Just (fid, fid_st) -> (
         (* check that fid is open for reading *)
         let oflags = fid_st.fids_oflags in
-        if not (finset_mem O_RDONLY oflags || finset_mem O_RDWR oflags) then
+        let can_read = 
+          (finset_mem O_RDONLY oflags || finset_mem O_RDWR oflags) 
+          || (is_freebsd_arch env && finset_mem O_EXEC oflags)  (* freebsd non-posix behaviour? 2015-08-11_freebsd_ufs2_tmpfs/html/suite/open/test/open___open_broken_sl___O_APPEND__O_CREAT__O_EXEC__O_TRUNC___0666___det_write_3___9a78211436f6d425ec38f5c4e02270801f3524f8___1___read_3___1___close_3-int.trace *)
+        in
+        if not can_read then
           finset_singleton (OS_normal (update_pending_return s0 pid (Error EBADF)))  (* posix/read.md EBADF:1 *)
         else (begin
           (* we have a fd, which we are allowed to read from, so 
