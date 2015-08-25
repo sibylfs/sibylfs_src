@@ -2984,7 +2984,9 @@ module Fs_operations = struct
     (* check for posix/open.md EACCES:2 *)
     ( match rpath with
        | RN_file (_,_,i0_ref,_) -> (fsm_get_state >>= (fun s0 -> (                
-           let o_exec_ok   = (finset_mem O_EXEC   oflags -->  env.env_prms.cp_has_file_execute_permission s0 i0_ref) in (* coverage:linux:irrelevant *)
+           let o_exec_ok   = (is_freebsd_arch env) ||  (* file:///mnt/sdb1/tom/github/sibylfs_src/2015-08-11_freebsd_ufs2_tmpfs/html/suite/open/test/open___open_f3_sl.txt___O_APPEND__O_CLOEXEC__O_CREAT__O_EXEC___0666___det_write_3___9a78211436f6d425ec38f5c4e02270801f3524f8___1___read_3___1___close_3-int.trace/index.html freebsd seems to allow execute on ordinary files? FIXME freebsd non-posix behaviour? *)
+             (finset_mem O_EXEC   oflags -->  env.env_prms.cp_has_file_execute_permission s0 i0_ref) 
+           in (* coverage:linux:irrelevant *)
            let o_rdonly_ok = (finset_mem O_RDONLY oflags -->  env.env_prms.cp_has_file_read_permission s0 i0_ref) in
            let o_rdwr_ok   = (finset_mem O_RDWR   oflags --> (env.env_prms.cp_has_file_read_permission s0 i0_ref && 
                                                               env.env_prms.cp_has_file_write_permission s0 i0_ref)) in
