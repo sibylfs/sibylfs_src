@@ -3102,7 +3102,7 @@ module Fs_operations = struct
         |||
            fsm_cond_raise ELOOP (finset_mem O_NOFOLLOW oflags && Resolve.res_name_is_symlink env.env_ops s0 rpath) (* posix/open.md ELOOP:1 FIXME but for open, path resolution always follows symlinks, so this condition never arises? FIXME look at tests for this; mac non-posix behaviour hfsplus_loop/open/results/check_exec_open___open_f3_sl.txt___O_NOFOLLOW__O_WRONLY___none___close_3-int.trace *)
         |||
-           fsm_cond_raise EMLINK (is_freebsd_arch env && finset_mem O_NOFOLLOW oflags && Resolve.res_name_is_symlink env.env_ops s0 rpath)  (* /2015-08-11_freebsd_ufs2_tmpfs/tmpfs/open/results/check_exec_open___open_broken_sl___O_APPEND__O_CLOEXEC__O_CREAT__O_DIRECTORY__O_EXEC__O_NOFOLLOW__O_TRUNC___0666___det_write_3___9a78211436f6d425ec38f5c4e02270801f3524f8___1___read_3___1___close_3-int.trace FreeBSD non-posix behaviour *)
+           fsm_cond_raise EMLINK (is_freebsd_arch env && finset_mem O_NOFOLLOW oflags && Resolve.res_name_is_symlink env.env_ops s0 rpath)  (* 2015-08-11_freebsd_ufs2_tmpfs/html/suite/open/test/open___open_broken_sl___O_APPEND__O_CLOEXEC__O_CREAT__O_DIRECTORY__O_EXEC__O_NOFOLLOW__O_TRUNC___0666___det_write_3___9a78211436f6d425ec38f5c4e02270801f3524f8___1___read_3___1___close_3-int.trace/index.html FreeBSD non-posix behaviour *)
         |||
 
      (* O_CREAT *)
@@ -3111,7 +3111,11 @@ module Fs_operations = struct
         |||
           (fsm_cond_raise ENOTDIR (finset_mem O_CREAT oflags && rn_ends_with_slash rpath && not(is_mac_os_x_arch env || is_freebsd_arch env) )) (* posix/open.md ENOTDIR:2 open cannot be used to create a directory (implicit in posix spec), but this arises even if the directory exists; mac non-posix behaviour hfsplus_loop/open/results/check_exec_open___open_nonempty_dir_____O_CREAT__O_SEARCH___0666___close_3-int.trace *)
         |||
-          (fsm_cond_raise ENOTDIR (finset_mem O_CREAT oflags && finset_mem O_DIRECTORY oflags && is_RN_none rpath && is_freebsd_arch env))  (* 2015-08-11_freebsd_ufs2_tmpfs/tmpfs/open/results/check_exec_open___open_broken_sl___O_APPEND__O_CLOEXEC__O_CREAT__O_DIRECTORY__O_EXEC__O_TRUNC___0666___det_write_3___9a78211436f6d425ec38f5c4e02270801f3524f8___1___read_3___1___close_3-int.trace freebsd non-posix behaviour FIXME but with this example, the target of the broken symlink gets created anyway, but not as a directory 
+          (fsm_cond_raise ENOTDIR (finset_mem O_CREAT oflags && finset_mem O_DIRECTORY oflags && is_RN_none rpath && is_freebsd_arch env))  (* 
+
+2015-08-11_freebsd_ufs2_tmpfs/html/suite/open/test/open___open_broken_sl___O_APPEND__O_CLOEXEC__O_CREAT__O_DIRECTORY__O_EXEC__O_TRUNC___0666___det_write_3___9a78211436f6d425ec38f5c4e02270801f3524f8___1___read_3___1___close_3-int.trace/index.html
+
+freebsd non-posix behaviour FIXME but with this example, the target of the broken symlink gets created anyway, but not as a directory 
 
 FreeBSD man page https://www.freebsd.org/cgi/man.cgi?query=open&sektion=2 has:
 
@@ -3533,7 +3537,7 @@ But this is surely not POSIX, and violates the invariant that a call that return
             (is_mac_os_x_arch env && not b0) || is_freebsd_arch env))
       )  (* hfsplus_loop/rename/results/check_exec_rename___rename_nonempty_dir1__d2__f3.txt___nonempty_dir1__nonexist_4__-int.trace hfsplus_loop/rename/results/check_exec_rename___rename_nonempty_dir1__d2__f3.txt___nonempty_dir1__d2__sl_dotdot_no_such_target__-int.trace
 : the path "nonempty_dir1/nonexist_4/" is treated differently to "nonempty_dir1/d2/sl_dotdot_no_such_target/" *)
-(* freebsd non-posix behaviour 2015-08-11_freebsd_ufs2_tmpfs/tmpfs/rename/results/check_exec_rename___rename_nonempty_dir1__d2__f3.txt___nonempty_dir1__d2__sl_dotdot_no_such_target__-int.trace *)
+(* freebsd non-posix behaviour 2015-08-11_freebsd_ufs2_tmpfs/html/suite/rename/test/rename___rename_nonempty_dir1__d2__f3.txt___nonempty_dir1__d2__sl_dotdot_no_such_target__-int.trace/index.html *)
         |||
       (fsm_cond_raise ENOTDIR (is_RN_file rsrc && is_RN_dir rdst && is_linux_arch env && rn_ends_with_slash rdst)) (* coverage:mac_os_x:posix:irrelevant *)
          (* tr/5 even if empty; arguably a Linux bug? Confirmed non-posix behaviour *)
@@ -4829,7 +4833,7 @@ module Os_operations = struct
         let oflags = fid_st.fids_oflags in
         let can_read = 
           (finset_mem O_RDONLY oflags || finset_mem O_RDWR oflags) 
-          || (is_freebsd_arch env && finset_mem O_EXEC oflags)  (* freebsd non-posix behaviour? 2015-08-11_freebsd_ufs2_tmpfs/html/suite/open/test/open___open_broken_sl___O_APPEND__O_CREAT__O_EXEC__O_TRUNC___0666___det_write_3___9a78211436f6d425ec38f5c4e02270801f3524f8___1___read_3___1___close_3-int.trace *)
+          || (is_freebsd_arch env && finset_mem O_EXEC oflags)  (* freebsd non-posix behaviour? 2015-08-11_freebsd_ufs2_tmpfs/html/suite/open/test/open___open_broken_sl___O_APPEND__O_CREAT__O_EXEC__O_TRUNC___0666___det_write_3___9a78211436f6d425ec38f5c4e02270801f3524f8___1___read_3___1___close_3-int.trace/index.html *)
         in
         if not can_read then
           finset_singleton (OS_normal (update_pending_return s0 pid (Error EBADF)))  (* posix/read.md EBADF:1 *)
