@@ -1,4 +1,4 @@
-(*
+(* -*- mode: tuareg -*-
 
 In order to showing that the test coverage is 100%, we mark with
 special comments the lines that are irrelevant and unreachable.
@@ -2425,10 +2425,15 @@ module Resolve = struct
      fs_ops 'dir_ref 'file_ref 'impl ->
      'impl -> res_name 'dir_ref 'file_ref -> bool
   let res_name_is_symlink ops s0 rn = match rn with
-    | RN_file(_,_,i0_ref,_) -> ((ops.fops_stat_file s0 i0_ref).st_kind = S_IFLNK)
+    | RN_file(_,_,i0_ref,_) -> ((ops.fops_stat_file s0 i0_ref).st_kind = S_IFLNK)  (* FIXME don't want to depend on s0 *)
     | _ -> false 
   end
 
+  val is_broken_symlink: forall 'dir_ref 'file_ref 'impl.
+     environment 'dir_ref 'file_ref 'impl -> 
+     res_name 'dir_ref 'file_ref ->
+     bool
+  let is_broken_symlink env rpath = true  (* FIXME *)
 
 end
 
@@ -3248,6 +3253,60 @@ But this is surely not POSIX, and violates the invariant that a call that return
       fsm_return (entry, oflags))))
 
 
+  (* FreeBSD strangeness with O_CREAT and O_DIRECTORY *)
+  val fsop_open_freebsd_strange_check: forall 'dir_ref 'file_ref 'impl.
+     environment 'dir_ref 'file_ref 'impl -> 
+     'impl ->
+     res_name 'dir_ref 'file_ref -> 
+     int_open_flags -> bool
+  let fsop_open_freebsd_strange_check env s0 rpath oflag = (
+      let arch = architecture_of_ty_arch env.env_arch in
+      let oflags = arch.arch_open_flags_of_int oflag in 
+      (finset_mem O_CREAT oflags) 
+      && (finset_mem O_DIRECTORY oflags) 
+      && (is_RN_none rpath || Resolve.res_name_is_symlink env.env_ops s0 rpath)
+      && (* if a broken symlink, then behaviour is strange provided O_NOFOLLOW is not in the open flags *)
+        (not (finset_mem O_NOFOLLOW oflags && Resolve.is_broken_symlink env rpath)) 
+      &&
+        (not (finset_mem O_EXCL oflags && Resolve.is_broken_symlink env rpath))
+      && (not (rn_ends_with_slash rpath))  )
+
+  val fsop_open_freebsd_strange: forall 'dir_ref 'file_ref 'impl.
+     environment 'dir_ref 'file_ref 'impl ->
+     res_name 'dir_ref 'file_ref -> 
+     int_open_flags ->
+     maybe file_perm ->
+     fsmonad 'impl ret_value
+  let fsop_open_freebsd_strange env rpath oflag mode = (
+    let fsop_unlink_core env rpath = (
+      fsm_get_state >>= fun s0 ->
+      (match rpath with 
+        | RN_file(d0_ref,n,_,_) -> (
+            let s0 = env.env_ops.fops_unlink s0 d0_ref n in
+            fsm_put_state s0) 
+        | _ -> fsm_special Impossible "error raised before 2kp" (* coverage:impossible *)
+       end))
+    in
+    fsm_get_state >>= (fun s0 ->
+      (match (is_freebsd_arch env && fsop_open_freebsd_strange_check env s0 rpath oflag) with
+      | true -> (
+        (* if rpath is a symlink, remove it *)
+        (match rpath with
+         | RN_file _ -> (fsop_unlink_core env rpath)
+         | RN_none _ -> (fsm_do_nothing) 
+         | _ -> (fsm_special Impossible "error raised before bvt")
+        end) 
+        >>= (fun _ ->
+        (* create empty file where symlink (or nonexist) was *)
+        let rpath = (match rpath with
+          | RN_file(d0_ref,n,i0_ref,rp) -> (RN_none(d0_ref,n,rp))
+          | RN_none _ -> rpath
+          | _ -> (failwith "impossible 3b1") end)
+        in
+        fsop_open_core_create_if_not_exists env rpath mode >>= (fun _ -> fsm_do_nothing (* discard result *) )))
+      | false -> fsm_do_nothing end)))
+      
+
   val fsop_open : forall 'dir_ref 'file_ref 'impl.
      environment 'dir_ref 'file_ref 'impl ->
      res_name 'dir_ref 'file_ref -> 
@@ -3256,8 +3315,9 @@ But this is surely not POSIX, and violates the invariant that a call that return
      fsmonad 'impl (entry 'dir_ref 'file_ref * finset open_flag)
   let fsop_open env rpath oflag mode = (fsm_get_state >>= (fun s0 -> 
     let rpath = if (is_mac_os_x_arch env) then (mac_os_x_map_rpath env s0 rpath) else rpath in
+    fsop_open_freebsd_strange env rpath oflag mode >>= (fun _ -> 
     fsop_open_checks env rpath oflag mode >>= (fun _ ->
-    fsop_open_core env rpath oflag mode)))
+    fsop_open_core env rpath oflag mode))))
 
 
   (*--------------------------*)
