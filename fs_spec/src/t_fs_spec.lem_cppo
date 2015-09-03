@@ -3549,13 +3549,13 @@ But this is surely not POSIX, and violates the invariant that a call that return
            non-posix behaviour ignores trailing slash when going via a symlink *)
         |||
       (
-        let b0 = (
-          let rp = (match rdst with | RN_none(_,_,rp) -> rp end) in     (* coverage:linux:posix:irrelevant *)
-          let cwd = rp.rp_cwd in                                        (* coverage:linux:posix:irrelevant *)
-          let path = CS_Some(Resolve.ty_name_list_to_string rp.rp_nl) in    (* coverage:linux:posix:irrelevant *)
-          Resolve.res_name_is_symlink env.env_ops s0 (Resolve.process_path_no_follow_no_trailing_slash env s0 cwd path))
-        in 
         fsm_cond_raise ENOENT (is_RN_file rsrc && is_RN_none rdst && rn_ends_with_slash rdst && (
+            let b0 = (
+              let rp = (match rdst with | RN_none(_,_,rp) -> rp end) in     (* coverage:linux:posix:irrelevant *)
+              let cwd = rp.rp_cwd in                                        (* coverage:linux:posix:irrelevant *)
+              let path = CS_Some(Resolve.ty_name_list_to_string rp.rp_nl) in    (* coverage:linux:posix:irrelevant *)
+              Resolve.res_name_is_symlink env.env_ops s0 (Resolve.process_path_no_follow_no_trailing_slash env s0 cwd path))
+            in 
             (is_mac_os_x_arch env && not b0) || is_freebsd_arch env))
       )  (* hfsplus_loop/rename/results/check_exec_rename___rename_nonempty_dir1__d2__f3.txt___nonempty_dir1__nonexist_4__-int.trace hfsplus_loop/rename/results/check_exec_rename___rename_nonempty_dir1__d2__f3.txt___nonempty_dir1__d2__sl_dotdot_no_such_target__-int.trace
 : the path "nonempty_dir1/nonexist_4/" is treated differently to "nonempty_dir1/d2/sl_dotdot_no_such_target/" *)
@@ -3590,10 +3590,10 @@ But this is surely not POSIX, and violates the invariant that a call that return
   let fsop_rename_checks_root env rsrc = (fsm_get_state >>= (fun s0 -> (
     match rsrc with
     | RN_dir (d0_ref, _) -> (  (* attempt to rename root on linux or mac? *)
-        if (Resolve.is_root_dir env.env_ops s0 d0_ref && (is_linux_arch env || is_mac_os_x_arch env)) then (
+        if (Resolve.is_root_dir env.env_ops s0 d0_ref) then (
           fsm_cond_raises [
-            (EBUSY,true); (* http://fs.dsheets.name/2015-03-15_linux_ext+hfsplus+tmpfs/html/suite/rename/test/adhoc_rename_root-int.trace/index.html#23 ; also on Mac? *)
-            (EISDIR,is_mac_os_x_arch env)]) (* http://fs.dsheets.name/2015-03-16_osx_hfsplus+fusexmp+sshfs/html/suite/rename/test/adhoc_rename_root-int.trace/index.html#23 *)
+            (EBUSY,(is_linux_arch env || is_mac_os_x_arch env)); (* http://fs.dsheets.name/2015-03-15_linux_ext+hfsplus+tmpfs/html/suite/rename/test/adhoc_rename_root-int.trace/index.html#23 ; also on Mac? *)
+            (EISDIR,(is_mac_os_x_arch env || is_freebsd_arch env))]) (* http://fs.dsheets.name/2015-03-16_osx_hfsplus+fusexmp+sshfs/html/suite/rename/test/adhoc_rename_root-int.trace/index.html#23 *)
         else
           fsm_do_nothing) (* coverage:linux:mac_os_x:irrelevant *)
     | _ -> fsm_do_nothing end)))
