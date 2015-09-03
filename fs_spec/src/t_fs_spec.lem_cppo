@@ -2163,6 +2163,16 @@ module Resolve = struct
         (* FIXME not correct for disconnected dirs - should probably throw an exception ENOENT *)
     | Just(dir_ref,_) -> (RR_inter <| rr_symlinks_so_far=symlinks_so_far; rr_so_far=dir_ref; rr_ns=ns |>) end)
 
+  val read_symlink_as_string: forall 'dir_ref 'file_ref 'impl.
+     environment 'dir_ref 'file_ref 'impl -> 
+     'impl ->
+     'file_ref ->
+     string
+  let read_symlink_as_string env s0 i0_ref = (
+    let bs = env.env_ops.fops_readlink s0 i0_ref in
+    let s = T_list_array.to_string bs in
+    s)
+
   (* i0_ref is a symlink *)
   val rr_symlink : forall 'dir_ref 'file_ref 'impl.
     rr_params 'dir_ref 'file_ref 'impl -> 
@@ -2202,8 +2212,7 @@ module Resolve = struct
       (* check whether too many symbolic links have already been followed *)
       if (symlinks_so_far >= ps.rr_env.env_ops.fops_lookup_sysconf ps.rr_s0 SC_SYMLOOP_MAX) then RR_final (RR_error(ELOOP, Nothing)) else
       (* read the link contents *)
-      let bs = ps.rr_env.env_ops.fops_readlink ps.rr_s0 i0_ref in
-      let s = T_list_array.to_string bs in
+      let s = read_symlink_as_string ps.rr_env ps.rr_s0 i0_ref in
       (* at this point, we need to process bs as a path, possibly an absolute path *)
       let nl = split_path_string s in
       if nl_starts_with_slash nl then
@@ -2273,77 +2282,6 @@ module Resolve = struct
   let rec resolve_relative env s0 cmd symlinks_so_far so_far ns = (
     alt_rr <| rr_env=env; rr_s0=s0; rr_cmd=cmd |> symlinks_so_far so_far ns)
 
-(*
-  let rec resolve_relative env s0 follow_last_symlink symlinks_so_far sofar ns = (
-    match ns with 
-    | [] -> (RR_dir(sofar))
-    | n::ns -> (
-      (* process . and .. entries *)
-      if (n=".") || (n="") then (
-        resolve_relative env s0 follow_last_symlink symlinks_so_far sofar ns
-      ) else if (n="..") then (
-        (match env.env_ops.fops_get_parent s0 sofar with
-        | Nothing -> (resolve_relative env s0 follow_last_symlink symlinks_so_far sofar ns) (* FIXME not correct for disconnected dirs *)
-        | Just(dir_ref,_) -> (resolve_relative env s0 follow_last_symlink symlinks_so_far dir_ref ns) 
-        end)
-#ifdef aspect_perms
-      ) else if (not (env.env_prms.cp_has_dir_search_permission s0 sofar)) then RR_error(EACCES, Nothing) else (
-#else
-      ) else (
-#endif
-        (* try and resolve n (the next path component) *)
-        let m = env.env_ops.fops_resolve s0 sofar n in
-        (match m with 
-        | Nothing -> (
-          if (ns=[]) || (ns=[""]) then (* may end in a slash; FIXME what about multiple slashes? *)
-            RR_none(sofar,n)
-          else
-            RR_error(ENOENT, Nothing))  (* posix/rename.md ENOENT:2; posix/link.md ENOENT:1; posix/rmdir.md ENOENT:2 *)
-        | Just entry -> (
-          (* process the entry corresponding to n *)
-          (match entry with 
-          | File_ref_entry i0_ref -> (
-            (* process a symlink *)
-            (* If i0_ref is a symlink, do we follow it? *)
-            let follow_symlink = 
-              (* of course we only do it, if it is really a symlink *)
-              ((env.env_ops.fops_stat_file s0 i0_ref).st_kind = S_IFLNK) (* is it actually one *) && (
-                 (* if used as a directory, it is always followed *)
-                 (ns <> []) ||
-                 (* if it is the last component, it depends on
-                    the command that requested the resolution. Commands like
-                    [open] want to follow the symlink, whereas e.g. [unlink] does
-                    not. The argument [follow_last_symlink] is used for this purpose. *)
-                 follow_last_symlink
-      ) in
-            if (follow_symlink) then 
-              (* check whether too many symbolic links have already been followed *)
-              if (symlinks_so_far >= env.env_ops.fops_lookup_sysconf s0 SC_SYMLOOP_MAX) then
-                RR_error(ELOOP, Nothing)
-              else (
-                let bs = env.env_ops.fops_readlink s0 i0_ref in
-                let s = T_list_array.to_string bs in
-                (* FIXME at this point, we need to process bs as a path, possibly an absolute path *)
-                let nl = split_path_string s in
-                if nl_starts_with_slash nl then
-                  let root = fromJust (env.env_ops.fops_get_root s0) in
-                  resolve_relative env s0 follow_last_symlink (succ symlinks_so_far) root (ty_name_list_to_list nl ++ ns)
-                else
-                  resolve_relative env s0 follow_last_symlink (succ symlinks_so_far) sofar (ty_name_list_to_list nl ++ ns) (* potentially non-terminating eg ln -s loop loop *)
-              )
-            (* return if no more path components to process *)
-            else if (ns=[]) then 
-              RR_file(sofar,n,i0_ref) (* if we are at the end, return the file *)
-            else
-              (* we got a file, which is no symlink and it is not the last component
-                 during path resolution. So, we are in trouble. So always raise an error.
-                 However, a common problem are trailing slashes. In this case raise and error,
-                 but also return the file found. *)
-              (let res_without_slashes = (if (List.all (fun s -> s = "") ns) then Just (RR_file(sofar,n,i0_ref)) else Nothing) in
-               RR_error(ENOTDIR, res_without_slashes)))  (* posix/rename.md ENOTDIR:1 ENOTDIR:3 ENOTDIR:5; posix/link.md ENOTDIR:1 ENOTDIR:3; FIXME posix/mkdir.md ENOENT:4 specifies that this may return ENOENT, but this is surely a POSIX specification error *)
-          | Dir_ref_entry d0_ref -> (
-            resolve_relative env s0 follow_last_symlink symlinks_so_far d0_ref ns) end)) end)) ) end)
-*)
 
   (* if a path starts with two slashes, the behaviour is impl defined;
      we don't want to deal with this in every command, so we have a
@@ -2428,12 +2366,6 @@ module Resolve = struct
     | RN_file(_,_,i0_ref,_) -> ((ops.fops_stat_file s0 i0_ref).st_kind = S_IFLNK)  (* FIXME don't want to depend on s0 *)
     | _ -> false 
   end
-
-  val is_broken_symlink: forall 'dir_ref 'file_ref 'impl.
-     environment 'dir_ref 'file_ref 'impl -> 
-     res_name 'dir_ref 'file_ref ->
-     bool
-  let is_broken_symlink env rpath = true  (* FIXME *)
 
 end
 
@@ -3253,22 +3185,52 @@ But this is surely not POSIX, and violates the invariant that a call that return
       fsm_return (entry, oflags))))
 
 
+
+  val open_is_broken_symlink: forall 'dir_ref 'file_ref 'impl.
+     environment 'dir_ref 'file_ref 'impl -> 
+     'impl ->
+     'dir_ref ->
+     'file_ref -> (* assumed in dir *)
+     (int_open_flags * maybe file_perm) ->
+     bool
+  let open_is_broken_symlink env s0 d0_ref i0_ref (oflag,mode) = (
+    (* read symlink and try to resolve from this position as if we
+       were the original open call; at this point we seem to need access
+       to the original command, but we fudge it here *)
+    let s = Resolve.read_symlink_as_string env s0 i0_ref in
+    let cs = CS_Some(s) in
+    let cmd = OS_OPEN(cs,oflag,mode) in
+    let rpath = Resolve.process_path env s0 d0_ref cmd cs in
+    (match rpath with
+     | RN_None -> true
+     | RN_error -> true
+     | _ -> false end) )
+
+
+
   (* FreeBSD strangeness with O_CREAT and O_DIRECTORY *)
   val fsop_open_freebsd_strange_check: forall 'dir_ref 'file_ref 'impl.
      environment 'dir_ref 'file_ref 'impl -> 
      'impl ->
      res_name 'dir_ref 'file_ref -> 
-     int_open_flags -> bool
-  let fsop_open_freebsd_strange_check env s0 rpath oflag = (
+     int_open_flags -> 
+     maybe file_perm ->
+     bool
+  let fsop_open_freebsd_strange_check env s0 rpath oflag mode = (
       let arch = architecture_of_ty_arch env.env_arch in
       let oflags = arch.arch_open_flags_of_int oflag in 
       (finset_mem O_CREAT oflags) 
       && (finset_mem O_DIRECTORY oflags) 
       && (is_RN_none rpath || Resolve.res_name_is_symlink env.env_ops s0 rpath)
-      && (* if a broken symlink, then behaviour is strange provided O_NOFOLLOW is not in the open flags *)
-        (not (finset_mem O_NOFOLLOW oflags && Resolve.is_broken_symlink env rpath)) 
-      &&
-        (not (finset_mem O_EXCL oflags && Resolve.is_broken_symlink env rpath))
+      && ( 
+        (* if a broken symlink, then behaviour is strange provided O_NOFOLLOW or O_EXCL are not in the open flags *)
+        match rpath with 
+        | RN_file(d0_ref,n,i0_ref,_) -> ( 
+            (* must be a symlink, from previous clause; is it broken? *)
+            let is_broken_symlink = open_is_broken_symlink env s0 d0_ref i0_ref (oflag,mode) in
+            (not (finset_mem O_NOFOLLOW oflags && is_broken_symlink))
+            && (not (finset_mem O_EXCL oflags && is_broken_symlink))  )
+        | _ -> true (* if not a symlink, this check is irrelevant *) end)
       && (not (rn_ends_with_slash rpath))  )
 
   val fsop_open_freebsd_strange: forall 'dir_ref 'file_ref 'impl.
@@ -3288,7 +3250,7 @@ But this is surely not POSIX, and violates the invariant that a call that return
        end))
     in
     fsm_get_state >>= (fun s0 ->
-      (match (is_freebsd_arch env && fsop_open_freebsd_strange_check env s0 rpath oflag) with
+      (match (is_freebsd_arch env && fsop_open_freebsd_strange_check env s0 rpath oflag mode) with
       | true -> (
         (* if rpath is a symlink, remove it *)
         (match rpath with
