@@ -1042,7 +1042,7 @@ module Fs_types = struct
     fops_write: 'jimpl -> 'file_ref -> ty_bytes -> 'jimpl;
     fops_mkfile: 'jimpl -> 'dir_ref -> name -> 'jimpl * 'file_ref; (* FIXME prefer this to touch *)
     fops_readlink: 'jimpl -> 'file_ref -> ty_bytes; (* internal *)
-    fops_symlink: 'jimpl -> 'dir_ref -> name -> ty_bytes -> 'jimpl;    
+    fops_symlink: 'jimpl -> 'dir_ref -> name -> ty_bytes -> file_perm -> 'jimpl;    
     fops_stat_file: 'jimpl -> 'file_ref -> ty_stats; (* this is internal - doesn't expect to update times etc *)
     fops_stat_dir: 'jimpl -> 'dir_ref -> ty_stats; (* this is internal - doesn't expect to update times etc *)
     fops_lstat: 'jimpl -> 'file_ref -> ty_stats; (* this is internal -doesn't expect to update times etc *)
@@ -4347,7 +4347,8 @@ But this is surely not POSIX, and violates the invariant that a call that return
   let fsop_symlink_core env src dst = (fsm_get_state >>= (fun s0 ->
     ( match dst with
         | RN_none(d0_ref,n,_) -> 
-            (let s1 = env.env_ops.fops_symlink s0 d0_ref n src in
+            (let perm = (if is_freebsd_arch env then (File_perm 0O755) else (File_perm 0O777)) in
+             let s1 = env.env_ops.fops_symlink s0 d0_ref n src perm in
              fsm_put_state s1)
         | _ -> fsm_special Impossible "error raised before" (* coverage:impossible *)
      end)))

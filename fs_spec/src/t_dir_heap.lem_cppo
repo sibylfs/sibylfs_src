@@ -602,10 +602,10 @@ module Dir_heap_ops = struct
   (*-------------------------------*)
   (* dhops_symlink                 *)
   (*-------------------------------*)
-  val dhops_symlink : dir_heap_state -> dh_dir_ref -> string -> ty_bytes -> dir_heap_state
-  let dhops_symlink s0 d0_ref name bs = (
+  val dhops_symlink : dir_heap_state -> dh_dir_ref -> string -> ty_bytes -> file_perm -> dir_heap_state
+  let dhops_symlink s0 d0_ref name bs perm = (
     let (s1,(i0_ref,i0)) = dh_create_new_file s0 in 
-    let i0' = <| i0 with dhf_kind = S_IFLNK; dhf_contents = bs |> in
+    let i0' = <| i0 with dhf_kind = S_IFLNK; dhf_perm = perm; dhf_contents = bs |> in
     let s2 = dh_update_files s1 i0_ref (Just i0') in
     let s3 = dh_update_dir_entries s2 d0_ref name (Just (File_ref_entry i0_ref)) in
     s3
