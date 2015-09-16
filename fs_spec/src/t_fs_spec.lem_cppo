@@ -378,11 +378,11 @@ module Fs_types = struct
 
   type long = int64 (*o with sexp o*)
 
-  (* [ty_real_time] is our corresponding type for the POSIX
+  (* [ty_os_time] is our corresponding type for the POSIX
   timespec. *)
   type ty_os_time = <| tv_sec:t_time ; tv_nsec:long |> (*o with sexp o*)
 
-  (* a real-world timestamp can be both a time value or a
+  (* an os timestamp can be both a time value or a
   marked-for-update label *)
   type ty_os_timestamp = Os_timestamp of ty_os_time (*o with sexp o*)
 
@@ -401,8 +401,8 @@ module Fs_types = struct
   val dest_os_timestamp : ty_os_timestamp -> ty_os_time
   let dest_os_timestamp (Os_timestamp x) = x
 
-  (* [timespec_lte] checks that real time [t] is smaller or equal to
-real time [t'] (lexicographic order). We need the equality because of
+  (* [timespec_lte] checks that os time [t] is smaller or equal to
+os time [t'] (lexicographic order). We need the equality because of
 time resolution: if the difference between timestamps is smaller than
 the time resolution, old and new timestamps have the same values *)
   val timespec_lte : ty_os_time -> ty_os_time -> bool
@@ -426,6 +426,43 @@ the time resolution, old and new timestamps have the same values *)
   (*-------------------------------*)
   (* result record for stat        *)
   (*-------------------------------*)
+
+  (* Note: we need to model two types of stats, since the
+  specification validates real world states (that use a harder model
+  for timestamps than the logical one used by the spec *)
+
+  (* [ty_logical_stats] are stats produced by the spec *)
+  type ty_logical_stats =                                                                             (* coverage:sexp *)
+      <| l_st_dev : int;                    (** Device number *)                                     (* coverage:sexp *)
+         l_st_ino : inode;                  (** Inode number *)                                      (* coverage:sexp *)
+         l_st_kind : file_kind;             (** Kind of the file *)                                  (* coverage:sexp *)
+         l_st_perm : file_perm;             (** Access rights *)                                     (* coverage:sexp *)
+         l_st_nlink : int;                  (** Number of links *)                                   (* coverage:sexp *)
+         l_st_uid : uid;                    (** User id of the owner *)                              (* coverage:sexp *)
+         l_st_gid : gid;                    (** Group ID of the file's group *)                      (* coverage:sexp *)
+         l_st_rdev : int;                   (** Device minor number *)                               (* coverage:sexp *)
+         l_st_size : int64;                 (** Size in bytes; no sensible meaning for directories *)(* coverage:sexp *)
+         l_st_atime : ty_logical_timestamp; (** Last access time *)                                (* coverage:sexp *)
+         l_st_mtime : ty_logical_timestamp; (** Last modification time *)                          (* coverage:sexp *)
+         l_st_ctime : ty_logical_timestamp; (** Last status change time *)                         (* coverage:sexp *)
+      |> (*o with sexp o*) (* coverage:sexp *)
+
+
+  (* [ty_os_stats] are stats produced by a real world operating system *)
+  type ty_os_stats =                                                                             (* coverage:sexp *)
+      <| os_st_dev : int;                    (** Device number *)                                     (* coverage:sexp *)
+         os_st_ino : inode;                  (** Inode number *)                                      (* coverage:sexp *)
+         os_st_kind : file_kind;             (** Kind of the file *)                                  (* coverage:sexp *)
+         os_st_perm : file_perm;             (** Access rights *)                                     (* coverage:sexp *)
+         os_st_nlink : int;                  (** Number of links *)                                   (* coverage:sexp *)
+         os_st_uid : uid;                    (** User id of the owner *)                              (* coverage:sexp *)
+         os_st_gid : gid;                    (** Group ID of the file's group *)                      (* coverage:sexp *)
+         os_st_rdev : int;                   (** Device minor number *)                               (* coverage:sexp *)
+         os_st_size : int64;                 (** Size in bytes; no sensible meaning for directories *)(* coverage:sexp *)
+         os_st_atime : ty_os_timestamp; (** Last access time *)                                (* coverage:sexp *)
+         os_st_mtime : ty_os_timestamp; (** Last modification time *)                          (* coverage:sexp *)
+         os_st_ctime : ty_os_timestamp; (** Last status change time *)                         (* coverage:sexp *)
+      |> (*o with sexp o*) (* coverage:sexp *)
 
   (* from ocaml source unix.mli *)
   type ty_stats =                                                                             (* coverage:sexp *)
