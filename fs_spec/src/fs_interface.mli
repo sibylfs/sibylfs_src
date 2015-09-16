@@ -50,6 +50,17 @@ module Fs_spec_intf : sig
       val instance_Basic_classes_SetType_Fs_spec_Fs_types_inode_dict :
         inode Lem_basic_classes.setType_class
       val dest_Inode : inode -> int
+      type t_time = int
+      type long = int64
+      type ty_os_time = { tv_sec:t_time ; tv_nsec:long }
+      type ty_os_timestamp = Os_timestamp of ty_os_time
+      type ty_logical_time = int
+      type ty_logical_timestamp = Logical_timestamp of ty_logical_time | Marked_for_update
+      val dest_logical_timestamp : ty_logical_timestamp -> ty_logical_time
+      val dest_os_timestamp : ty_os_timestamp -> ty_os_time
+      val timespec_lte : ty_os_time -> ty_os_time -> bool
+      type ts_type = TS_Access | TS_Modification | TS_Change
+
       type error =
           E2BIG
         | EACCES
@@ -190,6 +201,36 @@ module Fs_spec_intf : sig
       val instance_Basic_classes_SetType_Fs_spec_Fs_types_gid_dict :
         gid Lem_basic_classes.setType_class
       val root_gid : gid
+      type ty_logical_stats = {
+        l_st_dev : int;
+        l_st_ino : inode;
+        l_st_kind : file_kind;
+        l_st_perm : file_perm;
+        l_st_nlink : int;
+        l_st_uid : uid;
+        l_st_gid : gid;
+        l_st_rdev : int;
+        l_st_size : int64;
+        l_st_atime : ty_logical_timestamp;
+        l_st_mtime : ty_logical_timestamp;
+        l_st_ctime : ty_logical_timestamp;
+      } with sexp
+
+      type ty_os_stats = {
+        os_st_dev : int;
+        os_st_ino : inode;
+        os_st_kind : file_kind;
+        os_st_perm : file_perm;
+        os_st_nlink : int;
+        os_st_uid : uid;
+        os_st_gid : gid;
+        os_st_rdev : int;
+        os_st_size : int64;
+        os_st_atime : ty_os_timestamp;
+        os_st_mtime : ty_os_timestamp;
+        os_st_ctime : ty_os_timestamp;
+      } with sexp
+
       type ty_stats = {
         st_dev : int;
         st_ino : inode;
@@ -220,6 +261,8 @@ module Fs_spec_intf : sig
         | RV_num of int
         | RV_bytes of ty_bytes
         | RV_names of name list
+        | RV_logical_stats of ty_logical_stats
+        | RV_os_stats of ty_os_stats
         | RV_stats of ty_stats
         | RV_file_perm of file_perm
       with sexp
@@ -331,6 +374,7 @@ module Fs_spec_intf : sig
         arch_allows_dir_read : bool;
         arch_group_from_parent_dir : bool;
         arch_allows_removing_from_protected_dir_if_writeable : bool;
+        arch_is_periodic : bool;
       }
       type ('dir_ref, 'file_ref, 'jimpl) perm_ops = {
         pops_set_perm_file : 'jimpl -> file_perm -> 'file_ref -> 'jimpl;

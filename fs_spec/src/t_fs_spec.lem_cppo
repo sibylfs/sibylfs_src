@@ -464,6 +464,7 @@ the time resolution, old and new timestamps have the same values *)
          os_st_ctime : ty_os_timestamp; (** Last status change time *)                         (* coverage:sexp *)
       |> (*o with sexp o*) (* coverage:sexp *)
 
+  (* FIXME ag: remove ty_stats *)
   (* from ocaml source unix.mli *)
   type ty_stats =                                                                             (* coverage:sexp *)
       <| st_dev : int;               (** Device number *)                                     (* coverage:sexp *)
@@ -490,6 +491,10 @@ the time resolution, old and new timestamps have the same values *)
     | RV_num of nat (* FIXME int? or change constructor name*)   (* coverage:sexp *)
     | RV_bytes of ty_bytes (* FIXME add init return type *)      (* coverage:sexp *)
     | RV_names of list name                                      (* coverage:sexp *)
+    (* RV_logical_stats cannot appear in successful transition label *)
+    | RV_logical_stats of ty_logical_stats                       (* coverage:sexp *)
+    | RV_os_stats of ty_os_stats                                 (* coverage:sexp *)
+    (* FIXME ag: remove RV_stats *)
     | RV_stats of ty_stats                                       (* coverage:sexp *)
     | RV_file_perm of file_perm (*o with sexp o*) (* coverage:sexp *)
 
@@ -1015,8 +1020,9 @@ the time resolution, old and new timestamps have the same values *)
     arch_allows_dir_read : bool; (* allow reading from a directory? If set to false, reading a directory needs readdir command instead of read. *)     (* coverage:sexp *)
     arch_group_from_parent_dir: bool; (* Should new directories inherit the group of their parent dir? If set false, they use                          (* coverage:sexp *)
       the effective group id of the process instead. *)                                                                                                (* coverage:sexp *)
-    arch_allows_removing_from_protected_dir_if_writeable : bool (* Allow deleting files and directories from protected directories, if the file or dir (* coverage:sexp *)
+    arch_allows_removing_from_protected_dir_if_writeable : bool; (* Allow deleting files and directories from protected directories, if the file or dir (* coverage:sexp *)
       is writeable? see posix/dir_protect.md *)                                                                                                        (* coverage:sexp *)
+    arch_is_periodic: bool (* delays timestamps update *)                                                                                              (* coverage:sexp *)
   |>(*o with sexp_of o*) (* coverage:sexp*)                                                                                                            (* coverage:sexp *)
 
   type ignore_j5f (* to force trailing comment above, see lem issue #174 *)
@@ -1132,10 +1138,18 @@ the time resolution, old and new timestamps have the same values *)
     fops_write: 'jimpl -> 'file_ref -> ty_bytes -> 'jimpl;
     fops_mkfile: 'jimpl -> 'dir_ref -> name -> 'jimpl * 'file_ref; (* FIXME prefer this to touch *)
     fops_readlink: 'jimpl -> 'file_ref -> ty_bytes; (* internal *)
-    fops_symlink: 'jimpl -> 'dir_ref -> name -> ty_bytes -> 'jimpl;    
+    fops_symlink: 'jimpl -> 'dir_ref -> name -> ty_bytes -> 'jimpl;
     fops_stat_file: 'jimpl -> 'file_ref -> ty_stats; (* this is internal - doesn't expect to update times etc *)
     fops_stat_dir: 'jimpl -> 'dir_ref -> ty_stats; (* this is internal - doesn't expect to update times etc *)
     fops_lstat: 'jimpl -> 'file_ref -> ty_stats; (* this is internal -doesn't expect to update times etc *)
+#ifdef aspect_time
+    fops_get_timestamp: 'jimpl -> entry 'dir_ref 'file_ref -> ts_type -> ty_logical_timestamp;
+    fops_set_timestamp: 'jimpl -> entry 'dir_ref 'file_ref -> ts_type -> ty_logical_timestamp -> 'jimpl;
+    fops_update_all_marked_timestamps: 'jimpl -> 'jimpl;
+    fops_periodic_update: 'jimpl -> (finset 'jimpl);
+    fops_get_clock: 'jimpl -> ty_logical_time;
+    fops_set_clock: 'jimpl -> ty_logical_time -> 'jimpl;
+#endif
 
     fops_observe_dir_register : 'jimpl -> 'dir_ref -> ('jimpl * ty_od_handle 'dir_ref);
     fops_observe_dir : 'jimpl -> ty_od_handle 'dir_ref -> ('jimpl * list ty_od_entry);
@@ -1279,7 +1293,8 @@ o*)
     oss_fid_table: fmap ty_fid (fid_state 'dir_ref 'file_ref);    (* coverage:sexp *)
     oss_group_table: fmap gid (finset uid) (*o sexp_opaque o*);   (* coverage:sexp *)
     oss_fs_state: 'jimpl;                                         (* coverage:sexp *)
-    oss_env: environment 'dir_ref 'file_ref 'jimpl                (* coverage:sexp *)
+    oss_env: environment 'dir_ref 'file_ref 'jimpl;               (* coverage:sexp *)
+    oss_realtime_table: fmap ty_logical_time ty_os_time           (* coverage:sexp *)
   |> (*o with sexp_of o*)                                         (* coverage:sexp *)
 
   val os_state_to_fs_state : forall 'dir_ref 'file_ref 'jimpl. ty_os_state 'dir_ref 'file_ref 'jimpl -> 'jimpl
@@ -1613,7 +1628,8 @@ module Fs_arch = struct
     arch_int_of_seek_command = linux_arch_int_of_seek_command;
     arch_allows_dir_read = false;
     arch_group_from_parent_dir = false; (* use effective gid of process for new dirs *)
-    arch_allows_removing_from_protected_dir_if_writeable = false; 
+    arch_allows_removing_from_protected_dir_if_writeable = false;
+    arch_is_periodic = true;
   |>
 
   (* for testing, we don't want to fail every time we hit a POSIX
@@ -1632,6 +1648,7 @@ module Fs_arch = struct
     arch_allows_dir_read = false;
     arch_group_from_parent_dir = false; (* for testing perhaps try true as well *)
     arch_allows_removing_from_protected_dir_if_writeable = false;
+    arch_is_periodic = false;
   |>
 
 
@@ -1648,6 +1665,7 @@ module Fs_arch = struct
     arch_allows_dir_read = false;
     arch_group_from_parent_dir = false; (* for testing perhaps try true as well *)
     arch_allows_removing_from_protected_dir_if_writeable = false;
+    arch_is_periodic = false;
   |>
 
   (* freebsd arch is like posix *)
@@ -1663,11 +1681,19 @@ module Fs_arch = struct
     arch_allows_dir_read = true;
     arch_group_from_parent_dir = false; (* for testing perhaps try true as well *)
     arch_allows_removing_from_protected_dir_if_writeable = false;
+    arch_is_periodic = false;
   |>
+
+  (* [posix_periodic_test_arch] is like [posix_periodic_arch], but is
+  periodic *)
+  val posix_periodic_test_arch : architecture
+  let posix_periodic_test_arch =
+    <| posix_test_arch with arch_is_periodic = true |>
 
   let architecture_of_ty_arch a = (match a with
     | ARCH_LINUX -> linux_arch (* coverage:mac_os_x:irrelevant *)
     | ARCH_POSIX -> posix_test_arch (* coverage:linux:mac_os_x:irrelevant *)
+    | ARCH_POSIX_PERIODIC -> posix_periodic_test_arch (* coverage:linux:mac_os_x:irrelevant *)
     | ARCH_MAC_OS_X -> mac_os_x_test_arch (* coverage:linux:posix:irrelevant *)
     | ARCH_FREEBSD -> freebsd_test_arch
   end)
@@ -2024,6 +2050,274 @@ module Fs_permissions = struct
 end
 #endif
 
+#ifdef aspect_time
+
+(******************************************************************************)
+(* Fs_time                                                                    *)
+(*                                                                            *)
+(* operations concerned with time                                             *)
+(******************************************************************************)
+
+module Fs_time = struct
+
+  open Fs_types
+
+  (* [increment_time] increments file system clock of a unit when invoked *)
+  val increment_time : forall 'dir_ref 'file_ref 'impl.
+    environment 'dir_ref 'file_ref 'impl ->
+    os_state_or_special 'dir_ref 'file_ref 'impl ->
+    os_state_or_special 'dir_ref 'file_ref 'impl
+  let increment_time env s =
+    match s with
+      |OS_normal(s0) ->
+        let new_time = (env.env_ops.fops_get_clock s0.oss_fs_state) + 1 in
+        OS_normal(
+            <| s0 with oss_fs_state = env.env_ops.fops_set_clock s0.oss_fs_state new_time |>
+          )
+      |_ -> s end
+
+(* [is_marked] checks if the given [ty_logical_timestamp] is a
+  [Marked_for_update l] *)
+  val is_marked :
+    ty_logical_timestamp ->
+    bool
+  let is_marked ts =
+    match ts with
+    | Marked_for_update -> true
+    | _ -> false end
+
+(* [mark_timestamp] makes a [ty_logical_timestamp] with a concrete
+  value a [Marked_for_update[] ], while it leaves the timestamp intact
+  if it is already marked. Note that the [Marked_for_update]
+  constructor is initialised with an empty list to avoid redundancy
+  (if the architecture is periodic the os state transition will add
+  the current logical clock to all marked timestamps lists)*)
+  val mark_timestamp : forall 'dir_ref 'file_ref 'impl.
+    fs_ops 'dir_ref 'file_ref 'impl ->
+    'impl ->
+    ts_type ->
+    entry 'dir_ref 'file_ref ->
+    'impl
+  let mark_timestamp ops s0 timestamp_type inode_entry =
+    let t =
+      (ops.fops_get_timestamp s0 inode_entry timestamp_type) in
+    let t =
+      if is_marked t
+      then t
+      else Marked_for_update
+    in
+    (ops.fops_set_timestamp s0 inode_entry timestamp_type t)
+
+  (* [mark_timestamps] applies [mark_timestamp] to all the given
+      types *)
+  val mark_timestamps : forall 'dir_ref 'file_ref 'impl.
+    fs_ops 'dir_ref 'file_ref 'impl ->
+    'impl ->
+    list ts_type ->
+    entry 'dir_ref 'file_ref ->
+    'impl
+  let mark_timestamps ops s0 ts i0_ref =
+    foldl (fun s1 t -> mark_timestamp ops s1 t i0_ref) s0 ts
+
+
+  (* [do_periodic_update] creates a new state for each object in the
+  state that has marked timestamps: in this new state the timestamps
+  of the object will have a concrete value, while the other timestamps
+  of the other objects are left untouched. This function explodes the
+  non determinism, probably causing a performance problem. *)
+  val do_periodic_update : forall 'dir_ref 'file_ref 'impl.
+    environment 'dir_ref 'file_ref 'impl ->
+    os_state_or_special 'dir_ref 'file_ref 'impl ->
+    finset (os_state_or_special 'dir_ref 'file_ref 'impl)
+  let do_periodic_update env s =
+    match s with
+    | OS_normal(s0) ->
+       let fs_state = s0.oss_fs_state in
+       finset_image
+         (fun fs_s ->
+          OS_normal(<| s0 with oss_fs_state=fs_s |>))
+         (env.env_ops.fops_periodic_update fs_state)
+      | _ -> finset_singleton s
+    end
+
+  (* [update_all_marked_timestamps] gives a concrete time value to all
+     the marked [ty_logical_timestamp]s existing in the fs state [s].
+     This is necessary to model fs that do not allow delay in
+     timestamps update (viz no Marked_for_update) *)
+  val update_all_marked_timestamps : forall 'dir_ref 'file_ref 'impl.
+    environment 'dir_ref 'file_ref 'impl ->
+    os_state_or_special 'dir_ref 'file_ref 'impl ->
+    os_state_or_special 'dir_ref 'file_ref 'impl
+  let update_all_marked_timestamps env s =
+    match s with
+      | OS_normal(s0) -> OS_normal(
+    <| s0 with oss_fs_state=(env.env_ops.fops_update_all_marked_timestamps s0.oss_fs_state)
+      |>)
+      | _ -> s
+    end
+
+(* [update_timestamps_fs_state] assign concrete time values to the
+  timestamps of the given [entry] by using the file system state [s0] *)
+  val update_timestamps_fs_state : forall 'dir_ref 'file_ref 'impl.
+    fs_ops 'dir_ref 'file_ref 'impl ->
+    'impl ->
+    entry 'dir_ref 'file_ref ->
+    'impl
+  let update_timestamps_fs_state ops s0 entry =
+    let types = [TS_Access; TS_Modification; TS_Change] in
+    let update_timestamp fs_state t =
+      (let ts =
+         (ops.fops_get_timestamp fs_state entry t) in
+       if is_marked ts then
+         (ops.fops_set_timestamp fs_state entry t (Logical_timestamp(ops.fops_get_clock fs_state)))
+       else fs_state)
+    in
+    List.foldl (fun s0 t -> update_timestamp s0 t) s0 types
+
+  (* [update_timestamps_os_state] assign concrete time values to the
+  timestamps of the given [entry] by using the operating system state
+  [s0] *)
+  val update_timestamps_os_state : forall 'dir_ref 'file_ref 'impl.
+    environment 'dir_ref 'file_ref 'impl ->
+    ty_os_state 'dir_ref 'file_ref 'impl ->
+    entry 'dir_ref 'file_ref ->
+    ty_os_state 'dir_ref 'file_ref 'impl
+  let update_timestamps_os_state env s0 entry =
+    let fs_state' =
+      update_timestamps_fs_state env.env_ops s0.oss_fs_state entry
+    in
+    <| s0 with oss_fs_state = fs_state'|>
+
+  (* [update_timestamps_for_entry_if_no_open_fds] gives a concrete [ty_logical_time]
+   values to marked timestamps, when no process has open file
+   descriptors for their file anymore. We need this function when we
+   call the [close] interface in order to obtaining a correct
+   state. *)
+  val update_timestamps_for_entry_if_no_open_fds : forall 'dir_ref 'file_ref 'impl.
+    environment 'dir_ref 'file_ref 'impl ->
+    entry 'dir_ref 'file_ref  ->
+    os_state_or_special 'dir_ref 'file_ref 'impl ->
+    os_state_or_special 'dir_ref 'file_ref 'impl
+  let update_timestamps_for_entry_if_no_open_fds env entry os_s =
+    match os_s with
+      | OS_normal(s0') ->
+        let are_all_entry_fd_closed =
+          (* gather all file descriptors *)
+          let all_fd_states =
+            let all_ppstates = fmap_range s0'.oss_pid_table in
+            let f1 ppstate = fmap_range ppstate.pps_fd_table in
+            finset_bigunion_image f1 all_ppstates
+          in
+          (* gather all open file descriptors for the file we are interested in *)
+          let open_fds_pointing_to_entry =
+            let is_open_and_pointing_to_entry fd_s =
+              let fid_state = fromJust(fmap_lookup s0'.oss_fid_table fd_s.fds_fid) in
+              (fid_state.fids_open_or_closed = FID_OPEN)
+                &&
+              (fid_state.fids_entry = entry)
+            in
+            finset_filter (fun fd_s -> (is_open_and_pointing_to_entry fd_s)) all_fd_states
+          in
+          (* checks that the fd is not opened by any process *)
+          finset_is_empty open_fds_pointing_to_entry
+        in
+        (* update timestamps if all fd for entry are closed *)
+        let s0'' =
+          if are_all_entry_fd_closed
+          then (update_timestamps_os_state env s0' entry)
+          else s0'
+        in
+        OS_normal(s0'')
+      | _ -> os_s
+        end
+
+  val compare_stats : forall 'dir_ref 'file_ref 'impl.
+    environment 'dir_ref 'file_ref 'impl ->
+    ty_logical_stats ->
+    ty_os_stats ->
+    bool
+  let compare_stats env stat stat' =
+    (* lets start with the simple record fields that should really be equal *)
+    (stat.l_st_kind  = stat'.os_st_kind)  (** Kind of the file *) &&
+      (stat.l_st_perm  = stat'.os_st_perm)  (** Access rights *)    &&
+        (if stat.l_st_kind = S_IFDIR
+         then true
+         else stat.l_st_size = stat'.os_st_size) &&
+          stat.l_st_nlink = stat'.os_st_nlink &&
+            (stat.l_st_uid = stat'.os_st_uid) &&
+              (stat.l_st_gid = stat'.os_st_gid)
+
+  val differ_only_on_time_formats : forall 'dir_ref 'file_ref 'impl.
+    environment 'dir_ref 'file_ref 'impl ->
+    ty_logical_stats ->
+    ty_os_stats ->
+    bool
+    let differ_only_on_time_formats env spec_stats os_stats =
+    (compare_stats env spec_stats os_stats)
+
+  (* [wf_realtime_map] checks that the logicaltime-realtime map is
+  well formed after accumulating a new pair.  It is not well formed
+  if:
+
+   - the real time corresponding to the logical time is smaller than
+     existing map real times we have an error, because an action was
+     performed later but resulted with a previous real time;
+
+   - the logical time already existed among the keys of the map *)
+  val wf_realtime_map :
+    fmap ty_logical_time ty_os_time ->
+    bool
+  let wf_realtime_map m =
+    let dom = list_from_finset (fmap_dom m) in
+    let dom_pairs =
+      (* all possible pairs achievable from the domain *)
+      foldl (fun l x -> (l++(map (fun x' -> (x,x')) dom))) [] dom
+    in
+    let l_times_pairs_in_increasing_order =
+      List.filter (fun (x, x') -> x < x' ) dom_pairs
+    in
+    let is_corresponding_r_times_pair_in_increasing_order (l_t, l_t') =
+      let r_t = fromJust (fmap_lookup m l_t) in
+      let r_t' = fromJust (fmap_lookup m l_t') in
+      (* here we are loose and we allow the two real times can be equal
+      (the reason is time granularity: [tv_sec] can be rounded up)*)
+      (timespec_lte r_t r_t')
+    in
+    List.all is_corresponding_r_times_pair_in_increasing_order l_times_pairs_in_increasing_order
+
+
+  (* [insert_new_entry_in_realtime_map s0 pair] updates the map in
+  [s0]. This map translates logical times in real-world times. The
+  [pair] must be (logical_time, real_time). 
+  *)
+  val insert_new_entry_in_realtime_map : forall 'dir_ref 'file_ref 'impl.
+    ty_os_state 'dir_ref 'file_ref 'impl ->
+    (ty_logical_time * ty_os_time) ->
+    (maybe (ty_os_state 'dir_ref 'file_ref 'impl))
+  let insert_new_entry_in_realtime_map s0 (l, r) = (
+    (* we have a new entry l->r; can we add it to the map? *)
+    let m = s0.oss_realtime_table in
+    (match (fmap_lookup m l) with
+    | Just r' -> (if r'=r then Just(s0) else Nothing)
+    | Nothing -> (
+      let m' = fmap_update m (l,r) in
+      if wf_realtime_map m' then
+        Just(<|s0 with oss_realtime_table=m'|>)
+      else
+        Nothing) end))
+
+  (* [insert_new_entries_in_realtime_map] calls
+  [insert_new_entry_in_realtime_map] for multiple new entries *)
+  val insert_new_entries_in_realtime_map : forall 'dir_ref 'file_ref 'impl.
+    ty_os_state 'dir_ref 'file_ref 'impl ->
+    list (ty_logical_time * ty_os_time) ->
+    (maybe (ty_os_state 'dir_ref 'file_ref 'impl))
+  let insert_new_entries_in_realtime_map s0 tps = (
+    let f1 = (fun acc elt -> match acc with | Nothing -> Nothing | Just s1 -> insert_new_entry_in_realtime_map s1 elt end) in
+    foldl f1 (Just s0) tps)
+
+ end
+#endif
 
 (******************************************************************************)
 (* Resolving paths                                                            *)
@@ -5767,7 +6061,8 @@ module Os_transition_system = struct
       oss_fid_table=fid_table;
       oss_group_table=fmap_empty();
       oss_fs_state=fs0;
-      oss_env=env
+      oss_env=env;
+      oss_realtime_table=fmap_empty();
     |>
     in
     s0)

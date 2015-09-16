@@ -8,7 +8,7 @@
 # use command line argument 'CPPO_ARGS="xxxx"'
 
 ifndef CPPO_ARGS
-CPPO_ARGS:=-D aspect_perms
+CPPO_ARGS:=-D aspect_perms -D aspect_time
 endif
 
 CPPO=cppo $(CPPO_ARGS)
