@@ -369,6 +369,59 @@ module Fs_types = struct
 
   let root_gid : gid = Group_id 0
 
+  (*-------------------------------*)
+  (* Time types                    *)
+  (*-------------------------------*)
+
+  (* these abbreviations types are just to stick to POSIX types*)
+  type t_time = nat (*o with sexp o*)
+
+  type long = int64 (*o with sexp o*)
+
+  (* [ty_real_time] is our corresponding type for the POSIX
+  timespec. *)
+  type ty_os_time = <| tv_sec:t_time ; tv_nsec:long |> (*o with sexp o*)
+
+  (* a real-world timestamp can be both a time value or a
+  marked-for-update label *)
+  type ty_os_timestamp = Os_timestamp of ty_os_time (*o with sexp o*)
+
+  (* [ty_logical_time] is used only by the spec *)
+  type ty_logical_time = nat (*o with sexp o*)
+
+  (* a spec timestamp can be both a time value than a
+  marked-for-update label *)
+  type ty_logical_timestamp =
+    Logical_timestamp of ty_logical_time
+    | Marked_for_update (*o with sexp o*)
+
+  val dest_logical_timestamp : ty_logical_timestamp -> ty_logical_time
+  let dest_logical_timestamp (Logical_timestamp x) = x
+
+  val dest_os_timestamp : ty_os_timestamp -> ty_os_time
+  let dest_os_timestamp (Os_timestamp x) = x
+
+  (* [timespec_lte] checks that real time [t] is smaller or equal to
+real time [t'] (lexicographic order). We need the equality because of
+time resolution: if the difference between timestamps is smaller than
+the time resolution, old and new timestamps have the same values *)
+  val timespec_lte : ty_os_time -> ty_os_time -> bool
+  let timespec_lte t t' =
+    (t.tv_sec < t'.tv_sec)
+    ||
+      ( (t.tv_sec = t'.tv_sec) && t.tv_nsec <= t'.tv_nsec)
+
+  let default_timespec = <| tv_sec=0; tv_nsec=0 |>
+
+
+  (*
+   the three types of timestamps:
+    ACCESS       -> inode's file is read
+    MODIFICATION -> inode's file data is changed
+    CHANGE       -> inode's file metadata is changed
+   *)
+  type ts_type = TS_Access | TS_Modification | TS_Change (*o with sexp o*)
+
 
   (*-------------------------------*)
   (* result record for stat        *)
