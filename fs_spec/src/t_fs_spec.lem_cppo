@@ -2077,7 +2077,7 @@ module Fs_time = struct
       |_ -> s end
 
 (* [is_marked] checks if the given [ty_logical_timestamp] is a
-  [Marked_for_update l] *)
+  [Marked_for_update] *)
   val is_marked :
     ty_logical_timestamp ->
     bool
@@ -2087,11 +2087,8 @@ module Fs_time = struct
     | _ -> false end
 
 (* [mark_timestamp] makes a [ty_logical_timestamp] with a concrete
-  value a [Marked_for_update[] ], while it leaves the timestamp intact
-  if it is already marked. Note that the [Marked_for_update]
-  constructor is initialised with an empty list to avoid redundancy
-  (if the architecture is periodic the os state transition will add
-  the current logical clock to all marked timestamps lists)*)
+  value a [Marked_for_update] (while it leaves the timestamp intact if
+  it is already marked). *)
   val mark_timestamp : forall 'dir_ref 'file_ref 'impl.
     fs_ops 'dir_ref 'file_ref 'impl ->
     'impl ->
@@ -2108,8 +2105,8 @@ module Fs_time = struct
     in
     (ops.fops_set_timestamp s0 inode_entry timestamp_type t)
 
-  (* [mark_timestamps] applies [mark_timestamp] to all the given
-      types *)
+  (* [mark_timestamps] applies [mark_timestamp] for each timestamp
+  type present in [ts] *)
   val mark_timestamps : forall 'dir_ref 'file_ref 'impl.
     fs_ops 'dir_ref 'file_ref 'impl ->
     'impl ->
@@ -2120,16 +2117,19 @@ module Fs_time = struct
     foldl (fun s1 t -> mark_timestamp ops s1 t i0_ref) s0 ts
 
 
-  (* [do_periodic_update] creates a new state for each object in the
-  state that has marked timestamps: in this new state the timestamps
-  of the object will have a concrete value, while the other timestamps
-  of the other objects are left untouched. This function explodes the
-  non determinism, probably causing a performance problem. *)
+  (* [do_periodic_update] implements the OS non deterministic choice
+  of updating timestamps. Since any marked object in the file system
+  could be updated during a transition, this function creates a new
+  state for each marked object in the state [s]: in each new state the
+  timestamps of the marked object have now a concrete value, while the
+  other objects are left untouched. Note: using this function in each
+  transition generates a performance problem while running the
+  specification as a software. *)
   val do_periodic_update : forall 'dir_ref 'file_ref 'impl.
     environment 'dir_ref 'file_ref 'impl ->
     os_state_or_special 'dir_ref 'file_ref 'impl ->
     finset (os_state_or_special 'dir_ref 'file_ref 'impl)
-  let do_periodic_update env s =
+  let do_periodic_update env s = (
     match s with
     | OS_normal(s0) ->
        let fs_state = s0.oss_fs_state in
@@ -2138,12 +2138,12 @@ module Fs_time = struct
           OS_normal(<| s0 with oss_fs_state=fs_s |>))
          (env.env_ops.fops_periodic_update fs_state)
       | _ -> finset_singleton s
-    end
+    end)
 
   (* [update_all_marked_timestamps] gives a concrete time value to all
      the marked [ty_logical_timestamp]s existing in the fs state [s].
-     This is necessary to model fs that do not allow delay in
-     timestamps update (viz no Marked_for_update) *)
+     This function models file system that do not allow delay
+     (i.e. periodic updates) in timestamps update *)
   val update_all_marked_timestamps : forall 'dir_ref 'file_ref 'impl.
     environment 'dir_ref 'file_ref 'impl ->
     os_state_or_special 'dir_ref 'file_ref 'impl ->
@@ -2151,13 +2151,15 @@ module Fs_time = struct
   let update_all_marked_timestamps env s =
     match s with
       | OS_normal(s0) -> OS_normal(
-    <| s0 with oss_fs_state=(env.env_ops.fops_update_all_marked_timestamps s0.oss_fs_state)
+    <| s0 with
+         oss_fs_state=(env.env_ops.fops_update_all_marked_timestamps s0.oss_fs_state)
       |>)
       | _ -> s
     end
 
-(* [update_timestamps_fs_state] assign concrete time values to the
-  timestamps of the given [entry] by using the file system state [s0] *)
+(* [update_timestamps_fs_state] assigns concrete time values to the
+  timestamps of the given [entry] by using the file system state
+  [s0] *)
   val update_timestamps_fs_state : forall 'dir_ref 'file_ref 'impl.
     fs_ops 'dir_ref 'file_ref 'impl ->
     'impl ->
@@ -2174,7 +2176,7 @@ module Fs_time = struct
     in
     List.foldl (fun s0 t -> update_timestamp s0 t) s0 types
 
-  (* [update_timestamps_os_state] assign concrete time values to the
+  (* [update_timestamps_os_state] assigns concrete time values to the
   timestamps of the given [entry] by using the operating system state
   [s0] *)
   val update_timestamps_os_state : forall 'dir_ref 'file_ref 'impl.
@@ -2188,17 +2190,18 @@ module Fs_time = struct
     in
     <| s0 with oss_fs_state = fs_state'|>
 
-  (* [update_timestamps_for_entry_if_no_open_fds] gives a concrete [ty_logical_time]
-   values to marked timestamps, when no process has open file
-   descriptors for their file anymore. We need this function when we
-   call the [close] interface in order to obtaining a correct
-   state. *)
+  (* [update_timestamps_for_entry_if_no_open_fds] gives a concrete
+   [ty_logical_time] values to marked timestamps, when no process has
+   any file descriptors opened for the object anymore. This function
+   reflects POSIX "All timestamps that are marked for update shall be
+   updated when the file ceases to be open by any process " (see:
+   http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap04.html). *)
   val update_timestamps_for_entry_if_no_open_fds : forall 'dir_ref 'file_ref 'impl.
     environment 'dir_ref 'file_ref 'impl ->
     entry 'dir_ref 'file_ref  ->
     os_state_or_special 'dir_ref 'file_ref 'impl ->
     os_state_or_special 'dir_ref 'file_ref 'impl
-  let update_timestamps_for_entry_if_no_open_fds env entry os_s =
+  let update_timestamps_for_entry_if_no_open_fds env entry os_s = (
     match os_s with
       | OS_normal(s0') ->
         let are_all_entry_fd_closed =
@@ -2229,7 +2232,7 @@ module Fs_time = struct
         in
         OS_normal(s0'')
       | _ -> os_s
-        end
+    end)
 
   val compare_stats : forall 'dir_ref 'file_ref 'impl.
     environment 'dir_ref 'file_ref 'impl ->
@@ -2252,16 +2255,15 @@ module Fs_time = struct
     ty_logical_stats ->
     ty_os_stats ->
     bool
-    let differ_only_on_time_formats env spec_stats os_stats =
+  let differ_only_on_time_formats env spec_stats os_stats =
     (compare_stats env spec_stats os_stats)
 
   (* [wf_realtime_map] checks that the logicaltime-realtime map is
-  well formed after accumulating a new pair.  It is not well formed
-  if:
+  well formed after accumulating a new pair. It is not well formed if:
 
    - the real time corresponding to the logical time is smaller than
-     existing map real times we have an error, because an action was
-     performed later but resulted with a previous real time;
+     existing real times in the map (because an action was performed
+     later but resulted with a previous real time);
 
    - the logical time already existed among the keys of the map *)
   val wf_realtime_map :
@@ -2288,8 +2290,7 @@ module Fs_time = struct
 
   (* [insert_new_entry_in_realtime_map s0 pair] updates the map in
   [s0]. This map translates logical times in real-world times. The
-  [pair] must be (logical_time, real_time). 
-  *)
+  [pair] must be (logical_time, real_time).  *)
   val insert_new_entry_in_realtime_map : forall 'dir_ref 'file_ref 'impl.
     ty_os_state 'dir_ref 'file_ref 'impl ->
     (ty_logical_time * ty_os_time) ->
@@ -2298,13 +2299,14 @@ module Fs_time = struct
     (* we have a new entry l->r; can we add it to the map? *)
     let m = s0.oss_realtime_table in
     (match (fmap_lookup m l) with
-    | Just r' -> (if r'=r then Just(s0) else Nothing)
-    | Nothing -> (
-      let m' = fmap_update m (l,r) in
-      if wf_realtime_map m' then
-        Just(<|s0 with oss_realtime_table=m'|>)
-      else
-        Nothing) end))
+     | Just r' -> (if r'=r then Just(s0) else Nothing)
+     | Nothing -> (
+       let m' = fmap_update m (l,r) in
+       if wf_realtime_map m' then
+         Just(<|s0 with oss_realtime_table=m'|>)
+       else
+         Nothing)
+     end))
 
   (* [insert_new_entries_in_realtime_map] calls
   [insert_new_entry_in_realtime_map] for multiple new entries *)
@@ -2313,7 +2315,13 @@ module Fs_time = struct
     list (ty_logical_time * ty_os_time) ->
     (maybe (ty_os_state 'dir_ref 'file_ref 'impl))
   let insert_new_entries_in_realtime_map s0 tps = (
-    let f1 = (fun acc elt -> match acc with | Nothing -> Nothing | Just s1 -> insert_new_entry_in_realtime_map s1 elt end) in
+    let f1 =
+      (fun acc elt ->
+       match acc with
+       | Nothing -> Nothing
+       | Just s1 -> insert_new_entry_in_realtime_map s1 elt
+       end)
+    in
     foldl f1 (Just s0) tps)
 
  end
