@@ -272,6 +272,9 @@ module Fmap = struct
   val fmap_range : forall 'k 'v. MapKeyType 'k, SetType 'v => fmap 'k 'v -> finset 'v
   let fmap_range m = finset_from_set (range (map_from_fmap m))
 
+  val fmap_image : forall 'k 'v 'r. MapKeyType 'k, SetType 'v => ('v -> 'r) -> fmap 'k 'v -> fmap 'k 'r
+  let fmap_image f (Finmap m) = Finmap (Map.map f m)
+
   val fmap_in_dom : forall 'k 'v. SetType 'k, Eq 'k, MapKeyType 'k => 'k -> fmap 'k 'v -> bool
   let fmap_in_dom k m = Map.member k (map_from_fmap m)
 

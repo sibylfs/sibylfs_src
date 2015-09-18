@@ -229,15 +229,15 @@ end) : Dump_fs_operations with type state = M.state = struct
 
   let inode_of_file_path s p =
     let st = get_stat s p in
-    dest_Inode (st.st_ino)
+    dest_Inode (st.l_st_ino)
 
   let inode_of_dir_path s p =
     let st = get_stat s p in
-    dest_Inode (st.st_ino)
+    dest_Inode (st.l_st_ino)
 
   let kind_of_path s p =
     let st = get_stat s p in
-    match st.st_kind with
+    match st.l_st_kind with
       | S_IFLNK -> Unix.S_LNK
       | S_IFDIR -> Unix.S_DIR
       | S_IFREG -> Unix.S_REG

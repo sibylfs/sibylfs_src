@@ -186,6 +186,14 @@ let simple_string_of_uid uid = (match uid with
 let simple_string_of_gid gid = (match gid with
   | Group_id n -> string_of_int n)
 
+let string_of_os_timestamp (Os_timestamp t) =
+  "{tv_sec="^(string_of_int t.tv_sec)^";tv_nsec="^(string_of_int (Int64.to_int t.tv_nsec))^";}"
+
+let string_of_logical_timestamp t =
+  (match t with
+   | Logical_timestamp lt -> string_of_int lt
+   | Marked_for_update -> "Marked"
+  )
 
 let string_of_os_ext_cmd arch cmd = (match cmd with
   | OS_OPEN_CLOSE (p,fs,p') -> ("open_close "^(string_of_cstring p)^" "^(string_of_int_flags arch fs)^(match p' with None -> "" | _ -> " "^(string_of_perm_opt p'))^"")
@@ -263,28 +271,44 @@ let string_of_ret_value v = (match v with
     "RV_bytes("^(string_of_bytes bs)^")")
   | RV_names(ns) -> (
     "["^(String.concat ";" (List.map string_of_name ns))^"]") 
-  | RV_stats(s) -> (
+  | RV_logical_stats(s) -> (
     let open Unix.LargeFile in
     let (d,i,k,p,n,u,g,r,s,a,m,c) = 
-      (s.st_dev,s.st_ino,s.st_kind,s.st_perm,s.st_nlink,s.st_uid,s.st_gid,s.st_rdev,s.st_size,s.st_atime,s.st_mtime,s.st_ctime)
+      (s.l_st_dev,s.l_st_ino,s.l_st_kind,s.l_st_perm,s.l_st_nlink,s.l_st_uid,s.l_st_gid,s.l_st_rdev,s.l_st_size,s.l_st_atime,s.l_st_mtime,s.l_st_ctime)
     in
-    ("RV_stat { "^
-      "st_dev="^(string_of_int d)^"; "^ 
-      "st_ino="^(string_of_inode i)^"; "^
-      "st_kind="^(string_of_kind k)^"; "^
-      "st_perm="^(string_of_perm p)^"; "^ 
-      "st_nlink="^(string_of_int n)^"; "^
-      "st_uid="^(simple_string_of_uid u)^"; "^ 
-      "st_gid="^(simple_string_of_gid g)^"; "^ 
-      "st_rdev="^(string_of_int r)^"; "^
-      "st_size="^(Int64.to_string s)^"; "^
-(* times are not implemented in the main branch 
-      "st_atim="^string_of_timestamp a^"; "^
-      "st_mtim="^string_of_timestamp m^"; "^
-      "st_ctim="^string_of_timestamp c^"; "^
-*)
-      "}")))
-
+    ("RV_logical_stat { "^
+      "l_st_dev="^(string_of_int d)^"; "^ 
+      "l_st_ino="^(string_of_inode i)^"; "^
+      "l_st_kind="^(string_of_kind k)^"; "^
+      "l_st_perm="^(string_of_perm p)^"; "^ 
+      "l_st_nlink="^(string_of_int n)^"; "^
+      "l_st_uid="^(simple_string_of_uid u)^"; "^ 
+      "l_st_gid="^(simple_string_of_gid g)^"; "^ 
+      "l_st_rdev="^(string_of_int r)^"; "^
+      "l_st_size="^(Int64.to_string s)^"; "^
+      "l_st_atim="^string_of_logical_timestamp a^"; "^
+      "l_st_mtim="^string_of_logical_timestamp m^"; "^
+      "l_st_ctim="^string_of_logical_timestamp c^"; "^
+     "}"))
+  |RV_os_stats(s) -> (
+    let open Unix.LargeFile in
+    let (d,i,k,p,n,u,g,r,s,a,m,c) = 
+      (s.os_st_dev,s.os_st_ino,s.os_st_kind,s.os_st_perm,s.os_st_nlink,s.os_st_uid,s.os_st_gid,s.os_st_rdev,s.os_st_size,s.os_st_atime,s.os_st_mtime,s.os_st_ctime)
+    in
+    ("RV_os_stat { "^
+      "os_st_dev="^(string_of_int d)^"; "^ 
+      "os_st_ino="^(string_of_inode i)^"; "^
+      "os_st_kind="^(string_of_kind k)^"; "^
+      "os_st_perm="^(string_of_perm p)^"; "^ 
+      "os_st_nlink="^(string_of_int n)^"; "^
+      "os_st_uid="^(simple_string_of_uid u)^"; "^ 
+      "os_st_gid="^(simple_string_of_gid g)^"; "^ 
+      "os_st_rdev="^(string_of_int r)^"; "^
+      "os_st_size="^(Int64.to_string s)^"; "^
+      "os_st_atim="^string_of_os_timestamp a^"; "^
+      "os_st_mtim="^string_of_os_timestamp m^"; "^
+      "os_st_ctim="^string_of_os_timestamp c^"; "^
+     "}")))
 let string_of_rv_error_or_value ev = (match ev with
   | Error e -> ("Error("^(string_of_error e)^")")
   | Value v -> ("Value("^(string_of_ret_value v)^")"))

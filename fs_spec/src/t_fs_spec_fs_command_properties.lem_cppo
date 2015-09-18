@@ -512,7 +512,7 @@ let fsop_open_success_cond s0 env rpath oflag mode_opt =
  (match rpath with
   | RN_file (d0_ref, name, i0_ref, rp) -> (
        (finset_mem O_CREAT oflags --> not(rn_ends_with_slash rpath)) &&
-       (finset_mem O_NOFOLLOW oflags --> ((env.env_ops.fops_stat_file s0 i0_ref).st_kind <> S_IFLNK)) &&
+       (finset_mem O_NOFOLLOW oflags --> ((env.env_ops.fops_stat_file s0 i0_ref).l_st_kind <> S_IFLNK)) &&
        (if (is_linux_arch env) then (
          (finset_mem O_CREAT oflags --> not (finset_mem O_EXCL oflags))
        ) else (

@@ -464,23 +464,6 @@ the time resolution, old and new timestamps have the same values *)
          os_st_ctime : ty_os_timestamp; (** Last status change time *)                         (* coverage:sexp *)
       |> (*o with sexp o*) (* coverage:sexp *)
 
-  (* FIXME ag: remove ty_stats *)
-  (* from ocaml source unix.mli *)
-  type ty_stats =                                                                             (* coverage:sexp *)
-      <| st_dev : int;               (** Device number *)                                     (* coverage:sexp *)
-         st_ino : inode;             (** Inode number *)                                      (* coverage:sexp *)
-         st_kind : file_kind;        (** Kind of the file *)                                  (* coverage:sexp *)
-         st_perm : file_perm;        (** Access rights *)                                     (* coverage:sexp *)
-         st_nlink : int;             (** Number of links *)                                   (* coverage:sexp *)
-         st_uid : uid;               (** User id of the owner *)                              (* coverage:sexp *)
-         st_gid : gid;               (** Group ID of the file's group *)                      (* coverage:sexp *)
-         st_rdev : int;              (** Device minor number *)                               (* coverage:sexp *)
-         st_size : int64;            (** Size in bytes; no sensible meaning for directories *)(* coverage:sexp *)
-         st_atime : float_t;           (** Last access time *)                                (* coverage:sexp *)
-         st_mtime : float_t;           (** Last modification time *)                          (* coverage:sexp *)
-         st_ctime : float_t;           (** Last status change time *)                         (* coverage:sexp *)
-      |> (*o with sexp o*) (* coverage:sexp *)
-
 
   (*-------------------------------*)
   (* Return values                 *)
@@ -494,8 +477,6 @@ the time resolution, old and new timestamps have the same values *)
     (* RV_logical_stats cannot appear in successful transition label *)
     | RV_logical_stats of ty_logical_stats                       (* coverage:sexp *)
     | RV_os_stats of ty_os_stats                                 (* coverage:sexp *)
-    (* FIXME ag: remove RV_stats *)
-    | RV_stats of ty_stats                                       (* coverage:sexp *)
     | RV_file_perm of file_perm (*o with sexp o*) (* coverage:sexp *)
 
   instance (Eq ret_value)
@@ -1001,7 +982,7 @@ the time resolution, old and new timestamps have the same values *)
 
   (* a representation of the available architectures *)
   type ty_arch =
-      ARCH_LINUX | ARCH_POSIX | ARCH_MAC_OS_X | ARCH_FREEBSD (*o with sexp_of o*)    (* coverage:sexp*)
+      ARCH_LINUX | ARCH_POSIX | ARCH_POSIX_PERIODIC | ARCH_MAC_OS_X | ARCH_FREEBSD (*o with sexp_of o*)    (* coverage:sexp*)
   instance (Eq ty_arch)
     let (=) = unsafe_structural_equality
     let (<>) = unsafe_structural_inequality
@@ -1139,9 +1120,9 @@ the time resolution, old and new timestamps have the same values *)
     fops_mkfile: 'jimpl -> 'dir_ref -> name -> 'jimpl * 'file_ref; (* FIXME prefer this to touch *)
     fops_readlink: 'jimpl -> 'file_ref -> ty_bytes; (* internal *)
     fops_symlink: 'jimpl -> 'dir_ref -> name -> ty_bytes -> 'jimpl;
-    fops_stat_file: 'jimpl -> 'file_ref -> ty_stats; (* this is internal - doesn't expect to update times etc *)
-    fops_stat_dir: 'jimpl -> 'dir_ref -> ty_stats; (* this is internal - doesn't expect to update times etc *)
-    fops_lstat: 'jimpl -> 'file_ref -> ty_stats; (* this is internal -doesn't expect to update times etc *)
+    fops_stat_file: 'jimpl -> 'file_ref -> ty_logical_stats; (* this is internal - doesn't expect to update times etc *)
+    fops_stat_dir: 'jimpl -> 'dir_ref -> ty_logical_stats; (* this is internal - doesn't expect to update times etc *)
+    fops_lstat: 'jimpl -> 'file_ref -> ty_logical_stats; (* this is internal -doesn't expect to update times etc *)
 #ifdef aspect_time
     fops_get_timestamp: 'jimpl -> entry 'dir_ref 'file_ref -> ts_type -> ty_logical_timestamp;
     fops_set_timestamp: 'jimpl -> entry 'dir_ref 'file_ref -> ts_type -> ty_logical_timestamp -> 'jimpl;
@@ -1826,17 +1807,17 @@ module Fs_permissions = struct
     environment 'dir_ref 'file_ref 'impl ->
     (uid -> gid -> bool) ->
     uid -> permission_type -> 
-    ty_stats -> bool
+    ty_logical_stats -> bool
   let uid_check_permission env is_user_in_group uid pt stat = begin
      let perm_check = 
-       if (uid = stat.st_uid) then
+       if (uid = stat.l_st_uid) then
           permission_type_to_user_perm pt
-       else if is_user_in_group uid stat.st_gid then
+       else if is_user_in_group uid stat.l_st_gid then
           permission_type_to_group_perm pt
        else
           permission_type_to_other_perm pt
      in
-     check_file_perms stat.st_perm perm_check
+     check_file_perms stat.l_st_perm perm_check
   end
 
 
@@ -1887,7 +1868,7 @@ module Fs_permissions = struct
     'impl -> 'file_ref -> bool 
   let anyone_has_file_execute_permission ops s0 i0_ref =
     let i0_stats = ops.fops_stat_file s0 i0_ref in (* coverage:linux:irrelevant *)
-    let i0_perms = i0_stats.st_perm in (* coverage:linux:irrelevant *)
+    let i0_perms = i0_stats.l_st_perm in (* coverage:linux:irrelevant *)
     check_file_perms i0_perms S_IXUSR (* coverage:linux:irrelevant *)
     ||
     check_file_perms i0_perms S_IXGRP (* coverage:linux:irrelevant *)
@@ -1939,7 +1920,7 @@ module Fs_permissions = struct
     environment 'dir_ref 'file_ref 'impl ->
     (uid -> gid -> bool) ->
     uid -> bool -> 
-    ty_stats -> ty_stats -> bool
+    ty_logical_stats -> ty_logical_stats -> bool
   let uid_has_restricted_delete_privilege env in_group uid allow_write dir_stats file_stats = (
     (* abort if there is no write permission on the directory. In this case, one
        does not have delete permission, but the restricted one is fine. This is important
@@ -1948,10 +1929,10 @@ module Fs_permissions = struct
     if (not (uid_check_permission env in_group uid Perm_write dir_stats)) then true else 
 
     (* Similarly abort, if the parent directory is not protected. *)
-    let dir_is_protected = check_file_perms dir_stats.st_perm S_ISVTX in
+    let dir_is_protected = check_file_perms dir_stats.l_st_perm S_ISVTX in
     if (not dir_is_protected) then true else begin
-       (uid = file_stats.st_uid) || 
-       (uid = dir_stats.st_uid) ||
+       (uid = file_stats.l_st_uid) || 
+       (uid = dir_stats.l_st_uid) ||
        (allow_write
          && (uid_check_permission env in_group uid Perm_write file_stats)) (* coverage:impossible -there are no architectures that have arch_allows_removing_from_protected_dir_if_writeable set to true, so allow_write is always false*)
     end
@@ -1984,7 +1965,7 @@ module Fs_permissions = struct
     'file_ref -> bool
   let uid_owns_file env uid s0 file_ref =
     let file_stats = env.env_ops.fops_stat_file s0 file_ref in
-    (file_stats.st_uid = uid)
+    (file_stats.l_st_uid = uid)
 
   val uid_owns_dir : forall 'dir_ref 'file_ref 'impl. 
     environment 'dir_ref 'file_ref 'impl -> 
@@ -1993,7 +1974,7 @@ module Fs_permissions = struct
     'dir_ref -> bool
   let uid_owns_dir env uid s0 dir_ref =
     let file_stats = env.env_ops.fops_stat_dir s0 dir_ref in
-    (file_stats.st_uid = uid)
+    (file_stats.l_st_uid = uid)
 
   val uid_permissions : forall 'dir_ref 'file_ref 'impl. 
     environment 'dir_ref 'file_ref 'impl -> 
@@ -2234,29 +2215,38 @@ module Fs_time = struct
       | _ -> os_s
     end)
 
+  (* we compare all the fields of the stats unless they are timestamps
+  (because we use the oss_realtime_table for those)*)
   val compare_stats : forall 'dir_ref 'file_ref 'impl.
-    environment 'dir_ref 'file_ref 'impl ->
     ty_logical_stats ->
     ty_os_stats ->
     bool
-  let compare_stats env stat stat' =
-    (* lets start with the simple record fields that should really be equal *)
-    (stat.l_st_kind  = stat'.os_st_kind)  (** Kind of the file *) &&
-      (stat.l_st_perm  = stat'.os_st_perm)  (** Access rights *)    &&
-        (if stat.l_st_kind = S_IFDIR
-         then true
-         else stat.l_st_size = stat'.os_st_size) &&
-          stat.l_st_nlink = stat'.os_st_nlink &&
-            (stat.l_st_uid = stat'.os_st_uid) &&
-              (stat.l_st_gid = stat'.os_st_gid)
+  let compare_stats stat stat' = (
+    (stat.l_st_dev   = stat'.os_st_dev   )
+    &&
+    (stat.l_st_ino   = stat'.os_st_ino   )
+    &&
+    (stat.l_st_kind  = stat'.os_st_kind  )
+    &&
+    (stat.l_st_perm  = stat'.os_st_perm  )
+    &&
+    (stat.l_st_nlink = stat'.os_st_nlink )
+    &&
+    (stat.l_st_uid   = stat'.os_st_uid   )
+    &&
+    (stat.l_st_gid   = stat'.os_st_gid   )
+    &&
+    (stat.l_st_rdev  = stat'.os_st_rdev  )
+    &&
+    (stat.l_st_size  = stat'.os_st_size  )
+    )
 
   val differ_only_on_time_formats : forall 'dir_ref 'file_ref 'impl.
-    environment 'dir_ref 'file_ref 'impl ->
     ty_logical_stats ->
     ty_os_stats ->
     bool
-  let differ_only_on_time_formats env spec_stats os_stats =
-    (compare_stats env spec_stats os_stats)
+  let differ_only_on_time_formats spec_stats os_stats =
+    (compare_stats spec_stats os_stats)
 
   (* [wf_realtime_map] checks that the logicaltime-realtime map is
   well formed after accumulating a new pair. It is not well formed if:
@@ -2640,7 +2630,7 @@ module Resolve = struct
         (match entry with 
         | Dir_ref_entry d0_ref -> (alt_rr ps symlinks_so_far d0_ref ns)
         | File_ref_entry i0_ref -> (
-          let is_symlink = ((ps.rr_env.env_ops.fops_stat_file ps.rr_s0 i0_ref).st_kind = S_IFLNK) in
+          let is_symlink = ((ps.rr_env.env_ops.fops_stat_file ps.rr_s0 i0_ref).l_st_kind = S_IFLNK) in
           (match is_symlink with 
           | true -> (match rr_symlink ps symlinks_so_far so_far ns n i0_ref with
             | RR_inter i0 -> alt_rr ps i0.rr_symlinks_so_far i0.rr_so_far i0.rr_ns
@@ -2817,7 +2807,7 @@ module Resolve = struct
      fs_ops 'dir_ref 'file_ref 'impl ->
      'impl -> res_name 'dir_ref 'file_ref -> bool
   let res_name_is_symlink ops s0 rn = match rn with
-    | RN_file(_,_,i0_ref,_) -> ((ops.fops_stat_file s0 i0_ref).st_kind = S_IFLNK)
+    | RN_file(_,_,i0_ref,_) -> ((ops.fops_stat_file s0 i0_ref).l_st_kind = S_IFLNK)
     | _ -> false 
   end
 
@@ -3100,6 +3090,9 @@ module Fs_operations = struct
 #ifdef aspect_perms
   open Fs_permissions
 #endif
+#ifdef aspect_time
+  open Fs_time
+#endif
 
   (*--------------------------*)
   (* auxiliary functions      *)
@@ -3262,6 +3255,14 @@ module Fs_operations = struct
     (match (spath, dpath) with 
       | (RN_file(_,_,i0_ref,_), RN_none(d0_ref, n, _)) -> (
             let s0 = env.env_ops.fops_link_file s0 i0_ref d0_ref n in
+#ifdef aspect_time
+            let s0 = (* LINK_TS:2 in fs_spec/posix/link.md*)
+              mark_timestamps (env.env_ops) s0 [TS_Change] (File_ref_entry i0_ref)
+            in
+            let s0 = (* LINK_TS:1 in fs_spec/posix/link.md *)
+              mark_timestamps (env.env_ops) s0 [TS_Modification;TS_Change] (Dir_ref_entry d0_ref)
+            in
+#endif
             fsm_put_state s0)
       | _ -> fsm_special Impossible "error raised before" (* coverage:impossible *)
      end))
@@ -3331,7 +3332,7 @@ module Fs_operations = struct
     let new_uid = env.env_prms.cp_get_euid () in
     let new_gid = if arch.arch_group_from_parent_dir then
         (* inherit group from parent directory d0_ref *)
-        (env.env_ops.fops_stat_dir s2 d0_ref).st_gid (* coverage:impossible -no architecture has this field set to true *)
+        (env.env_ops.fops_stat_dir s2 d0_ref).l_st_gid (* coverage:impossible -no architecture has this field set to true *)
       else 
         (* use effective group id of process *)
         env.env_prms.cp_get_egid () 
@@ -3346,6 +3347,14 @@ module Fs_operations = struct
       | RN_none(d0_ref,n,_) -> (
          (* create the new directory and get a reference to it back *)
          let (s1, d1_ref) = env.env_ops.fops_mkdir s0 d0_ref n in
+#ifdef aspect_time
+         let s1 =  (* see MKDIR_TS:1 in fs_spec/posix/mkdir.md *)
+           mark_timestamps (env.env_ops) s1 [TS_Access; TS_Modification; TS_Change] (Dir_ref_entry(d1_ref))
+         in
+         let s1 = (* see MKDIR_TS:2 in fs_spec/posix/mkdir.md *)
+           mark_timestamps (env.env_ops) s1 [TS_Modification;TS_Change] (Dir_ref_entry(d0_ref))
+         in
+#endif
 #ifdef aspect_perms
          let s1 = fsop_mkdir_core_perms env mode s1 d0_ref d1_ref in (* update permissions and owner of new directory *)
 #endif
@@ -3553,7 +3562,7 @@ module Fs_operations = struct
     let new_uid = env.env_prms.cp_get_euid () in
     let new_gid = if arch.arch_group_from_parent_dir then
                      (* inherit group from parent directory d0_ref *)
-                     (env.env_ops.fops_stat_dir s2 d0_ref).st_gid (* coverage:impossible -group inheritance unsupported by the existing architectures*)
+                     (env.env_ops.fops_stat_dir s2 d0_ref).l_st_gid (* coverage:impossible -group inheritance unsupported by the existing architectures*)
                   else 
                      (* use effective group id of process *)
                      env.env_prms.cp_get_egid ()                 
@@ -3583,6 +3592,14 @@ module Fs_operations = struct
               (* We are sure we want to create a new regular file,
                  since if we tried to open a directory, we would have run into an error above. *)
               let (s1,i0_ref) = env.env_ops.fops_mkfile s0 d0_ref n in
+#ifdef aspect_time
+              let s1 = (* see OPEN_TS:1.1 in fs_spec/posix/open.md *)
+                mark_timestamps (env.env_ops) s1 [TS_Access; TS_Modification; TS_Change] (File_ref_entry i0_ref)
+              in
+              let s1 = (* see OPEN_TS:1.2 in fs_spec/posix/open.md *)
+                mark_timestamps (env.env_ops) s1 [TS_Modification; TS_Change] (Dir_ref_entry d0_ref)
+              in
+#endif
 #ifdef aspect_perms
               let s1 = fsop_open_core_create_perms env rpath mode d0_ref i0_ref s1 in
 #endif
@@ -3605,6 +3622,11 @@ module Fs_operations = struct
         | File_ref_entry i0_ref -> (
             let zero_bytes = T_list_array.of_string "" in (* FIXME define elsewhere? *)
             let s0 = env.env_ops.fops_write s0 i0_ref zero_bytes in
+#ifdef aspect_time
+            let s0 = (* see TRUNCATE_TS in fs_spec/posix/truncate *)
+              mark_timestamps (env.env_ops) s0 [TS_Modification; TS_Change] (File_ref_entry i0_ref)
+            in
+#endif
             fsm_put_state_return s0 (entry,oflags))
         end) else
          fsm_return (entry, oflags)
@@ -3710,6 +3732,12 @@ module Fs_operations = struct
   | File_ref_entry i0_ref -> (
       let ofs = (natFromInt ofs) in
       let (s1, res) = env.env_ops.fops_read s0 i0_ref in 
+#ifdef aspect_time
+      let s1 = (* see READ_TS in fs_spec/posix/read.md *)
+       if len > 0 then mark_timestamp (env.env_ops) s1 TS_Access (File_ref_entry(i0_ref))
+       else s1
+      in
+#endif
       (fsm_put_state s1) >>= (fun _x_ -> 
       let bs = dest_RV_bytes res in
       let len_bs = T_list_array.dim bs in
@@ -4096,7 +4124,16 @@ module Fs_operations = struct
     (match (rsrc, rdst) with
     | (RN_file (d0_ref,nsrc,_,_), RN_none (d1_ref, ndst, _)) -> 
         (* do the move; there is no file ns_dst *)
-        fsm_put_state (env.env_ops.fops_mvfile s0 d0_ref nsrc d1_ref ndst)
+        let s1 = (env.env_ops.fops_mvfile s0 d0_ref nsrc d1_ref ndst) in
+#ifdef aspect_time
+        let s1 = (* see RENAME_TS in fs_spec/posix/rename.md *)
+          mark_timestamps (env.env_ops) s1 [TS_Modification; TS_Change] (Dir_ref_entry d0_ref)
+        in
+        let s1 =(* see RENAME_TS in fs_spec/posix/rename.md *)
+          mark_timestamps (env.env_ops) s1 [TS_Modification; TS_Change] (Dir_ref_entry d1_ref)
+        in
+#endif
+        fsm_put_state s1
     | (RN_file (d0_ref,nsrc,i0_ref,_), RN_file (d1_ref,ndst,i1_ref,_)) -> (
         (* do the move; there is a file name ns_dst *)
         if (env.env_ops.fops_file_ref_eq s0 i1_ref i0_ref) then 
@@ -4109,7 +4146,13 @@ module Fs_operations = struct
         (match p with 
            | Nothing -> (fsm_special Impossible "src was root; can not happen because subdir would be true") (* coverage:impossible*)
            | Just(d0_ref,nsrc) -> (
-                fsm_put_state (env.env_ops.fops_mvdir s0 d0_ref nsrc d1_ref ndst)) end)
+             let s1 = (env.env_ops.fops_mvdir s0 d0_ref nsrc d1_ref ndst) in
+
+#ifdef aspect_time
+                let s1 = mark_timestamps (env.env_ops) s1 [TS_Modification; TS_Change] (Dir_ref_entry d0_ref) in
+                let s1 = mark_timestamps (env.env_ops) s1 [TS_Modification; TS_Change] (Dir_ref_entry d1_ref) in
+#endif
+                fsm_put_state s1) end)
     | (RN_dir (d0_ref,_), RN_dir (d1_ref,_)) -> 
         (* if same dir, return silently *)
         (if (env.env_ops.fops_dir_ref_eq s0 d1_ref d0_ref) then
@@ -4122,7 +4165,13 @@ module Fs_operations = struct
           | (_,Nothing) -> (
             fsm_special Impossible "impossible 1765 rename of dir onto root; can not happen because dst must be nonempty") (* coverage:impossible *)
           | (Just(d0_ref',nsrc),Just(d1_ref',ndst)) -> (
-            fsm_put_state (env.env_ops.fops_mvdir s0 d0_ref' nsrc d1_ref' ndst)) end))
+            let s1 = (env.env_ops.fops_mvdir s0 d0_ref' nsrc d1_ref' ndst) in
+#ifdef aspect_time
+            let s1 = mark_timestamps (env.env_ops) s1 [TS_Modification; TS_Change] (Dir_ref_entry d0_ref') in
+            let s1 = mark_timestamps (env.env_ops) s1 [TS_Modification; TS_Change] (Dir_ref_entry d1_ref') in
+#endif
+            fsm_put_state s1) end))
+
     | _ -> fsm_special Impossible "error raised before" (* coverage:impossible *)
      end)))
 
@@ -4208,6 +4257,11 @@ module Fs_operations = struct
             | Nothing -> fsm_special Impossible "error raised before" (* coverage:impossible *)
             | Just (d1_ref, n) ->  
                 let s1 = env.env_ops.fops_unlink s0 d1_ref n in  
+#ifdef aspect_time
+                let s1 = (* see RMDIR_TS in fs_spec/posix/rmdir.md *)
+                  mark_timestamps (env.env_ops) s1 [TS_Modification; TS_Change] (Dir_ref_entry(d1_ref))
+                in
+#endif
                 fsm_put_state s1
           end)
       | _ -> fsm_special Impossible "error raised before" (* coverage:impossible *)
@@ -4246,8 +4300,20 @@ module Fs_operations = struct
   let fsop_stat_core ops rn = (
     fsm_get_state >>= (fun s0 -> (
     (match rn with
-    | RN_file(d0_ref,n,i0_ref,rp) -> (fsm_return (RV_stats (ops.fops_stat_file s0 i0_ref)))
-    | RN_dir(d0_ref,rp) -> (fsm_return (RV_stats (ops.fops_stat_dir s0 d0_ref)))
+    | RN_file(d0_ref,n,i0_ref,rp) ->
+#ifdef aspect_time
+    let s0 = (* see STAT_TS in fs_spec/posix/timestamps *)
+      update_timestamps_fs_state ops s0 (File_ref_entry i0_ref)
+    in
+#endif
+       (fsm_return (RV_logical_stats (ops.fops_stat_file s0 i0_ref)))
+    | RN_dir(d0_ref,rp) ->
+#ifdef aspect_time
+    let s0 = (* see STAT_TS in fs_spec/posix/timestamps *)
+      update_timestamps_fs_state ops s0 (Dir_ref_entry d0_ref)
+    in
+#endif
+       (fsm_return (RV_logical_stats (ops.fops_stat_dir s0 d0_ref)))
     | _ -> fsm_special Impossible "error raised before" end)))) (* coverage:impossible *)
 
   val fsop_stat: forall 'dir_ref 'file_ref 'impl.
@@ -4317,6 +4383,14 @@ module Fs_operations = struct
            (* create a new array, of length len, with same contents *)
            let bs' = T_list_array.resize bs len in
            let s0 = env.env_ops.fops_write s0 i0_ref bs' in
+#ifdef aspect_time
+           let s0 =
+            if ((T_list_array.dim bs) <> (T_list_array.dim bs'))
+            then mark_timestamps (env.env_ops) s0 [TS_Modification;TS_Change] (File_ref_entry(i0_ref))
+            else s0
+           in
+#endif
+
            fsm_put_state s0
          end 
        | _ -> fsm_special Impossible "error raised before" (* coverage:impossible *)
@@ -4394,8 +4468,17 @@ module Fs_operations = struct
   let fsop_unlink_core env rpath = (
     fsm_get_state >>= fun s0 ->
     (match rpath with 
-      | RN_file(d0_ref,n,_,_) -> (
+      | RN_file(d0_ref,n,i0_ref,_) -> (
           let s0 = env.env_ops.fops_unlink s0 d0_ref n in
+#ifdef aspect_time
+          let s0 = (* see UNLINK_TS:1 in fs_spec/posix/unlink.md *)
+            mark_timestamps (env.env_ops) s0 [TS_Modification; TS_Change] (Dir_ref_entry d0_ref)
+          in
+          let s0 = (* see UNLINK_TS:2 in fs_spec/posix/unlink *)
+           if ((env.env_ops.fops_lstat s0 i0_ref).l_st_nlink <> 0)
+           then mark_timestamp env.env_ops s0 TS_Change (File_ref_entry i0_ref)
+           else s0 in
+#endif
           fsm_put_state s0) 
       | _ -> fsm_special Impossible "error raised before" (* coverage:impossible *)
      end))
@@ -4456,9 +4539,19 @@ module Fs_operations = struct
     (match rpath with 
       | RN_file(_,_,i0_ref,_) -> (
           let s1 = env.env_perm_ops.pops_set_perm_file s0 perm i0_ref in
+#ifdef aspect_time
+          let s1 = (* see CHMOD_TS in fs_spec/posix/chmod *)
+            mark_timestamp env.env_ops s1 TS_Change (File_ref_entry i0_ref)
+          in
+#endif
           fsm_put_state s1)
       | RN_dir(d0_ref, _) -> (         
           let s1 = env.env_perm_ops.pops_set_perm_dir s0 perm d0_ref in
+#ifdef aspect_time
+          let s1 = (* see CHMOD_TS in fs_spec/posix/chmod *)
+            mark_timestamp env.env_ops s1 TS_Change (Dir_ref_entry d0_ref)
+          in
+#endif
           fsm_put_state s1)
       | _ -> fsm_special Impossible "error raised before" (* coverage:impossible *)
      end)
@@ -4517,9 +4610,19 @@ module Fs_operations = struct
     (match rpath with 
       | RN_file(_,_,i0_ref,_) -> (
           let s1 = env.env_perm_ops.pops_chown_file s0 (u, g) i0_ref in
+#ifdef aspect_time
+          let s1 = (* see CHOWN_TS in fs_spec/posix/chown *)
+            mark_timestamp env.env_ops s1 TS_Change (File_ref_entry i0_ref)
+          in
+#endif
           fsm_put_state s1)
       | RN_dir(d0_ref, _) -> (         
           let s1 = env.env_perm_ops.pops_chown_dir s0 (u, g) d0_ref in
+#ifdef aspect_time
+          let s1 = (* see CHOWN_TS in fs_spec/posix/chown *)
+            mark_timestamp env.env_ops s1 TS_Change (Dir_ref_entry d0_ref)
+          in
+#endif
           fsm_put_state s1)
       | _ -> fsm_special Impossible "error raised before" (* coverage:impossible *)
      end)
@@ -4573,6 +4676,14 @@ module Fs_operations = struct
                      (* want to create a new array from bs' and bs *)
                      let bs'' = T_list_array.list_array_write (bs,0,len_written) (bs',natFromInt ofs) in
                      let s2 = ops.fops_write s1 i0_ref bs'' in
+#ifdef aspect_time
+                     let s2 =(* see WRITE_TS in fs_spec/posix/write.md *)
+                     if len > 0
+                     then mark_timestamps ops s2 [TS_Modification; TS_Change] (File_ref_entry i0_ref)
+                     else s0
+                     in
+#endif
+
                      fsm_put_state_return s2 (RV_num len_written)
         ))) end)
        end))
@@ -4692,10 +4803,21 @@ module Fs_operations = struct
     ( match dst with
         | RN_none(d0_ref,n,_) -> 
             (let s1 = env.env_ops.fops_symlink s0 d0_ref n src in
-             fsm_put_state s1)
+#ifdef aspect_time
+              (match (env.env_ops.fops_resolve s1 d0_ref n) with
+                | Nothing -> fsm_special Impossible "the symlink was created a step before"
+                | (Just new_syml) ->
+              let s1 = mark_timestamps (env.env_ops) s1 [TS_Access; TS_Modification; TS_Change] new_syml in
+              let s1 = mark_timestamps (env.env_ops) s1 [TS_Modification; TS_Change] (Dir_ref_entry d0_ref) in
+            fsm_put_state s1
+              end))
+
+#else
+               fsm_put_state s1)
+#endif
         | _ -> fsm_special Impossible "error raised before" (* coverage:impossible *)
      end)))
-  
+
   val fsop_symlink: forall 'dir_ref 'file_ref 'impl.
      environment 'dir_ref 'file_ref 'impl ->
      ty_bytes ->
@@ -4722,7 +4844,7 @@ module Fs_operations = struct
       | RN_none _ -> (fsm_raise ENOENT)
       | RN_file(_,_,i0_ref,_) -> (
           let ss = env.env_ops.fops_stat_file s0 i0_ref in
-          fsm_cond_raise EINVAL (ss.st_kind <> S_IFLNK)
+          fsm_cond_raise EINVAL (ss.l_st_kind <> S_IFLNK)
         )
      end))
 
@@ -4732,6 +4854,11 @@ module Fs_operations = struct
     (match src with
       | RN_file(_,_,i0_ref,_) -> (
           let bs = env.env_ops.fops_readlink s0 i0_ref in
+#ifdef aspect_time
+          (* see READLINK_TS in fs_spec/posix/readlink.md *)
+          (fsm_put_state (mark_timestamp env.env_ops s0 TS_Access (File_ref_entry i0_ref)))
+          >>= fun _ ->
+#endif
           fsm_return (RV_bytes(bs)))
       | _ -> fsm_special Impossible "error raised before" (* coverage:impossible *)
     end)))
@@ -5712,6 +5839,9 @@ module Os_transition_system = struct
 #ifdef aspect_perms
   open Fs_permissions
 #endif
+#ifdef aspect_time
+  open Fs_time
+#endif
   open Os_operations
 
 
@@ -5896,23 +6026,31 @@ module Os_transition_system = struct
                  stat'ed directory), in which case we allow the
                  transition *)
               match (ev,ev') with
-              | (Value(RV_stats s),Value(RV_stats s')) -> ( 
+              | (Value(RV_logical_stats s),Value(RV_os_stats s')) -> ( 
                   (* for a file, we are not interested in st_dev, st_ino (FIXME), st_rdev *)
-                  let mask_file s = (<| s with st_dev=0; st_rdev=0; st_ino=(Inode 0) |>) in
-                  (match s.st_kind with
+                  let mask_l_file s = (<| s with l_st_dev=0; l_st_rdev=0; l_st_ino=(Inode 0) |>) in
+                  let mask_os_file s = (<| s with os_st_dev=0; os_st_rdev=0; os_st_ino=(Inode 0) |>) in
+                  (match s.l_st_kind with
                   | S_IFREG -> (
-                    if mask_file s = mask_file s' then
+                    if
+                      (differ_only_on_time_formats (mask_l_file s) (mask_os_file s'))
+                    then
                       success  (* allow the transition if the only differences are things we are not interested in *)
                     else
                       failure) (* coverage:unused - this can happen only if we had failing traces, but we do not *)
                   | S_IFLNK -> (
-                    if mask_file s = mask_file s' then
+                    if
+                      (differ_only_on_time_formats (mask_l_file s) (mask_os_file s'))
+                    then
                       success  (* allow the transition if the only differences are things we are not interested in *)
                     else
                       failure) (* coverage:unused - this can happen only if we had failing traces, but we do not *)
                   | S_IFDIR -> (
-                      let mask_dir s = <| (mask_file s) with st_size=0 |> in
-                      if mask_dir s = mask_dir s' then 
+                      let mask_l_dir s = <| (mask_l_file s) with l_st_size=0 |> in
+                      let mask_os_dir s = <| (mask_os_file s) with os_st_size=0 |> in
+                      if
+                        (differ_only_on_time_formats (mask_l_dir s) (mask_os_dir s'))
+                      then
                         success
                       else
                         failure) (* coverage:unused - this can happen only if we had failing traces, but we do not *)

@@ -231,20 +231,6 @@ module Fs_spec_intf : sig
         os_st_ctime : ty_os_timestamp;
       } with sexp
 
-      type ty_stats = {
-        st_dev : int;
-        st_ino : inode;
-        st_kind : file_kind;
-        st_perm : file_perm;
-        st_nlink : int;
-        st_uid : uid;
-        st_gid : gid;
-        st_rdev : int;
-        st_size : Int64.t;
-        st_atime : float_t;
-        st_mtime : float_t;
-        st_ctime : float_t;
-      } with sexp
 (*
       val default_st_dev : int
       val default_st_rdev : int
@@ -263,7 +249,6 @@ module Fs_spec_intf : sig
         | RV_names of name list
         | RV_logical_stats of ty_logical_stats
         | RV_os_stats of ty_os_stats
-        | RV_stats of ty_stats
         | RV_file_perm of file_perm
       with sexp
       val instance_Basic_classes_Eq_Fs_spec_Fs_types_ret_value_dict :
@@ -360,7 +345,7 @@ module Fs_spec_intf : sig
         | OS_EXTENDED_CMD of ty_os_ext_command
       with sexp
       val paths_of_ty_os_command : ty_os_command -> cstring list
-      type ty_arch = ARCH_LINUX | ARCH_POSIX | ARCH_MAC_OS_X | ARCH_FREEBSD
+      type ty_arch = ARCH_LINUX | ARCH_POSIX | ARCH_POSIX_PERIODIC| ARCH_MAC_OS_X | ARCH_FREEBSD
       val instance_Basic_classes_Eq_Fs_spec_Fs_types_ty_arch_dict :
         'a Lem_basic_classes.eq_class
       type architecture = {

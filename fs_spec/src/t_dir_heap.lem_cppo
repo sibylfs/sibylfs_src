@@ -76,16 +76,16 @@ o*)
                                                                          (* coverage:sexp *)
     dhd_observers : fmap nat (list ty_od_entry);                         (* coverage:sexp *)
                                                                          (* coverage:sexp *)
-    (* fields like in ty_stats, but omitting                             (* coverage:sexp *)
+    (* fields like in ty_stats, but omitting                             (* covoerage:sexp *)
        st_dev, st_ino, st_kind, st_rvded *)                              (* coverage:sexp *)
-    dhd_perm  : file_perm;  (** Access rights *)                         (* coverage:sexp *)
-    dhd_nlink  : int;        (** Number of links *)                      (* coverage:sexp *)
-    dhd_uid   : uid;        (** User id of the owner *)                  (* coverage:sexp *)
-    dhd_gid   : gid;        (** Group ID of the dh_file's group *)       (* coverage:sexp *)
-    dhd_size  : int64;      (** Size in bytes *)                         (* coverage:sexp *)
-    dhd_atime : float_t;      (** Last access time *)                    (* coverage:sexp *)
-    dhd_mtime : float_t;      (** Last modification time *)              (* coverage:sexp *)
-    dhd_ctime : float_t;      (** Last status change time *)             (* coverage:sexp *)
+    dhd_perm  : file_perm;                 (** Access rights *)          (* coverage:sexp *)
+    dhd_nlink  : int;                      (** Number of links *)        (* coverage:sexp *)
+    dhd_uid   : uid;                       (** User id of the owner *)   (* coverage:sexp *)
+    dhd_gid   : gid;                       (** Group ID of the dh_file's group *)       (* coverage:sexp *)
+    dhd_size  : int64;                     (** Size in bytes *)          (* coverage:sexp *)
+    dhd_atime : ty_logical_timestamp;      (** Last access time *)       (* coverage:sexp *)
+    dhd_mtime : ty_logical_timestamp;      (** Last modification time *) (* coverage:sexp *)
+    dhd_ctime : ty_logical_timestamp;      (** Last status change time *)(* coverage:sexp *)
   |> (*o with sexp_of o*)                                                (* coverage:sexp *)
 
   (* for impl marshalling, we need to avoid using fmaps *)
@@ -102,9 +102,9 @@ o*)
     dhmd_uid   : uid;        (** User id of the owner *)                 (* coverage:sexp *)
     dhmd_gid   : gid;        (** Group ID of the dh_file's group *)      (* coverage:sexp *)
     dhmd_size  : int64;      (** Size in bytes *)                        (* coverage:sexp *)
-    dhmd_atime : float_t;      (** Last access time *)                   (* coverage:sexp *)
-    dhmd_mtime : float_t;      (** Last modification time *)             (* coverage:sexp *)
-    dhmd_ctime : float_t;      (** Last status change time *)            (* coverage:sexp *)
+    dhmd_atime : ty_logical_timestamp;      (** Last access time *)      (* coverage:sexp *)
+    dhmd_mtime : ty_logical_timestamp;      (** Last modification time *)(* coverage:sexp *)
+    dhmd_ctime : ty_logical_timestamp;      (** Last status change time*)(* coverage:sexp *)
   |>  (*o with sexp_of o*)                                               (* coverage:sexp *)
 
   let dh_mdir_of_dir d = <| (* coverage:unused *)
@@ -144,9 +144,9 @@ o*)
   let default_st_nlink = (1:int)
   let default_st_uid = root_uid
   let default_st_gid = root_gid
-  let default_st_atime = (Float 0)
-  let default_st_mtime = (Float 0)
-  let default_st_ctime = (Float 0)
+  let default_st_atime = (Logical_timestamp 0)
+  let default_st_mtime = (Logical_timestamp 0)
+  let default_st_ctime = (Logical_timestamp 0)
 
   (* an empty directory with default settings *)
   val dh_default_dir : dh_dir
@@ -177,9 +177,9 @@ o*)
     dhf_nlink : int;        (** Number of links *)                  (* coverage:sexp *)
     dhf_uid   : uid;        (** User id of the owner *)             (* coverage:sexp *)
     dhf_gid   : gid;        (** Group ID of the dh_file's group *)  (* coverage:sexp *)
-    dhf_atime : float_t;      (** Last access time *)               (* coverage:sexp *)
-    dhf_mtime : float_t;      (** Last modification time *)         (* coverage:sexp *)
-    dhf_ctime : float_t;      (** Last status change time *)        (* coverage:sexp *)
+    dhf_atime : ty_logical_timestamp;      (** Last access time *)  (* coverage:sexp *)
+    dhf_mtime : ty_logical_timestamp;      (** Last modification time *)         (* coverage:sexp *)
+    dhf_ctime : ty_logical_timestamp;      (** Last status change time *)        (* coverage:sexp *)
   |>  (*o with sexp_of o*)                                          (* coverage:sexp *)
 
   (* an empty file with default settings *)
@@ -248,12 +248,14 @@ o*)
   type dir_heap_state = <|                    (* coverage:sexp *)
     dhs_state_fs     : dir_heap_state_fs;     (* coverage:sexp *)
     dhs_state_config : dir_heap_state_config; (* coverage:sexp *)
+    dhs_clock        : ty_logical_time;       (* coverage:sexp *)
   |> (*o with sexp_of o*)                     (* coverage:sexp *)
 
   val dh_initial_state : dir_heap_state
   let dh_initial_state = <|
     dhs_state_fs=dh_initial_state_fs;
     dhs_state_config=dh_initial_state_config;
+    dhs_clock=0;
   |>
 
   (* instantiations of types that are exposed in the interface used by fs_test *)
@@ -615,39 +617,39 @@ module Dir_heap_ops = struct
   (*-------------------------------*)
   (* dhops_stat                    *)
   (*-------------------------------*)
-  val dhops_stat_file : dir_heap_state -> dh_file_ref -> ty_stats
+  val dhops_stat_file : dir_heap_state -> dh_file_ref -> ty_logical_stats
   let dhops_stat_file s0 i0_ref = (
     let i0 = fromJust (dh_lookup_file s0 i0_ref) in
-    <| st_dev = default_st_dev;  (* not implemented yet, use default *)
-       st_ino = dest_File_ref s0 i0_ref; 
-       st_kind = i0.dhf_kind;
-       st_perm = i0.dhf_perm;
-       st_nlink = i0.dhf_nlink;
-       st_uid = i0.dhf_uid;
-       st_gid = i0.dhf_gid; 
-       st_rdev = default_st_rdev;  (* not implemented yet, use default *)
-       st_size =  int64FromNat (T_list_array.dim i0.dhf_contents);
-       st_atime = i0.dhf_atime; 
-       st_mtime = i0.dhf_mtime; 
-       st_ctime = i0.dhf_ctime; 
+    <| l_st_dev = default_st_dev;  (* not implemented yet, use default *)
+       l_st_ino = dest_File_ref s0 i0_ref; 
+       l_st_kind = i0.dhf_kind;
+       l_st_perm = i0.dhf_perm;
+       l_st_nlink = i0.dhf_nlink;
+       l_st_uid = i0.dhf_uid;
+       l_st_gid = i0.dhf_gid; 
+       l_st_rdev = default_st_rdev;  (* not implemented yet, use default *)
+       l_st_size =  int64FromNat (T_list_array.dim i0.dhf_contents);
+       l_st_atime = i0.dhf_atime; 
+       l_st_mtime = i0.dhf_mtime; 
+       l_st_ctime = i0.dhf_ctime; 
     |>
   )
 
-  val dhops_stat_dir : dir_heap_state -> dh_dir_ref -> ty_stats
+  val dhops_stat_dir : dir_heap_state -> dh_dir_ref -> ty_logical_stats
   let dhops_stat_dir s0 d0_ref = (
     let d0 = fromJust (dh_lookup_dir s0 d0_ref) in
-    <| st_dev = default_st_dev;  (* not implemented yet, use default *)
-       st_ino = dest_Dir_ref s0 d0_ref; 
-       st_kind = S_IFDIR;
-       st_perm = d0.dhd_perm;
-       st_nlink = d0.dhd_nlink;
-       st_uid = d0.dhd_uid;
-       st_gid = d0.dhd_gid; 
-       st_rdev = default_st_rdev;  (* not implemented yet, use default *)
-       st_size =  d0.dhd_size;
-       st_atime = d0.dhd_atime; 
-       st_mtime = d0.dhd_mtime; 
-       st_ctime = d0.dhd_ctime; 
+    <| l_st_dev = default_st_dev;  (* not implemented yet, use default *)
+       l_st_ino = dest_Dir_ref s0 d0_ref; 
+       l_st_kind = S_IFDIR;
+       l_st_perm = d0.dhd_perm;
+       l_st_nlink = d0.dhd_nlink;
+       l_st_uid = d0.dhd_uid;
+       l_st_gid = d0.dhd_gid; 
+       l_st_rdev = default_st_rdev;  (* not implemented yet, use default *)
+       l_st_size =  d0.dhd_size;
+       l_st_atime = d0.dhd_atime; 
+       l_st_mtime = d0.dhd_mtime; 
+       l_st_ctime = d0.dhd_ctime; 
     |>
   )
 
@@ -689,6 +691,140 @@ module Dir_heap_ops = struct
     let s' = dh_update_dirs s d0_ref (Just d1) in
     s'
   )
+
+
+#ifdef aspect_time
+open Fs_time
+  (*-------------------------------*)
+  (* time management               *)
+  (*-------------------------------*)
+
+  val dhops_get_timestamp :
+    dir_heap_state ->
+    dh_entry ->
+    ts_type ->
+    ty_logical_timestamp
+  let dhops_get_timestamp s0 entry t_type =
+    (match entry with
+     | File_ref_entry(i0_ref) ->
+        let file = fromJust(dh_lookup_file s0 i0_ref) in
+         (match t_type with
+          | TS_Access       -> file.dhf_atime
+          | TS_Modification -> file.dhf_mtime
+          | TS_Change       -> file.dhf_ctime end)
+     | Dir_ref_entry(d0_ref) ->
+        let dir = fromJust(dh_lookup_dir s0 d0_ref) in
+        (match t_type with
+         | TS_Access       -> dir.dhd_atime
+         | TS_Modification -> dir.dhd_mtime
+         | TS_Change       -> dir.dhd_ctime end)
+     end)
+
+  val dhops_set_timestamp :
+    dir_heap_state ->
+    dh_entry ->
+    ts_type ->
+    ty_logical_timestamp ->
+    dir_heap_state
+  let dhops_set_timestamp s0 entry t_type value =
+    let s0 =
+      (match entry with
+        | File_ref_entry(f_ref) ->
+          let file = fromJust(dh_lookup_file s0 f_ref) in
+          let up_files f =
+            dh_update_files s0 f_ref (Just f)
+          in
+          (match t_type with
+            | TS_Access -> up_files (<| file with dhf_atime = value |>)
+            | TS_Modification -> up_files (<| file with dhf_mtime = value |>)
+            | TS_Change -> up_files (<| file with dhf_ctime = value |>)
+           end)
+        | Dir_ref_entry(d_ref) ->
+          let dir = fromJust(dh_lookup_dir s0 d_ref) in
+          let up_dirs f =
+            dh_update_dirs s0 d_ref (Just f)
+          in
+          (match t_type with
+            | TS_Access -> up_dirs (<| dir with dhd_atime = value |>)
+            | TS_Modification -> up_dirs (<| dir with dhd_mtime = value |>)
+            | TS_Change -> up_dirs (<| dir with dhd_ctime = value |>)
+           end)
+          end)
+    in
+    s0
+
+  val dhops_update_all_marked_timestamps :
+    dir_heap_state ->
+    dir_heap_state
+  let dhops_update_all_marked_ts s0 =
+    let new_t = Logical_timestamp s0.dhs_clock in
+    let update_marked t = if (is_marked t) then new_t else t in
+    let update_marked_ts_dir d =
+      <|d with
+        dhd_atime = update_marked d.dhd_atime;
+        dhd_mtime = update_marked d.dhd_mtime;
+        dhd_ctime = update_marked d.dhd_ctime;
+        |>
+    in
+    let update_marked_ts_file f =
+      <|f with
+        dhf_atime = update_marked f.dhf_atime;
+        dhf_mtime = update_marked f.dhf_mtime;
+        dhf_ctime = update_marked f.dhf_ctime;
+        |>
+    in
+    let dirs = fmap_image update_marked_ts_dir s0.dhs_state_fs.dhs_dirs in
+    let files = fmap_image update_marked_ts_file s0.dhs_state_fs.dhs_files in
+    <| s0 with dhs_state_fs=
+       <|
+         dhs_dirs=dirs;dhs_files=files;dhs_free_inodes=s0.dhs_state_fs.dhs_free_inodes
+       |>
+    |>
+
+  val update_timestamps :
+    dh_entry ->
+    dir_heap_state ->
+    dir_heap_state
+  let update_timestamps e s0 =
+    List.foldl
+      (fun s1 t -> dhops_set_timestamp s1 e t (Logical_timestamp s1.dhs_clock))
+      s0
+      [TS_Access;TS_Modification;TS_Change]
+
+  val dhops_periodic_update :
+    dir_heap_state ->
+    finset dir_heap_state
+  let dhops_periodic_update s0 =
+    (* get all marked dirs and marked files with their ids*)
+    let m_dirs =
+      List.filter
+        (fun (_,dir) -> (is_marked dir.dhd_atime) || (is_marked dir.dhd_mtime) || (is_marked dir.dhd_ctime))
+        (fmap_bindings (s0.dhs_state_fs.dhs_dirs))
+    in
+    let m_files=
+      List.filter
+        (fun (_,file) -> (is_marked file.dhf_atime) || (is_marked file.dhf_mtime) || (is_marked file.dhf_ctime))
+        (fmap_bindings (s0.dhs_state_fs.dhs_files))
+    in
+    (* get all possible states obtainable by periodic-updating dirs and files together *)
+    (* we need to mix files and dir ids *)
+    let m_entries =
+      (List.map (fun (id,_) -> Dir_ref_entry id) m_dirs) ++
+        (List.map (fun (id,_) -> File_ref_entry id) m_files)
+    in
+    let m_entries_powerset =
+      List.foldr (fun x rest -> rest ++ List.map (fun ys -> x::ys) rest) [[]] m_entries
+    in
+    (* we need to create a state for each element of
+    nondeterminstic_updated_entries, and this state must have updated
+    timestamps for the corresponding entries *)
+    let possible_states =
+      finset_image
+        (fun l -> List.foldl (fun s1 e -> update_timestamps e s1) s0 l)
+        (finset_from_list m_entries_powerset) in
+    possible_states
+
+#endif
 
 #ifdef aspect_perms
   (*-------------------------------*)
@@ -768,11 +904,19 @@ module Dir_heap_ops = struct
     fops_stat_dir=dhops_stat_dir;
     fops_lstat = dhops_stat_file; (* lstat behaves like stat apart from not resolving symlink *)
 
+#ifdef aspect_time
+    fops_get_timestamp=dhops_get_timestamp;
+    fops_set_timestamp=dhops_set_timestamp;
+    fops_update_all_marked_timestamps=dhops_update_all_marked_ts;
+    fops_periodic_update=dhops_periodic_update;
+    fops_get_clock=(fun s0 -> s0.dhs_clock);
+    fops_set_clock=(fun s0 t -> <| s0 with dhs_clock= t |> );
+#endif
+
     fops_observe_dir_register=dhops_observe_dir_register;
     fops_observe_dir=dhops_observe_dir;
     fops_observe_dir_unregister=dhops_observe_dir_unregister
   |>
-
 
   val dir_heap_env : environment dh_dir_ref dh_file_ref dir_heap_state
   let dir_heap_env = <|

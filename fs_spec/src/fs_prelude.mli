@@ -80,6 +80,9 @@ val fmap_from_list :
   'a Lem_map.mapKeyType_class -> ('a * 'b) list -> ('a, 'b) fmap
 val fmap_lookup : 'a -> ('b, 'c) fmap -> 'b -> 'c option
 val fmap_dom : 'a -> 'b -> ('c, 'd) fmap -> 'c Lem_support.finset
+val fmap_range : 'a Lem_map.mapKeyType_class ->
+  'b Lem_basic_classes.setType_class -> ('a, 'b) fmap -> 'b Lem_support.finset
+val fmap_image : 'a -> 'b -> ('c -> 'd) -> ('e, 'c) fmap -> ('e, 'd) fmap
 val fmap_in_dom : 'a -> 'b -> 'c -> 'd -> ('d, 'e) fmap -> bool
 val fmap_bindings :
   'a ->
