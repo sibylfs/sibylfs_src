@@ -27,6 +27,7 @@
 #include <caml/fail.h>
 #include <caml/signals.h>
 #include <caml/unixsupport.h>
+#include <sys/stat.h>
 
 /* From <https://github.com/ocaml/ocaml/blob/4.01.0/otherlibs/unix/lseek.c> */
 /* Modified to not use abstract commands */
@@ -197,4 +198,89 @@ CAMLprim value unix_pwrite(value fd, value buf, value bofs, value vlen, value vo
     }
   End_roots();
   return Val_int(ret);
+}
+
+// from https://github.com/janestreet/core/blob/master/lib/unix_stubs.c#L426
+/* Replacement for broken stat functions */
+
+static int file_kind_table[] = {
+  S_IFREG, S_IFDIR, S_IFCHR, S_IFBLK, S_IFLNK, S_IFIFO, S_IFSOCK
+};
+
+#define Val_file_offset(fofs) caml_copy_int64(fofs)
+
+static value cst_to_constr(int n, int *tbl, int size, int deflt)
+{
+  int i;
+  for (i = 0; i < size; i++)
+    if (n == tbl[i]) return Val_int(i);
+  return Val_int(deflt);
+}
+
+static value core_stat_aux_64(struct stat64 *buf)
+{
+  CAMLparam0();
+  CAMLlocal5(atime, mtime, ctime, offset, v);
+  #if defined __linux|| defined _BSD_SOURCE || defined _SVID_SOURCE //FIXME not completely sure that the addition __linux makes this portable
+  atime = caml_copy_double((double) buf->st_atime + (buf->st_atim.tv_nsec / 1000000000.0f));
+  mtime = caml_copy_double((double) buf->st_mtime + (buf->st_mtim.tv_nsec / 1000000000.0f));
+  ctime = caml_copy_double((double) buf->st_ctime + (buf->st_ctim.tv_nsec / 1000000000.0f));
+  #elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__)
+  atime = caml_copy_double((double) buf->st_atime + (buf->st_atimespec.tv_nsec / 1000000000.0f));
+  mtime = caml_copy_double((double) buf->st_mtime + (buf->st_mtimespec.tv_nsec / 1000000000.0f));
+  ctime = caml_copy_double((double) buf->st_ctime + (buf->st_ctimespec.tv_nsec / 1000000000.0f));
+  #else
+  atime = caml_copy_double((double) buf->st_atime + (buf->st_atime_nsec / 1000000000.0f));
+  mtime = caml_copy_double((double) buf->st_mtime + (buf->st_mtime_nsec / 1000000000.0f));
+  ctime = caml_copy_double((double) buf->st_ctime + (buf->st_ctime_nsec / 1000000000.0f));
+  #endif
+  offset = Val_file_offset(buf->st_size);
+  v = caml_alloc_small(12, 0);
+  Field (v, 0) = Val_int (buf->st_dev);
+  Field (v, 1) = Val_int (buf->st_ino);
+  Field (v, 2) = cst_to_constr(buf->st_mode & S_IFMT, file_kind_table,
+                               sizeof(file_kind_table) / sizeof(int), 0);
+  Field (v, 3) = Val_int (buf->st_mode & 07777);
+  Field (v, 4) = Val_int (buf->st_nlink);
+  Field (v, 5) = Val_int (buf->st_uid);
+  Field (v, 6) = Val_int (buf->st_gid);
+  Field (v, 7) = Val_int (buf->st_rdev);
+  Field (v, 8) = offset;
+  Field (v, 9) = atime;
+  Field (v, 10) = mtime;
+  Field (v, 11) = ctime;
+  CAMLreturn(v);
+}
+static inline char * core_copy_to_c_string(value v_str)
+{
+  asize_t len = caml_string_length(v_str) + 1;
+  char *p = caml_stat_alloc(len);
+  memcpy(p, String_val(v_str), len);
+  return p;
+}
+CAMLprim value core_unix_stat_64(value path)
+{
+  CAMLparam1(path);
+  int ret;
+  struct stat64 buf;
+  char *p = core_copy_to_c_string(path);
+  caml_enter_blocking_section();
+  ret = stat64(p, &buf);
+  caml_stat_free(p);
+  caml_leave_blocking_section();
+  if (ret == -1) uerror("stat", path);
+  CAMLreturn(core_stat_aux_64(&buf));
+}
+CAMLprim value core_unix_lstat_64(value path)
+{
+  CAMLparam1(path);
+  int ret;
+  struct stat64 buf;
+  char *p = core_copy_to_c_string(path);
+  caml_enter_blocking_section();
+  ret = lstat64(p, &buf);
+  caml_stat_free(p);
+  caml_leave_blocking_section();
+  if (ret == -1) uerror("lstat", path);
+  CAMLreturn(core_stat_aux_64(&buf));
 }

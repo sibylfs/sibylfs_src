@@ -87,8 +87,8 @@ let open_ path ?perms oflags = Errno_unix.with_unix_exn (fun () ->
 let rename   = Unix.rename
 let link     = Unix.link
 let chmod    = Unix.chmod
-let stat     = Unix.LargeFile.stat
-let lstat    = Unix.LargeFile.lstat
+external stat  : string -> stats = "core_unix_stat_64"
+external lstat : string -> stats = "core_unix_lstat_64"
 
 (* TODO: potentially non-portable
    should define valid and invalid symbolic commands *)
