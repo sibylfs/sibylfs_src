@@ -78,10 +78,11 @@ let options = Arg.align ([
     " output file; converts input trace and stores it in given file");  
   ( "-arch", 
     Arg.Symbol (["posix"; "linux"; "mac_os_x"; "freebsd"], (function
-    | "linux" -> (arch := Some ARCH_LINUX)
-    | "posix" -> (arch := Some ARCH_POSIX)
-    | "mac_os_x" -> (arch := Some ARCH_MAC_OS_X)
-    | "freebsd" -> (arch := Some ARCH_FREEBSD)
+    | "linux"          -> (arch := Some ARCH_LINUX)
+    | "posix"          -> (arch := Some ARCH_POSIX)
+    | "posix_periodic" -> (arch := Some ARCH_POSIX_PERIODIC)
+    | "mac_os_x"       -> (arch := Some ARCH_MAC_OS_X)
+    | "freebsd"        -> (arch := Some ARCH_FREEBSD)
     | _ -> () (* can't happen *))),
     " architecture to simulate");
   ( "--seed",
