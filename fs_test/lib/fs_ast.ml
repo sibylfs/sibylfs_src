@@ -32,10 +32,15 @@ type fd = int
 type perm = Fs_types.file_perm
 type size = int
 type offset = int
+type timestamp = Fs_types.ty_os_timestamp
 type dh = int
 
 type cstring = Fs_types.cstring = CS_Null | CS_Some of string
 type open_flags = Fs_types.open_flag list
+
+type timestamp_field =
+| T_sec of int
+| T_nsec of int64
 
 type stat_field =
 | St_dev of int
@@ -47,6 +52,9 @@ type stat_field =
 | St_gid of Fs_types.gid
 | St_rdev of int
 | St_size of int64
+| St_atim of timestamp
+| St_mtim of timestamp
+| St_ctim of timestamp
 
 type seek_command =
 | Seek_set

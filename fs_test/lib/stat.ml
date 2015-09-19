@@ -26,7 +26,7 @@ open Sexplib.Std
 open Diff
 open Fs_interface.Fs_spec_intf.Fs_types
 
-type t = ty_stats
+type t = ty_os_stats
 
 type d_t = {
   d_st_kind  : file_kind diff;
@@ -35,15 +35,13 @@ type d_t = {
   d_st_nlink : int diff;
   d_st_uid   : uid diff;
   d_st_gid   : gid diff;
-  d_st_atime : float_t diff;
-  d_st_mtime : float_t diff;
-  d_st_ctime : float_t diff;
+  (* timestamps have different types in the spec and in real world:
+  cannot be compared like this *)
 } with sexp
 
 let is_d_zero = function
   | { d_st_kind  = None; d_st_perm  = None; d_st_size  = None;
       d_st_nlink = None; d_st_uid   = None; d_st_gid   = None;
-      d_st_atime = None; d_st_mtime = None; d_st_ctime = None;
     } -> true
   | _ -> false
 
@@ -54,24 +52,18 @@ let is_d_zero = function
     time stamps will probably become tricky in the future. *)
 let diff st st_spec = {
   (* lets start with the simple record fields that should really be equal *)
-  d_st_kind  = diff st.st_kind st_spec.st_kind; (** Kind of the file *)
-  d_st_perm  = diff st.st_perm st_spec.st_perm; (** Access rights *)
+  d_st_kind  = diff st.os_st_kind st_spec.l_st_kind; (** Kind of the file *)
+  d_st_perm  = diff st.os_st_perm st_spec.l_st_perm; (** Access rights *)
   (* dir size isn't well defined *)
-  d_st_size  = (match st_spec.st_kind with
+  d_st_size  = (match st_spec.l_st_kind with
   | S_IFDIR -> None
-  | _       -> diff st.st_size st_spec.st_size); (** Size in bytes *)
-  d_st_nlink = diff st.st_nlink st_spec.st_nlink; (** Number of links *)
+  | _       -> diff st.os_st_size st_spec.l_st_size); (** Size in bytes *)
+  d_st_nlink = diff st.os_st_nlink st_spec.l_st_nlink; (** Number of links *)
 
   (* uid and gid should be the same, because posix takes care of the
      mapping for us *)
-  d_st_uid   = diff st.st_uid st_spec.st_uid;
-  d_st_gid   = diff st.st_gid st_spec.st_gid;
-
-  (* For now don't compare times very simply with equality.
-     TODO: Implement some kind of constraint checking later. *)
-  d_st_atime = diff st.st_atime st_spec.st_atime;
-  d_st_mtime = diff st.st_mtime st_spec.st_mtime;
-  d_st_ctime = diff st.st_ctime st_spec.st_ctime;
+  d_st_uid   = diff st.os_st_uid st_spec.l_st_uid;
+  d_st_gid   = diff st.os_st_gid st_spec.l_st_gid;
 
   (* do not consider inode and device numbers for now. 
      (st.st_dev   = st_spec.st_dev)   (** Device number *)  &&

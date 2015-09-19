@@ -11,6 +11,14 @@
  let parsing_error start stop msg =
    error (string_of_loc (start,stop) ^ "\n" ^ msg)
 
+ let sec start stop = function
+   | T_sec sec -> sec
+   | _ -> parsing_error start stop "bad sec field type"
+
+ let nsec start stop = function
+   | T_nsec nsec -> nsec
+   | _ -> parsing_error start stop "bad nsec field type"
+
  let st_dev start stop = function
    | St_dev st_dev -> st_dev
    | _ -> parsing_error start stop "bad st_dev field type"
@@ -47,6 +55,17 @@
    | St_size st_size -> st_size
    | _ -> parsing_error start stop "bad st_size field type"
 
+ let st_atim start stop = function
+   | St_atim st_atim -> st_atim
+   | _ -> parsing_error start stop "bad st_atim field type"
+
+ let st_mtim start stop = function
+   | St_mtim st_mtim -> st_mtim
+   | _ -> parsing_error start stop "bad st_mtim field type"
+
+ let st_ctim start stop = function
+   | St_ctim st_ctim -> st_ctim
+   | _ -> parsing_error start stop "bad st_ctim field type"
 %}
 
 %token LARROW RARROW LPAREN RPAREN LBRACKET RBRACKET LBRACE RBRACE
@@ -77,9 +96,11 @@
 
 %token RV_FILE_PERM RV_BYTES RV_NUM RV_NONE RV_STAT
 
-%token ST_KIND ST_SIZE ST_UID ST_INO ST_GID ST_RDEV ST_NLINK ST_DEV ST_PERM
+%token ST_KIND ST_SIZE ST_UID ST_INO ST_GID ST_RDEV ST_NLINK ST_DEV ST_PERM ST_ATIM ST_MTIM ST_CTIM
 
 %token S_IFBLK S_IFCHR S_IFIFO S_IFREG S_IFDIR S_IFLNK S_IFSOCK
+
+%token T_SEC T_NSEC
 
 %token NIL R W X SMALL_S BIG_S SMALL_T BIG_T
 
@@ -165,18 +186,18 @@ trace:
 
 dump_result:
  | END { [] }
- | p=STRING PIPE F PIPE ino=DEC PIPE sz=DEC PIPE sha=STRING NL d=dump_result {
-   Dump.(DE_file {file_path=p; file_node=ino; file_size=sz; file_sha=sha}) :: d
+ | p=STRING PIPE F PIPE ino=DEC PIPE sz=DEC PIPE sha=STRING PIPE atim=STRING PIPE mtim=STRING PIPE ctim=STRING  NL d=dump_result {
+   Dump.(DE_file {file_path=p; file_node=ino; file_size=sz; file_sha=sha; file_atim="";file_mtim="";file_ctim=""}) :: d
  }
  | STRING PIPE F PIPE DEC PIPE DEC PIPE error {
    let msg = "File dump entry SHA must be quoted string" in
    parsing_error $startpos($9) $endpos($9) msg
  }
- | dir_path=STRING PIPE D PIPE dir_node=DEC NL des=dump_result {
-   Dump.(DE_dir { dir_path; dir_node }) :: des
+ | dir_path=STRING PIPE D PIPE dir_node=DEC PIPE atim=STRING PIPE mtim=STRING PIPE ctim=STRING NL des=dump_result {
+   Dump.(DE_dir { dir_path; dir_node; dir_atim="";dir_mtim="";dir_ctim=""; }) :: des
  }
- | link_path=STRING PIPE L PIPE link_val=STRING NL des=dump_result {
-   Dump.(DE_symlink { link_path; link_val }) :: des
+ | link_path=STRING PIPE L PIPE link_val=STRING PIPE atim=STRING PIPE mtim=STRING PIPE ctim=STRING NL des=dump_result {
+   Dump.(DE_symlink { link_path; link_val; link_atim=""; link_mtim=""; link_ctim="";}) :: des
  }
  | err_path=STRING PIPE BANG PIPE call=STRING PIPE e=errno NL d=dump_result {
    Dump.(DE_error (e,call,err_path)) :: d
@@ -342,6 +363,19 @@ perm:
    + other         + (ospecial lsl  9)
    ))
  }
+;
+
+timestamp_field:
+ | T_SEC EQ sec=DEC SEMI { `T_sec, T_sec sec }
+ | T_NSEC EQ nsec=DEC SEMI { `T_nsec, T_nsec (Int64.of_int nsec) }
+;
+
+
+timestamp:
+ | LBRACE fields=list(timestamp_field) RBRACE {Fs_types.(Os_timestamp {
+    tv_sec  = sec   $startpos $endpos (List.assoc `T_sec   fields);
+    tv_nsec = nsec  $startpos $endpos (List.assoc `T_nsec  fields);
+    })}
 ;
 
 mkdir:
@@ -582,6 +616,9 @@ stat_field:
  | ST_INO EQ ino=DEC SEMI { `St_ino, St_ino (Fs_types.Inode ino) }
  | ST_KIND EQ kind=file_kind SEMI { `St_kind, St_kind kind }
  | ST_PERM EQ perm=perm SEMI { `St_perm, St_perm perm }
+ | ST_ATIM EQ atim=timestamp SEMI {`St_atim, St_atim atim}
+ | ST_MTIM EQ mtim=timestamp SEMI {`St_mtim, St_mtim mtim}
+ | ST_CTIM EQ ctim=timestamp SEMI {`St_ctim, St_ctim ctim}
  | ST_NLINK EQ nlink=DEC SEMI { `St_nlink, St_nlink nlink }
  | ST_UID EQ uid=DEC SEMI { `St_uid, St_uid (Fs_types.User_id uid) }
  | ST_GID EQ gid=DEC SEMI { `St_gid, St_gid (Fs_types.Group_id gid) }
@@ -599,19 +636,19 @@ value:
  | LBRACKET names=separated_list(SEMI,STRING) RBRACKET {
    Fs_types.RV_names names
  }
- | RV_STAT LBRACE fields=list(stat_field) RBRACE { Fs_types.(RV_stats {
-   st_dev   = st_dev   $startpos $endpos (List.assoc `St_dev   fields);
-   st_ino   = st_ino   $startpos $endpos (List.assoc `St_ino   fields);
-   st_kind  = st_kind  $startpos $endpos (List.assoc `St_kind  fields);
-   st_perm  = st_perm  $startpos $endpos (List.assoc `St_perm  fields);
-   st_nlink = st_nlink $startpos $endpos (List.assoc `St_nlink fields);
-   st_uid   = st_uid   $startpos $endpos (List.assoc `St_uid   fields);
-   st_gid   = st_gid   $startpos $endpos (List.assoc `St_gid   fields);
-   st_rdev  = st_rdev  $startpos $endpos (List.assoc `St_rdev  fields);
-   st_size  = st_size  $startpos $endpos (List.assoc `St_size  fields);
-   st_atime = (Float 0);
-   st_mtime = (Float 0);
-   st_ctime = (Float 0);
+ | RV_STAT LBRACE fields=list(stat_field) RBRACE { Fs_types.(RV_os_stats {
+   os_st_dev   = st_dev   $startpos $endpos (List.assoc `St_dev   fields);
+   os_st_ino   = st_ino   $startpos $endpos (List.assoc `St_ino   fields);
+   os_st_kind  = st_kind  $startpos $endpos (List.assoc `St_kind  fields);
+   os_st_perm  = st_perm  $startpos $endpos (List.assoc `St_perm  fields);
+   os_st_nlink = st_nlink $startpos $endpos (List.assoc `St_nlink fields);
+   os_st_uid   = st_uid   $startpos $endpos (List.assoc `St_uid   fields);
+   os_st_gid   = st_gid   $startpos $endpos (List.assoc `St_gid   fields);
+   os_st_rdev  = st_rdev  $startpos $endpos (List.assoc `St_rdev  fields);
+   os_st_size  = st_size  $startpos $endpos (List.assoc `St_size  fields);
+   os_st_atime = st_atim  $startpos $endpos (List.assoc `St_atim  fields);
+   os_st_mtime = st_mtim  $startpos $endpos (List.assoc `St_mtim  fields);
+   os_st_ctime = st_ctim  $startpos $endpos (List.assoc `St_ctim  fields);
  })
  }
 ;

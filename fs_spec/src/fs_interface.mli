@@ -538,9 +538,28 @@ module Fs_dump_intf : sig
     file_node : int;
     file_size : int;
     file_sha : string;
+    file_atim : string;
+    file_mtim : string;
+    file_ctim : string;
+
   } with sexp
-  type dir = { dir_path : string; dir_node : int; } with sexp
-  type symlink = { link_path : string; link_val : string; } with sexp
+
+  type dir = {
+      dir_path : string;
+      dir_node : int;
+      dir_atim : string;
+      dir_mtim : string;
+      dir_ctim : string;
+    } with sexp
+
+  type symlink = {
+      link_path : string;
+      link_val  : string;
+      link_atim : string;
+      link_mtim : string;
+      link_ctim : string;
+    } with sexp
+
   type error =
     Fs_spec_intf.Fs_types.error * string * string (* call, path *) with sexp
   type entry =

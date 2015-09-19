@@ -464,29 +464,36 @@ let stats_of_syscall_stats ({
   st_atime;
   st_mtime;
   st_ctime;
-}) = {
-  st_dev;
-  st_ino = Inode st_ino;
-  st_kind = kind_of_syscall_kind st_kind;
-  st_perm = file_perm_of_syscall_file_perm st_perm;
-  st_nlink;
-  st_uid = uid_of_syscall_uid st_uid;
-  st_gid = gid_of_syscall_gid st_gid;
-  st_rdev;
-  st_size;
-  st_atime = (Float 0); (* FIXME *)
-  st_mtime = (Float 0);
-  st_ctime = (Float 0);
-}
+}) = (
+  let open Fs_interface.Fs_spec_intf.Fs_types in
+  let get_os_timestamp seconds =
+    let tv_sec' = floor seconds in
+    let tv_nsec'= (int_of_float ((seconds -. tv_sec') *. 1000000000.0)) in
+    {tv_sec=(int_of_float tv_sec');tv_nsec=(Int64.of_int tv_nsec')}
+  in
+ {
+  os_st_dev=st_dev;
+  os_st_ino = Inode st_ino;
+  os_st_kind = kind_of_syscall_kind st_kind;
+  os_st_perm = file_perm_of_syscall_file_perm st_perm;
+  os_st_nlink = st_nlink;
+  os_st_uid = uid_of_syscall_uid st_uid;
+  os_st_gid = gid_of_syscall_gid st_gid;
+  os_st_rdev = st_rdev;
+  os_st_size = st_size;
+  os_st_atime = (Os_timestamp (get_os_timestamp st_atime));
+  os_st_mtime = (Os_timestamp (get_os_timestamp st_mtime));
+  os_st_ctime = (Os_timestamp (get_os_timestamp st_ctime));
+})
 
 (* FIXME may want stat64 *)
 let stat p = run_syscall (fun () ->
-  RV_stats (stats_of_syscall_stats (Syscall.stat p))
+  RV_os_stats (stats_of_syscall_stats (Syscall.stat p))
 ) ()
 
 (* FIXME may want stat64 *)
 let lstat p = run_syscall (fun () ->
-  RV_stats (stats_of_syscall_stats (Syscall.lstat p))
+  RV_os_stats (stats_of_syscall_stats (Syscall.lstat p))
 ) ()
 
 let readlink p = run_syscall (fun () ->
@@ -660,10 +667,10 @@ let posix_pre_os_trans arch ppstate lbl = Agent.(match lbl with
 )
 
 let posix_post_os_trans = function
-  | Value (RV_stats ({ st_uid = User_id uid; st_gid = Group_id gid } as st)) ->
-    Value (RV_stats { st with
-                      st_uid = User_id (lookup_uid_rev uid);
-                      st_gid = Group_id (lookup_gid_rev gid);
+  | Value (RV_os_stats ({ os_st_uid = User_id uid; os_st_gid = Group_id gid } as st)) ->
+    Value (RV_os_stats { st with
+                      os_st_uid = User_id (lookup_uid_rev uid);
+                      os_st_gid = Group_id (lookup_gid_rev gid);
                     })
   | eov -> eov
 
@@ -796,6 +803,18 @@ module Posix_ops = struct
       Unix.chmod (path_to_fname s0 p) st.st_perm;
       (Int64.to_int st.st_size, sha)
     )
+
+    let atime_of_path s0 p =
+      let st = get_stat s0 p in
+      string_of_float (st.st_atime)
+
+    let mtime_of_path s0 p =
+      let st = get_stat s0 p in
+      string_of_float (st.st_mtime)
+
+    let ctime_of_path s0 p =
+      let st = get_stat s0 p in
+            string_of_float (st.st_ctime)
 
     let inode_of_file_path s0 p =
       let st = get_stat s0 p in

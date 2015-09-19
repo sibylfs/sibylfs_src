@@ -199,6 +199,9 @@ module type Dump_fs_operations = sig
   val kind_of_path : state -> Fs_path.t -> Unix.file_kind
   val sha1_of_path : state -> Fs_path.t -> (int * string)
   val readlink : state -> Fs_path.t -> string
+  val atime_of_path : state -> Fs_path.t -> string
+  val mtime_of_path : state -> Fs_path.t -> string
+  val ctime_of_path : state -> Fs_path.t -> string
   val inode_of_file_path : state -> Fs_path.t -> int
   val inode_of_dir_path : state -> Fs_path.t -> int
   val enter_dir : state -> Fs_path.t -> dir_status
@@ -221,13 +224,25 @@ module Make(DO : Dump_fs_operations) = struct
         DE_file {
           file_path = path_s;
           file_node = DO.inode_of_file_path s path;
-          file_size; file_sha;
+          file_size;
+          file_sha;
+          file_atim = DO.atime_of_path s path;
+          file_mtim = DO.mtime_of_path s path;
+          file_ctim = DO.ctime_of_path s path;
         }
       | Unix.S_DIR -> DE_dir {
-        dir_path = path_s; dir_node = DO.inode_of_dir_path s path;
+          dir_path = path_s;
+          dir_node = DO.inode_of_dir_path s path;
+          dir_atim = DO.atime_of_path s path;
+          dir_mtim = DO.mtime_of_path s path;
+          dir_ctim = DO.ctime_of_path s path;
       }
       | Unix.S_LNK -> DE_symlink {
-        link_path = path_s; link_val = DO.readlink s path;
+          link_path = path_s;
+          link_val = DO.readlink s path;
+          link_atim = DO.atime_of_path s path;
+          link_mtim = DO.mtime_of_path s path;
+          link_ctim = DO.ctime_of_path s path;
       }
       | _ -> failwith ("Dump_fs(DO).entry_of_path unhandled kind: " ^ path_s)
     with

@@ -34,16 +34,25 @@ type file = Fs_interface.Fs_dump_intf.file = {
     file_node : int;
     file_size : int;
     file_sha : string;
+    file_atim : string;
+    file_mtim : string;
+    file_ctim : string;
   } with sexp
 
 type dir = Fs_interface.Fs_dump_intf.dir = {
-  dir_path : string;
-  dir_node : int;
+    dir_path : string;
+    dir_node : int;
+    dir_atim : string;
+    dir_mtim : string;
+    dir_ctim : string; 
 } with sexp
 
-type symlink = Fs_interface.Fs_dump_intf.symlink = {
-  link_path : string;
-  link_val : string;
+type symlink = Fs_interface.Fs_dump_intf.symlink = { 
+    link_path : string;
+    link_val : string;
+    link_atim : string;
+    link_mtim : string;
+    link_ctim : string;
 } with sexp
 
 type error = Fs_interface.Fs_dump_intf.error with sexp
@@ -146,6 +155,18 @@ module type Dump_fs_operations = sig
       in state [s]. If [path] is not a symbolic link,
       the function fails. *)
   val readlink : state -> Fs_path.t -> string
+
+  (** [atime_of_path s p] gets the access timestamp of the file
+  identified by path [p] in state [s] *)
+  val atime_of_path : state -> Fs_path.t -> string
+
+  (** [mtime_of_path s p] gets the modification timestamp of the file
+  identified by path [p] in state [s] *)
+  val mtime_of_path : state -> Fs_path.t -> string
+
+  (** [ctime_of_path s p] gets the change timestamp of the file
+  identified by path [p] in state [s] *)
+  val ctime_of_path : state -> Fs_path.t -> string
 
   (** [inode_of_file_path s p] gets the inode of the file indentified
       by path [p] in state [s]. If [path] is not a regular file, the

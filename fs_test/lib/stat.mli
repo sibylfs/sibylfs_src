@@ -21,7 +21,7 @@
 (*    - License source: http://opensource.org/licenses/ISC                  *)
 (****************************************************************************)
 
-type t = Fs_interface.Fs_spec_intf.Fs_types.ty_stats
+type t = Fs_interface.Fs_spec_intf.Fs_types.ty_os_stats
 type d_t = {
   d_st_kind : Fs_interface.Fs_spec_intf.Fs_types.file_kind Diff.diff;
   d_st_perm : Fs_interface.Fs_spec_intf.Fs_types.file_perm Diff.diff;
@@ -29,14 +29,11 @@ type d_t = {
   d_st_nlink : int Diff.diff;
   d_st_uid : Fs_interface.Fs_spec_intf.Fs_types.uid Diff.diff;
   d_st_gid : Fs_interface.Fs_spec_intf.Fs_types.gid Diff.diff;
-  d_st_atime : Fs_interface.Fs_spec_intf.Fs_types.float_t Diff.diff;
-  d_st_mtime : Fs_interface.Fs_spec_intf.Fs_types.float_t Diff.diff;
-  d_st_ctime : Fs_interface.Fs_spec_intf.Fs_types.float_t Diff.diff;
 }
 val __d_t_of_sexp__ : Sexplib.Sexp.t -> d_t
 val d_t_of_sexp : Sexplib.Sexp.t -> d_t
 val sexp_of_d_t : d_t -> Sexplib.Sexp.t
 val is_d_zero : d_t -> bool
 val diff :
-  Fs_interface.Fs_spec_intf.Fs_types.ty_stats ->
-  Fs_interface.Fs_spec_intf.Fs_types.ty_stats -> d_t
+  Fs_interface.Fs_spec_intf.Fs_types.ty_os_stats ->
+  Fs_interface.Fs_spec_intf.Fs_types.ty_logical_stats -> d_t

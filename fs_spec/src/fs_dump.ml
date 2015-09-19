@@ -32,16 +32,25 @@ type file = {
   file_node : int;
   file_size : int;
   file_sha  : string;
+  file_atim : string;
+  file_mtim : string;
+  file_ctim : string;
 } with sexp
 
 type dir = {
   dir_path : string;
   dir_node : int;
+  dir_atim : string;
+  dir_mtim : string;
+  dir_ctim : string;
 } with sexp
 
 type symlink = {
   link_path : string;
   link_val  : string;
+  link_atim : string;
+  link_mtim : string;
+  link_ctim : string;
 } with sexp
 
 type error = Fs_spec.Fs_types.error * string * string (* call, path *)
@@ -119,6 +128,9 @@ module type Dump_fs_operations = sig
   val kind_of_path : state -> Path.t -> Unix.file_kind
   val sha1_of_path : state -> Path.t -> (int * string)
   val readlink : state -> Path.t -> string
+  val atime_of_path : state -> Path.t -> string
+  val mtime_of_path : state -> Path.t -> string
+  val ctime_of_path : state -> Path.t -> string
   val inode_of_file_path : state -> Path.t -> int
   val inode_of_dir_path : state -> Path.t -> int
   val enter_dir : Path.t -> dir_status
@@ -141,13 +153,25 @@ module Make(DO : Dump_fs_operations) = struct
         DE_file {
           file_path = path_s;
           file_node = DO.inode_of_file_path s path;
-          file_size; file_sha;
+          file_size;
+          file_sha;
+          file_atim = DO.atime_of_path s path;
+          file_mtim = DO.mtime_of_path s path;
+          file_ctim = DO.ctime_of_path s path;
         }
       | Unix.S_DIR -> DE_dir {
-        dir_path = path_s; dir_node = DO.inode_of_dir_path s path;
+          dir_path = path_s;
+          dir_node = DO.inode_of_dir_path s path;
+          dir_atim = DO.atime_of_path s path;
+          dir_mtim = DO.mtime_of_path s path;
+          dir_ctim = DO.ctime_of_path s path;
       }
       | Unix.S_LNK -> DE_symlink {
-        link_path = path_s; link_val = DO.readlink s path;
+          link_path = path_s;
+          link_val = DO.readlink s path;
+          link_atim = DO.atime_of_path s path;
+          link_mtim = DO.mtime_of_path s path;
+          link_ctim = DO.ctime_of_path s path;
       }
       | _ -> failwith ("fs_dump iu0 impossible: we only deal with files, dirs and links" ^ path_s)
     with
@@ -222,10 +246,28 @@ end) : Dump_fs_operations with type state = M.state = struct
   let get_stat (s0 : M.state) (p : Path.t) =
     try
       match process_path_spec s0 p with
-      | RN_file (_, _, i0_ref, _) -> M.env.env_ops.fops_stat_file s0 i0_ref 
+      | RN_file (_, _, i0_ref, _) -> M.env.env_ops.fops_lstat s0 i0_ref 
       | RN_dir (d0_ref, _) -> M.env.env_ops.fops_stat_dir s0 d0_ref 
       | _ -> (failwith "fs_dump get_stat 1")
     with _ -> (failwith "fs_dump get_stat 2")
+
+  let string_of_logical_timestamp t =
+    (match t with
+     | Logical_timestamp lt -> string_of_int lt
+     | Marked_for_update -> "Marked"
+    )
+
+  let atime_of_path s p =
+    let st = get_stat s p in
+    "st_atim="^(string_of_logical_timestamp (st.l_st_atime))
+
+  let mtime_of_path s p =
+    let st = get_stat s p in
+    "st_mtim="^(string_of_logical_timestamp (st.l_st_mtime))
+
+  let ctime_of_path s p =
+    let st = get_stat s p in
+    "st_ctim="^(string_of_logical_timestamp (st.l_st_ctime))
 
   let inode_of_file_path s p =
     let st = get_stat s p in

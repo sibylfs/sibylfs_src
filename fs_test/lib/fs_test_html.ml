@@ -304,9 +304,12 @@ let html_of_d_stat d = Stat.(
     @(match d.d_st_nlink with None -> [] | Some (r,s) -> html_of_d_nlink r s)
     @(match d.d_st_uid   with None -> [] | Some (r,s) -> html_of_d_uid   r s)
     @(match d.d_st_gid   with None -> [] | Some (r,s) -> html_of_d_gid   r s)
+(* timestamps differences are not printable, since we check times by checking that a Map is well formed.
+
     @(match d.d_st_atime with None -> [] | Some (r,s) -> html_of_d_atime r s)
     @(match d.d_st_mtime with None -> [] | Some (r,s) -> html_of_d_mtime r s)
     @(match d.d_st_ctime with None -> [] | Some (r,s) -> html_of_d_ctime r s)
+ *)
 )
 
 let html_of_error err = <:html<$str:Printer.string_of_error err$>>
@@ -338,12 +341,13 @@ let html_of_d_file_perm res spec = html_error_row <:html<
 
 let html_of_type rv = Types.(
   let rv_s = match rv with
-    | RV_none        -> "None"
-    | RV_num _       -> "Number"
-    | RV_bytes _     -> "Bytes"
-    | RV_names _     -> "Names"
-    | RV_stats _     -> "Stat"
-    | RV_file_perm _ -> "File permissions"
+    | RV_none            -> "None"
+    | RV_num _           -> "Number"
+    | RV_bytes _         -> "Bytes"
+    | RV_names _         -> "Names"
+    | RV_logical_stats _ -> "Logical_Stat"
+    | RV_os_stats _      -> "OS_Stat"
+    | RV_file_perm _     -> "File permissions"
   in
   <:html<$str:rv_s$>>
 )
@@ -424,23 +428,23 @@ let html_of_d_ret_lbl = CheckLib.(fun ({ error } as d_ret_lbl) ->
 )
 
 let html_of_eov prefix = Types.(function
-  | Value (RV_stats stat) ->
+  | Value (RV_os_stats stat) ->
     let stat_table = <:html<<table>
-      <tr><td>st_dev</td><td>=</td><td>$int:stat.st_dev$;</td></tr>
+      <tr><td>st_dev</td><td>=</td><td>$int:stat.os_st_dev$;</td></tr>
       <tr><td>st_ino</td><td>=</td>
-        <td>$str:Printer.string_of_inode stat.st_ino$;</td></tr>
+        <td>$str:Printer.string_of_inode stat.os_st_ino$;</td></tr>
       <tr><td>st_kind</td><td>=</td>
-        <td>$str:Printer.string_of_kind stat.st_kind$;</td></tr>
+        <td>$str:Printer.string_of_kind stat.os_st_kind$;</td></tr>
       <tr><td>st_perm</td><td>=</td>
-        <td>$str:Printer.string_of_perm stat.st_perm$;</td></tr>
-      <tr><td>st_nlink</td><td>=</td><td>$int:stat.st_nlink$;</td></tr>
+        <td>$str:Printer.string_of_perm stat.os_st_perm$;</td></tr>
+      <tr><td>st_nlink</td><td>=</td><td>$int:stat.os_st_nlink$;</td></tr>
       <tr><td>st_uid</td><td>=</td>
-        <td>$str:Printer.simple_string_of_uid stat.st_uid$;</td></tr>
+        <td>$str:Printer.simple_string_of_uid stat.os_st_uid$;</td></tr>
       <tr><td>st_gid</td><td>=</td>
-        <td>$str:Printer.simple_string_of_gid stat.st_gid$;</td></tr>
-      <tr><td>st_rdev</td><td>=</td><td>$int:stat.st_rdev$;</td></tr>
+        <td>$str:Printer.simple_string_of_gid stat.os_st_gid$;</td></tr>
+      <tr><td>st_rdev</td><td>=</td><td>$int:stat.os_st_rdev$;</td></tr>
       <tr><td>st_size</td><td>=</td>
-        <td>$str:Int64.to_string stat.st_size$;</td></tr>
+        <td>$str:Int64.to_string stat.os_st_size$;</td></tr>
     </table>&>> in
     <:html<<div class="stat">$prefix$RV_stat {$stat_table$}</div>&>>
   | eov -> <:html<$str:string_of_eov eov$>>
@@ -1085,7 +1089,7 @@ let cat (proj,inj) cats location line_opt other =
 let categorize_d_stat location line_opt line cats d_lbl = Stat.(function
   | { d_st_nlink = None } -> cat other_fld cats location line_opt d_lbl
   | { d_st_nlink = Some (x,y) } as d_stat -> Types.(match eov_of_line line with
-    | Some (Value (RV_stats { st_kind = S_IFDIR })) ->
+    | Some (Value (RV_os_stats { os_st_kind = S_IFDIR })) ->
       if is_d_zero { d_stat with d_st_nlink = None }
       then begin
         if x < y
@@ -1095,7 +1099,7 @@ let categorize_d_stat location line_opt line cats d_lbl = Stat.(function
         else cat other_fld cats location line_opt d_lbl
       end
       else cat other_fld cats location line_opt d_lbl
-    | Some (Value (RV_stats { st_kind = S_IFREG })) ->
+    | Some (Value (RV_os_stats { os_st_kind = S_IFREG })) ->
       if is_d_zero { d_stat with d_st_nlink = None }
       then begin
         if x < y

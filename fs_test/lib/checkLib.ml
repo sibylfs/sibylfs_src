@@ -523,7 +523,7 @@ let diff_error_or_value eov eov_spec = match (eov, eov_spec) with
     let bs_s = Abstract_string.to_string bs in
     let bs_spec_s = Abstract_string.to_string bs_spec in
     D_value (D_bytes (diff bs_s bs_spec_s))
-  | (Value (RV_stats st), Value (RV_stats st_spec)) ->
+  | (Value (RV_os_stats st), Value (RV_logical_stats st_spec)) ->
     D_value (D_stats (Stat.diff st st_spec))
   | (Value (RV_names ns), Value (RV_names ns_spec)) ->
     D_value (D_names (diff_names ns ns_spec))
