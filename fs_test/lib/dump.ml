@@ -92,12 +92,12 @@ with sexp
 (* --------------------------------- *)
 
 let entry_to_csv_record = function
-  | DE_file { file_path; file_node; file_size; file_sha } ->
-    sprintf "%S|F|%d|%d|%S\n" file_path file_node file_size file_sha
-  | DE_dir { dir_path; dir_node } ->
-    sprintf "%S|D|%d\n" dir_path dir_node
-  | DE_symlink { link_path; link_val } ->
-    sprintf "%S|L|%S\n" link_path link_val
+  | DE_file { file_path; file_node; file_size; file_sha; file_atim; file_mtim; file_ctim } ->
+    sprintf "%S|F|%d|%d|%S|%S|%S|%S\n" file_path file_node file_size file_sha file_atim file_mtim file_ctim
+  | DE_dir { dir_path; dir_node; dir_atim; dir_mtim; dir_ctim; } ->
+    sprintf "%S|D|%d|%S|%S|%S\n" dir_path dir_node dir_atim dir_mtim dir_ctim
+  | DE_symlink { link_path; link_val; link_atim; link_mtim; link_ctim } ->
+    sprintf "%S|L|%S|%S|%S|%S\n" link_path link_val link_atim link_mtim link_ctim
   | DE_error (err, call, path) ->
     sprintf "%S|!|%S|%s\n" path call (Printer.string_of_error err)
 

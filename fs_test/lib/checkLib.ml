@@ -562,13 +562,13 @@ let diff_return_label dest_lbl dest_lbl_spec =
   ) rvs_trace in
 
   (* get the rv to continue execution *)
-  let rvs_inter = List.filter rv_in_result rvs_spec in
+  let rvs_inter = List.filter rv_in_spec rvs_trace in
   let (rvs, reset) = match rvs_inter, rvs_spec with
     | _ :: _, _ ->
-      (* randomly choose one accepted by both lbl and lbl_spec *)
+      (* those accepted by both lbl and lbl_spec *)
       (rvs_inter, false)
     | [], _ :: _ ->
-      (* choose one only accepted by lbl_spec *)
+      (* those only accepted by lbl_spec *)
       (rvs_spec, true)
     | [], [] ->
       (* no return values are allowed, rely on caller to deal with it *)
@@ -816,6 +816,9 @@ let check_trace is0 lbls =
         let d_lbls = [D_interp_dump_failed] in
         let diffs = { trace_ctxt; trace_line; d_lbls; } :: diffs in
         process_lbl (diffs, ss, lines) lbls
+      | Dump_internal ->
+         print_endline (String.concat "" (Dump.to_csv_strings (interp_dump ss "/")));
+         process_lbl (diffs, ss, lines) lbls
       | Dump_result (p, dump) ->
         let d_lbls = check_dump ss (p, dump) in
         process_lbl
@@ -904,6 +907,8 @@ let interp_trace is0 lbls =
         process_lbl (ss, { line_no; lines=[lbl]; warns = [] } :: wtrace) lbls
       | Newline   ->
         process_lbl (ss, { line_no; lines=[lbl]; warns = [] } :: wtrace) lbls
+      | Dump_internal ->
+         process_lbl (ss, { line_no; lines=[lbl]; warns = [] } :: wtrace) lbls
       | Dump p -> begin
         try
           let dump = interp_dump ss p in
@@ -1132,7 +1137,7 @@ let script_of_trace (tr : Trace.untyped) : Trace.untyped =
   let convert_elbl lbls (n_opt, lbl) = Trace.(match lbl with
     | Label (_, lbl') when is_interp_label lbl' -> (n_opt, lbl) :: lbls
     | Label _ -> lbls
-    | Dump _ | Newline | Comment _ -> (n_opt, lbl) :: lbls
+    | Dump _ | Dump_internal | Newline | Comment _ -> (n_opt, lbl) :: lbls
     | Dump_result (p, _) -> (n_opt, Dump p) :: lbls
   ) in
   List.(rev (fold_left convert_elbl [] tr))

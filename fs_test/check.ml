@@ -77,7 +77,7 @@ let options = Arg.align ([
     Arg.String (fun s -> out_file := Some s),
     " output file; converts input trace and stores it in given file");  
   ( "-arch", 
-    Arg.Symbol (["posix"; "linux"; "mac_os_x"; "freebsd"], (function
+    Arg.Symbol (["posix"; "posix_periodic"; "linux"; "mac_os_x"; "freebsd"], (function
     | "linux"          -> (arch := Some ARCH_LINUX)
     | "posix"          -> (arch := Some ARCH_POSIX)
     | "posix_periodic" -> (arch := Some ARCH_POSIX_PERIODIC)

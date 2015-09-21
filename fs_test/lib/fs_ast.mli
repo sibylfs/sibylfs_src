@@ -117,6 +117,7 @@ type trace_line =
 | Comment_trace of string
 | Nl_trace
 | Type_trace
+| Dump_internal
 | Dump_result of (string * Dump.t)
 | Action_trace of (pid option * action)
 | Tau

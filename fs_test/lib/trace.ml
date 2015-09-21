@@ -58,6 +58,7 @@ type line =
    for labels that appear in traces (some of which may have pids, and
    some may not), or we should avoid using this bool *)
 | Dump of string
+| Dump_internal
 | Dump_result of (string * Dump.t)
 with sexp
 
@@ -170,6 +171,7 @@ let translate_trace_line arch lineno = function
   | Nl_trace -> [Some lineno, Newline]
   | Type_trace -> [Some lineno, Comment "@type trace"]
   | Dump_result (path, dump) -> [Some lineno, Dump_result (path, dump)]
+  | Dump_internal -> [Some lineno, Dump_internal] (* this is for dump-internal*)
   | Action_trace action -> translate_action arch lineno action
   | Return return -> translate_return arch lineno return
   | Tau -> [Some lineno, Label (false, OS_simple_label OS_TAU)]
@@ -272,6 +274,7 @@ let string_of_ext_lbl indent ?change_type string_of_lbl
   | Comment x -> (indent n_lbl)^"#"^x
   | Label lbl -> (indent n_lbl)^(string_of_lbl lbl)
   | Dump p    -> sprintf "%sdump %S" (indent n_lbl) p
+  | Dump_internal -> sprintf "%sdump-internal" (indent n_lbl)
   | Dump_result (p, dump) -> sprintf
     "%sdump-result %S\n%s%send dump-result"
     (indent n_lbl) p

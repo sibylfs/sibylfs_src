@@ -5891,7 +5891,24 @@ module Os_transition_system = struct
     let run_os_cmd (cmd : ty_os_command) = (
       match cmd with
       (* real os-commands *)
-      | OS_CLOSE fd                 -> (os_close env pid fd s0)
+      | OS_CLOSE fd                 ->
+#ifdef aspect_time
+        (* we need to check that the fd is valid *)
+        let fid_of_fd = lookup_fid_of_fd s0 pid fd in
+        if fid_of_fd = Nothing
+        (* if the fd does not exist we do not need to update timestamps *)
+        then (os_close env pid fd s0)
+        else
+          (* we need the entry corresponding to the to-be-closed fd *)
+          let entry = 
+            let (_,fid_state) = fromJust fid_of_fd in
+            fid_state.fids_entry
+          in
+          (* see FILE_CLOSED_TS in fs_spec/posix/timestamps *)
+          finset_image (update_timestamps_for_entry_if_no_open_fds env entry) (os_close env pid fd s0)
+#else
+         (os_close env pid fd s0)
+#endif
       | OS_OPEN (p,fs,mo)           -> (os_open env pid (pp p) fs mo s0) 
       | OS_UMASK p                  -> (os_umask pid p s0)
       | OS_CHDIR s                  -> (os_chdir env pid (pp s) s0)
@@ -6026,34 +6043,44 @@ module Os_transition_system = struct
                  stat'ed directory), in which case we allow the
                  transition *)
               match (ev,ev') with
+              | (Value(RV_logical_stats _), Value(RV_logical_stats _)) ->
+                failwith "attempt to pass a logical stat as a return value (only real stats admitted)"
               | (Value(RV_logical_stats s),Value(RV_os_stats s')) -> ( 
                   (* for a file, we are not interested in st_dev, st_ino (FIXME), st_rdev *)
                   let mask_l_file s = (<| s with l_st_dev=0; l_st_rdev=0; l_st_ino=(Inode 0) |>) in
                   let mask_os_file s = (<| s with os_st_dev=0; os_st_rdev=0; os_st_ino=(Inode 0) |>) in
+                  let mask_l_dir s = <| (mask_l_file s) with l_st_size=0 |> in
+                  let mask_os_dir s = <| (mask_os_file s) with os_st_size=0 |> in 
+                  let process_stats_values mask_l mask_os =
+                    (if
+                      (differ_only_on_time_formats (mask_l s) (mask_os s'))
+                    then
+#ifdef aspect_time
+                    let r =
+                      insert_new_entries_in_realtime_map s0
+                        [(dest_logical_timestamp s.l_st_atime,
+                          dest_os_timestamp s'.os_st_atime);
+                         (dest_logical_timestamp s.l_st_mtime,
+                          dest_os_timestamp s'.os_st_mtime);
+                         (dest_logical_timestamp s.l_st_ctime,
+                          dest_os_timestamp s'.os_st_ctime)]
+                    in
+                    if r = Nothing
+                    then failure
+                    else
+                      (* we want the state with
+                        the updated time table as possible output
+                        state of the transition *)
+                      let success = finset_singleton (OS_normal (update_run_state (fromJust r) pid RUNNING)) in
+#endif
+                      success  (* allow the transition if the only differences are things we are not interested in *)
+                    else
+                      failure) (* coverage:unused - this can happen only if we had failing traces, but we do not *)
+                  in
                   (match s.l_st_kind with
-                  | S_IFREG -> (
-                    if
-                      (differ_only_on_time_formats (mask_l_file s) (mask_os_file s'))
-                    then
-                      success  (* allow the transition if the only differences are things we are not interested in *)
-                    else
-                      failure) (* coverage:unused - this can happen only if we had failing traces, but we do not *)
-                  | S_IFLNK -> (
-                    if
-                      (differ_only_on_time_formats (mask_l_file s) (mask_os_file s'))
-                    then
-                      success  (* allow the transition if the only differences are things we are not interested in *)
-                    else
-                      failure) (* coverage:unused - this can happen only if we had failing traces, but we do not *)
-                  | S_IFDIR -> (
-                      let mask_l_dir s = <| (mask_l_file s) with l_st_size=0 |> in
-                      let mask_os_dir s = <| (mask_os_file s) with os_st_size=0 |> in
-                      if
-                        (differ_only_on_time_formats (mask_l_dir s) (mask_os_dir s'))
-                      then
-                        success
-                      else
-                        failure) (* coverage:unused - this can happen only if we had failing traces, but we do not *)
+                  | S_IFREG -> process_stats_values mask_l_file mask_os_file
+                  | S_IFLNK -> process_stats_values mask_l_file mask_os_file
+                  | S_IFDIR -> process_stats_values mask_l_dir mask_os_dir
                   | _ -> failure (* coverage:unused - this can happen only if we had failing traces, but we do not *)  end))
               | (_,_) -> failure (* coverage:unused - this can happen only if we had failing traces, but we do not *) end)))
       | (_,_) -> finset_empty ()
@@ -6159,6 +6186,10 @@ module Os_transition_system = struct
      finset (os_state_or_special 'dir_ref 'file_ref 'impl)
   let os_trans s0 lbl = (
     let env = s0.oss_env in
+#ifdef aspect_time
+    (* clock tics *)
+    let s0 = dest_OS_normal(increment_time env (OS_normal s0)) in
+#endif
     (* process transitions *)
     let pids = fmap_dom s0.oss_pid_table in
     let ss = finset_bigunion_image (fun pid -> os_trans_pid env s0 pid lbl) pids in
@@ -6166,6 +6197,18 @@ module Os_transition_system = struct
     let ss = finset_union ss (os_trans_pcreate_destroy env s0 lbl) in
     (* tau transitions *)
     let ss = finset_union ss (os_trans_tau env s0 lbl) in
+#ifdef aspect_time
+    (* OS_DEFINED_TS in fs_spec/posix/base_definitions/ch_4_general_concepts *)
+    (* in immediate mode we don't want Mup timestamps; these only arise in Tau transitions *)
+    let ss = (
+      match lbl with
+      | OS_TAU -> (
+        if ((architecture_of_ty_arch env.env_arch).arch_is_periodic)
+        then finset_bigunion_image (do_periodic_update env) ss
+        else finset_image (update_all_marked_timestamps env) ss)
+      | _ -> ss end)
+    in
+#endif
     ss)
 
 

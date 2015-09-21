@@ -72,7 +72,7 @@
 %token AT NL BANG DASH SEMI EQ COLON PIPE EOF
 
 %token TYPE SCRIPT TRACE NULL TAU DH FD PID GROUP_ID USER_ID
-%token DUMP DUMP_RESULT D F L END
+%token DUMP DUMP_RESULT DUMP_INTERNAL D F L END
 
 %token REWINDDIR PWRITE WRITE STAT LSTAT UNLINK READ ADD_USER_TO_GROUP CLOSE UMASK
 %token PREAD TRUNCATE OPEN READLINK RENAME CHOWN OPEN_CLOSE CREATE MKDIR
@@ -137,6 +137,10 @@ script:
  | lineno=lineno? DUMP p=string_nl s=script { (Dump p) :: s }
  | lineno=lineno? DUMP NL s=script { (Dump "/") :: s }
  | c=COMMENT s=script { (Comment_script c) :: s }
+ | lineno? DUMP_INTERNAL  error {
+   let msg = "dump-internal not allowed in script" in
+   parsing_error $startpos $endpos msg
+ }
  | lineno? DUMP_RESULT error {
    let msg = "dump-result not allowed in script" in
    parsing_error $startpos $endpos msg
@@ -170,6 +174,10 @@ trace:
  | EOF { [] }
  | NL t=trace { Nl_trace :: t }
  | trans=trace_transition t=trace { trans :: t }
+ | lineno? DUMP_INTERNAL  t=trace { Dump_internal :: t }
+ | lineno? DUMP_RESULT p=string_nl dump=dump_result DUMP_RESULT NL t=trace {
+   (Dump_result (p, dump)) :: t
+ }
  | lineno? DUMP_RESULT p=string_nl dump=dump_result DUMP_RESULT NL t=trace {
    (Dump_result (p, dump)) :: t
  }

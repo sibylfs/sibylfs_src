@@ -59,22 +59,23 @@ rule token lex_state = parse
     with Scanf.Scan_failure msg -> lexing_error lexbuf msg
   }
 
-  | "type"        { TYPE }
-  | "script"      { SCRIPT }
-  | "trace"       { TRACE }
-  | "null"        { NULL }
-  | "Tau"         { TAU }
-  | "DH"          { DH }
-  | "FD"          { FD }
-  | "Pid"         { PID }
-  | "Group_id"    { GROUP_ID }
-  | "User_id"     { USER_ID }
-  | "dump"        { DUMP }
-  | "dump-result" { DUMP_RESULT }
-  | 'D'           { D }
-  | 'F'           { F }
-  | 'L'           { L }
-  | "end"         { END }
+  | "type"          { TYPE }
+  | "script"        { SCRIPT }
+  | "trace"         { TRACE }
+  | "null"          { NULL }
+  | "Tau"           { TAU }
+  | "DH"            { DH }
+  | "FD"            { FD }
+  | "Pid"           { PID }
+  | "Group_id"      { GROUP_ID }
+  | "User_id"       { USER_ID }
+  | "dump"          { DUMP }
+  | "dump-result"   { DUMP_RESULT }
+  | "dump-internal" { DUMP_INTERNAL }
+  | 'D'             { D }
+  | 'F'             { F }
+  | 'L'             { L }
+  | "end"           { END }
 
   | "rewinddir" { REWINDDIR }
   | "pwrite" { PWRITE }
@@ -216,6 +217,12 @@ rule token lex_state = parse
   | "st_nlink" { ST_NLINK }
   | "st_dev"   { ST_DEV }
   | "st_perm"  { ST_PERM }
+  | "st_atim"  { ST_ATIM }
+  | "st_mtim"  { ST_MTIM }
+  | "st_ctim"  { ST_CTIM }
+
+  | "tv_sec"   {T_SEC}
+  | "tv_nsec"  {T_NSEC}
 
   | "S_IFBLK"  { S_IFBLK }
   | "S_IFCHR"  { S_IFCHR }

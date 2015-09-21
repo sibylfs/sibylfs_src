@@ -556,6 +556,7 @@ let html_of_line arch = Trace.(function
     <table>
     $html_of_dump result$
     </table></td>&>>
+  | Dump_internal -> <:html<<td class="dump">dump-internal </td>&>>
   | Label (has_pid, lbl) ->
     let open Types in
     let string_of_lbl = input_string_of_extended_label arch in

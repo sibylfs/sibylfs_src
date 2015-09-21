@@ -40,6 +40,7 @@ type line =
 | Newline
 | Label of (bool * os_extended_label)
 | Dump of string
+| Dump_internal
 | Dump_result of (string * Dump.t)
 with sexp
 

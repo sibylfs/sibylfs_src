@@ -409,6 +409,8 @@ let test_name_of_trace_lines suite lines =
     | (Newline | Comment _) :: more -> concat_name prefix more
     | (Dump_result _) :: _ ->
       failwith "test_name_of_trace_lines: literal dumps not supported"
+    | (Dump_internal) :: _ ->
+      failwith "test_name_of_trace_lines: dump_internal not supported (it is useful only in traces)"
     | (Dump p) :: more ->
       concat_name (prefix ^ "___" ^ p) more
     | (Label (true,_)) :: _ ->
