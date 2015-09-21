@@ -1,0 +1,63 @@
+@type trace
+# chown concurrent tests about timestamp assignment in an immediate architecture
+
+Pid 2 -> create User_id 2 Group_id 2
+Pid 3 -> create User_id 2 Group_id 2
+Pid 4 -> create User_id 2 Group_id 2
+
+Pid 1 -> add_user_to_group User_id 2 Group_id 2
+Tau
+Pid 1 <- -
+
+Pid 1 -> add_user_to_group User_id 3 Group_id 2
+Tau
+Pid 1 <- -
+
+Pid 1 -> add_user_to_group User_id 4 Group_id 2
+Tau
+Pid 1 <- -
+
+Pid 2 -> mkdir /empty_dir_1/ 0o777
+Tau
+Pid 2 <- -
+
+Pid 2 -> stat /empty_dir_1/
+Tau
+Pid 2 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=2;st_gid=2;st_rdev=0;st_size=4096;st_atim={tv_sec=2;tv_nsec=0;}; st_mtim={ tv_sec=2;tv_nsec=0;};st_ctim={ tv_sec=2;tv_nsec=0;};}
+
+# end of state setup
+
+dump-internal
+
+Pid 2 -> chown /empty_dir_1/ (User_id 2) (Group_id 2)
+Pid 4 -> chown /empty_dir_1/ (User_id 2) (Group_id 2)
+Pid 3 -> chown /empty_dir_1/ (User_id 2) (Group_id 2)
+
+Tau
+Tau
+Tau
+
+Pid 2 <- -
+Pid 4 <- -
+Pid 3 <- -
+
+## test that all the processes see the same timestamps
+
+dump-internal
+
+# chown should update the st_ctime of the file (see CHOWN_TS in fs_spec/posix/chown)
+
+Pid 2 -> stat /empty_dir_1/
+Tau
+Pid 2 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=2;st_gid=2;st_rdev=0;st_size=4096;st_atim={tv_sec=2;tv_nsec=0;}; st_mtim={ tv_sec=2;tv_nsec=0;};st_ctim={ tv_sec=8;tv_nsec=0;};}
+
+Pid 3 -> stat /empty_dir_1/
+Tau
+Pid 3 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=2;st_gid=2;st_rdev=0;st_size=4096;st_atim={tv_sec=2;tv_nsec=0;}; st_mtim={ tv_sec=2;tv_nsec=0;};st_ctim={ tv_sec=8;tv_nsec=0;};}
+
+Pid 4 -> stat /empty_dir_1/
+Tau
+Pid 4 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=2;st_gid=2;st_rdev=0;st_size=4096;st_atim={tv_sec=2;tv_nsec=0;}; st_mtim={ tv_sec=2;tv_nsec=0;};st_ctim={ tv_sec=8;tv_nsec=0;};}
+
+dump-internal
+

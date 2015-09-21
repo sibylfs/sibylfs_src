@@ -1,0 +1,15 @@
+@type trace
+# This trace tests that timestamps can be update at every moment by an internal action of the operating system
+# see OS_DEFINED_TS in fs_spec/posix/base_definitions/ch_4_general_concepts
+
+Pid 1 -> mkdir /tmp_dir_1/ 0o777
+Tau
+Pid 1 <- -
+
+Pid 1 -> mkdir /tmp_dir_2/ 0o777
+Tau
+Pid 1 <- -
+
+# all timestamps should be marked for udpate
+
+dump-internal

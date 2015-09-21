@@ -1,0 +1,38 @@
+@type trace
+# read tests about timestamp assignment in an periodic architecture
+
+Pid 1 -> open /f1.txt [O_CREAT;O_RDWR] 0o666
+Tau
+Pid 1 <- -
+
+Pid 1 -> stat /f1.txt
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFREG;st_perm=0o644;st_nlink=1;st_uid=0;st_gid=0;st_rdev=0;st_size=0;st_atim={tv_sec=1;tv_nsec=0;};st_mtim={tv_sec=1;tv_nsec=0;};st_ctim={tv_sec=1;tv_nsec=0;};}
+
+Pid 1 -> read (FD 3) 1
+Tau
+Pid 1 <- -
+
+# st_atime of the file read should be Mark
+
+dump-internal
+
+# with a size greater than 0 read alters the st_atime (see READ_TS in fs_spec/posix/read.md)
+
+Pid 1 -> stat /f1.txt
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFREG;st_perm=0o644;st_nlink=1;st_uid=0;st_gid=0;st_rdev=0;st_size=0;st_atim={tv_sec=2;tv_nsec=0;};st_mtim={tv_sec=1;tv_nsec=0;};st_ctim={tv_sec=1;tv_nsec=0;};}
+
+Pid 1 -> read (FD 3) 0
+Tau
+Pid 1 <- -
+
+# st_atime of the file read should not be Mark
+
+dump-internal
+
+# with a size equal to 0 read does not alter the st_atime
+
+Pid 1 -> stat /f1.txt
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFREG;st_perm=0o644;st_nlink=1;st_uid=0;st_gid=0;st_rdev=0;st_size=0;st_atim={tv_sec=2;tv_nsec=0;};st_mtim={tv_sec=1;tv_nsec=0;};st_ctim={tv_sec=1;tv_nsec=0;};}

@@ -1,0 +1,35 @@
+@type trace
+# rmdir test that checks that we are not allowed
+# to make parent timestamps go back in time
+
+# creation of a state where all possible behaviours should be observable
+
+Pid 1 -> mkdir /nonempty_dir_1/ 0o777
+Tau
+Pid 1 <- -
+
+Pid 1 -> mkdir /nonempty_dir_1//empty_dir_1/ 0o777
+Tau
+Pid 1 <- -
+
+
+# end of state setup
+
+Pid 1 -> stat /nonempty_dir_1/empty_dir_1/
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=0;st_gid=0;st_rdev=0;st_size=4096;st_atim={tv_sec=0;tv_nsec=1;}; st_mtim={ tv_sec=0;tv_nsec=1;};st_ctim={ tv_sec=0;tv_nsec=1;};}
+
+
+Pid 1 -> rmdir /nonempty_dir_1/empty_dir_1/
+Tau
+Pid 1 <- -
+
+# rmdir should alter the st_mtime and st_ctime of the parent directory of the removed directory  (see RMDIR_TS in fs_spec/posix/rmdir.md)
+
+Pid 1 -> stat /nonempty_dir_1/
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=0;st_gid=0;st_rdev=0;st_size=4096;st_atim={tv_sec=0;tv_nsec=0;}; st_mtim={ tv_sec=0;tv_nsec=0;};st_ctim={ tv_sec=0;tv_nsec=0;};}
+
+Pid 1 -> stat /nonempty_dir_1/
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=0;st_gid=0;st_rdev=0;st_size=4096;st_atim={tv_sec=0;tv_nsec=0;}; st_mtim={ tv_sec=0;tv_nsec=0;};st_ctim={ tv_sec=0;tv_nsec=0;};}

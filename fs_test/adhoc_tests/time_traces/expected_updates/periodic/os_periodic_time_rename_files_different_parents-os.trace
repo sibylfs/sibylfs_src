@@ -1,0 +1,56 @@
+@type trace
+# rename tests about timestamp assignment in an periodic architecture
+
+Pid 1 -> mkdir /nonempty_dir1/ 0o777
+Tau
+Pid 1 <- -
+
+Pid 1 -> mkdir /nonempty_dir2/ 0o777
+Tau
+Pid 1 <- -
+
+Pid 1 -> stat /nonempty_dir1
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=0;st_gid=0;st_rdev=0;st_size=4096;st_atim={tv_sec=0;tv_nsec=0;}; st_mtim={ tv_sec=0;tv_nsec=0;};st_ctim={ tv_sec=0;tv_nsec=0;};}
+
+Pid 1 -> stat /nonempty_dir2
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=0;st_gid=0;st_rdev=0;st_size=4096;st_atim={tv_sec=1;tv_nsec=0;}; st_mtim={ tv_sec=1;tv_nsec=0;};st_ctim={ tv_sec=1;tv_nsec=0;};}
+
+Pid 1 -> open /nonempty_dir1/f1.txt [O_CREAT;O_RDWR] 0o666
+Tau
+Pid 1 <- -
+
+Pid 1 -> stat /nonempty_dir1/f1.txt
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFREG;st_perm=0o644;st_nlink=1;st_uid=0;st_gid=0;st_rdev=0;st_size=0;st_atim={tv_sec=2;tv_nsec=0;};st_mtim={tv_sec=2;tv_nsec=0;};st_ctim={tv_sec=2;tv_nsec=0;};}
+
+# end of state setup
+
+## test rename on two files with different parent directories
+
+Pid 1 -> rename /nonempty_dir1/f1.txt /nonempty_dir2/f3.txt
+Tau
+Pid 1 <- -
+
+# rename should alter the st_mtime and st_ctime of the parent directory of the old file (see RENAME_TS in fs_spec/posix/rename.md)
+
+dump-internal
+
+
+Pid 1 -> stat /nonempty_dir1/
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=0;st_gid=0;st_rdev=0;st_size=4096;st_atim={tv_sec=0;tv_nsec=0;}; st_mtim={ tv_sec=3;tv_nsec=0;};st_ctim={ tv_sec=3;tv_nsec=0;};}
+
+# rename should alter the st_mtime and st_ctime of the parent directory of the renamed file (see RENAME_TS in fs_spec/posix/rename.md)
+
+
+Pid 1 -> stat /nonempty_dir2/
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=0;st_gid=0;st_rdev=0;st_size=4096;st_atim={tv_sec=1;tv_nsec=0;}; st_mtim={ tv_sec=3;tv_nsec=0;};st_ctim={ tv_sec=3;tv_nsec=0;};}
+
+# rename should not modify the timestamps of the renamed file
+
+Pid 1 -> stat /nonempty_dir2/f3.txt
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFREG;st_perm=0o644;st_nlink=1;st_uid=0;st_gid=0;st_rdev=0;st_size=0;st_atim={tv_sec=2;tv_nsec=0;};st_mtim={tv_sec=2;tv_nsec=0;};st_ctim={tv_sec=2;tv_nsec=0;};}

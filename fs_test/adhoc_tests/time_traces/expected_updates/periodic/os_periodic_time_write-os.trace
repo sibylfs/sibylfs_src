@@ -1,0 +1,43 @@
+@type trace
+# write tests about timestamp assignment in a periodic architecture
+
+Pid 1 -> mkdir /nonempty_dir_1/ 0o777
+Tau
+Pid 1 <- -
+
+Pid 1 -> open /nonempty_dir_1/f1.txt [O_CREAT;O_RDWR] 0o666
+Tau
+Pid 1 <- -
+
+Pid 1 -> stat /nonempty_dir_1/f1.txt
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFREG;st_perm=0o644;st_nlink=1;st_uid=0;st_gid=0;st_rdev=0;st_size=0;st_atim={tv_sec=4;tv_nsec=0;};st_mtim={tv_sec=4;tv_nsec=0;};st_ctim={tv_sec=4;tv_nsec=0;};}
+
+
+# end of state setup
+
+
+Pid 1 -> write (FD 3) "abc" 3
+Tau
+Pid 1 <- -
+
+# write should alter the st_mtime and last st_ctime of the file (see WRITE_TS in fs_spec/posix/write.md)
+
+dump-internal
+
+Pid 1 -> stat /nonempty_dir_1/f1.txt
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFREG;st_perm=0o644;st_nlink=1;st_uid=0;st_gid=0;st_rdev=0;st_size=0;st_atim={tv_sec=4;tv_nsec=0;};st_mtim={tv_sec=5;tv_nsec=0;};st_ctim={tv_sec=5;tv_nsec=0;};}
+
+
+
+## test that timestamps are not changed when the length to write is less than 0
+Pid 1 -> write (FD 3) "abc" 0
+Tau
+Pid 1 <- -
+
+dump-internal
+
+Pid 1 -> stat /nonempty_dir_1/f1.txt
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFREG;st_perm=0o644;st_nlink=1;st_uid=0;st_gid=0;st_rdev=0;st_size=0;st_atim={tv_sec=4;tv_nsec=0;};st_mtim={tv_sec=5;tv_nsec=0;};st_ctim={tv_sec=5;tv_nsec=0;};}

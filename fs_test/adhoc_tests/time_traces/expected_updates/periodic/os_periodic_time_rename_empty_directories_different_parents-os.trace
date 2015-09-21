@@ -1,0 +1,62 @@
+@type trace
+# rename tests about timestamp assignment in an immediate architecture
+
+Pid 1 -> mkdir /nonempty_dir_1/ 0o777
+Tau
+Pid 1 <- -
+
+Pid 1 -> mkdir /nonempty_dir_1/mydir1 0o777
+Tau
+Pid 1 <- -
+
+Pid 1 -> mkdir /nonempty_dir_2/ 0o777
+Tau
+Pid 1 <- -
+
+Pid 1 -> mkdir /nonempty_dir_2/mydir2 0o777
+Tau
+Pid 1 <- -
+
+Pid 1 -> stat /nonempty_dir_1/
+Tau
+Pid 1 <- RV_stat {st_dev=2049;  st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=3;st_uid=0;st_gid=0;st_rdev=0;st_size=4096;st_atim={tv_sec=0;tv_nsec=0;}; st_mtim={ tv_sec=0;tv_nsec=0;};st_ctim={ tv_sec=0;tv_nsec=0;};}
+
+Pid 1 -> stat /nonempty_dir_1/mydir1
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=0;st_gid=0;st_rdev=0;st_size=4096;st_atim={tv_sec=1;tv_nsec=0;}; st_mtim={ tv_sec=1;tv_nsec=0;};st_ctim={ tv_sec=1;tv_nsec=0;};}
+
+Pid 1 -> stat /nonempty_dir_2/
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=3;st_uid=0;st_gid=0;st_rdev=0;st_size=4096;st_atim={tv_sec=3;tv_nsec=0;}; st_mtim={ tv_sec=3;tv_nsec=0;};st_ctim={ tv_sec=3;tv_nsec=0;};}
+
+Pid 1 -> stat /nonempty_dir_2/mydir2
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=0;st_gid=0;st_rdev=0;st_size=4096;st_atim={tv_sec=4;tv_nsec=0;}; st_mtim={ tv_sec=4;tv_nsec=0;};st_ctim={ tv_sec=4;tv_nsec=0;};}
+
+# end of state setup
+
+## test rename with two existing empty directories with different parent directories
+
+Pid 1 -> rename /nonempty_dir_1/mydir1 /nonempty_dir_2/mydir2
+Tau
+Pid 1 <- -
+
+# rename should alter the st_mtime and st_ctime of the parent directory of the old file (see RENAME_TS in fs_spec/posix/rename.md)
+
+dump-internal
+
+Pid 1 -> stat /nonempty_dir_1/
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=0;st_gid=0;st_rdev=0;st_size=4096;st_atim={tv_sec=0;tv_nsec=0;}; st_mtim={ tv_sec=5;tv_nsec=0;};st_ctim={ tv_sec=5;tv_nsec=0;};}
+
+# rename should alter the st_mtime and st_ctime of the parent directory of the renamed file (see RENAME_TS in fs_spec/posix/rename.md)
+
+Pid 1 -> stat /nonempty_dir_2/
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=3;st_uid=0;st_gid=0;st_rdev=0;st_size=4096;st_atim={tv_sec=3;tv_nsec=0;}; st_mtim={ tv_sec=5;tv_nsec=0;};st_ctim={ tv_sec=5;tv_nsec=0;};}
+
+# rename should not modify the timestamps of the renamed file
+
+Pid 1 -> stat /nonempty_dir_2/mydir2
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=0;st_gid=0;st_rdev=0;st_size=4096;st_atim={tv_sec=3;tv_nsec=0;}; st_mtim={ tv_sec=3;tv_nsec=0;};st_ctim={ tv_sec=3;tv_nsec=0;};}

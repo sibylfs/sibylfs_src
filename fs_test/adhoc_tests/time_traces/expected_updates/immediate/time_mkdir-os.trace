@@ -1,0 +1,24 @@
+@type trace
+# mkdir tests about timestamp assignment in an immediate architecture
+
+Pid 1 -> mkdir /nonempty_dir_1/ 0o777
+Tau
+Pid 1 <- -
+
+Pid 1 -> mkdir /nonempty_dir_1//empty_dir_1/ 0o777
+Tau
+Pid 1 <- -
+
+# end of state setup
+
+# mkdir set all the timestamps of the new directory  (see MKDIR_TS:1 in fs_spec/posix/mkdir.md)
+
+Pid 1 -> stat /nonempty_dir_1/empty_dir_1/
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=0;st_gid=0;st_rdev=0;st_size=4096;st_atim={tv_sec=2;tv_nsec=0;}; st_mtim={ tv_sec=2;tv_nsec=0;};st_ctim={ tv_sec=2;tv_nsec=0;};}
+
+# mkdir alters also the st_ctime and the st_mtime of the parent directory (see MKDIR_TS:2 in fs_spec/posix/mkdir.md)
+
+Pid 1 -> stat /nonempty_dir_1/
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=3;st_uid=0;st_gid=0;st_rdev=0;st_size=4096;st_atim={tv_sec=2;tv_nsec=0;}; st_mtim={ tv_sec=2;tv_nsec=0;};st_ctim={ tv_sec=8;tv_nsec=0;};}

@@ -1,0 +1,29 @@
+@type trace
+# readlink tests about timestamp assignment in an periodic architecture
+
+Pid 1 -> open_close /f1.txt [O_CREAT;O_RDWR] 0
+Tau
+Pid 1 <- -
+
+Pid 1 -> symlink /f1.txt /my_symlink
+Tau
+Pid 1 <- -
+
+Pid 1 -> lstat  /my_symlink
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFLNK;st_perm=0o777;st_nlink=1;st_uid=0;st_gid=0;st_rdev=0;st_size=7;st_atim={tv_sec=3;tv_nsec=0;};st_mtim={tv_sec=3;tv_nsec=0;};st_ctim={tv_sec=3;tv_nsec=0;};}
+
+
+# end of state setup
+
+Pid 1 -> readlink /my_symlink
+Tau
+Pid 1 <- -
+
+# symlink should make the st_atime Marked
+
+dump-internal
+
+Pid 1 -> lstat  /my_symlink
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFLNK;st_perm=0o777;st_nlink=1;st_uid=0;st_gid=0;st_rdev=0;st_size=7;st_atim={tv_sec=3;tv_nsec=0;};st_mtim={tv_sec=3;tv_nsec=0;};st_ctim={tv_sec=3;tv_nsec=0;};}

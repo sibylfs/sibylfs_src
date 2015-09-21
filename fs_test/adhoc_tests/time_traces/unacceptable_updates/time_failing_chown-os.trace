@@ -1,0 +1,23 @@
+@type trace
+# chown test that checks that we are not allowed
+# to make timestamps go back in time
+
+Pid 1 -> mkdir /empty_dir_1/ 0o777
+Tau
+Pid 1 <- -
+
+Pid 1 -> stat /empty_dir_1/
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=0;st_gid=0;st_rdev=0;st_size=4096;st_atim={tv_sec=2;tv_nsec=0;}; st_mtim={ tv_sec=2;tv_nsec=0;};st_ctim={ tv_sec=2;tv_nsec=0;};}
+
+Pid 1 -> chown /empty_dir_1/ (User_id 4) (Group_id 4)
+Tau
+Pid 1 <- -
+
+Pid 1 -> stat /empty_dir_1/
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=4;st_gid=4;st_rdev=0;st_size=4096;st_atim={tv_sec=0;tv_nsec=0;}; st_mtim={ tv_sec=0;tv_nsec=0;};st_ctim={ tv_sec=0;tv_nsec=0;};}
+
+Pid 1 -> stat /empty_dir_1/
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=4;st_gid=4;st_rdev=0;st_size=4096;st_atim={tv_sec=2;tv_nsec=0;}; st_mtim={ tv_sec=2;tv_nsec=0;};st_ctim={ tv_sec=2;tv_nsec=0;};}

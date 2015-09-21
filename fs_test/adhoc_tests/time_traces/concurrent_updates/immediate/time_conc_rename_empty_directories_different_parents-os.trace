@@ -1,0 +1,121 @@
+@type trace
+
+# concurrent rename tests about timestamp assignment in an immediate architecture
+
+Pid 2 -> create User_id 2 Group_id 2
+Pid 3 -> create User_id 2 Group_id 2
+Pid 4 -> create User_id 2 Group_id 2
+
+Pid 1 -> add_user_to_group User_id 2 Group_id 2
+Tau
+Pid 1 <- -
+
+Pid 1 -> add_user_to_group User_id 3 Group_id 2
+Tau
+Pid 1 <- -
+
+Pid 1 -> add_user_to_group User_id 4 Group_id 2
+Tau
+Pid 1 <- -
+
+Pid 2 -> mkdir /nonempty_dir_1/ 0o777
+Tau
+Pid 2 <- -
+
+Pid 2 -> mkdir /nonempty_dir_2/ 0o777
+Tau
+Pid 2 <- -
+
+Pid 2 -> mkdir /nonempty_dir_1/mydir2 0o777
+Tau
+Pid 2 <- -
+
+Pid 2 -> mkdir /nonempty_dir_1/mydir3 0o777
+Tau
+Pid 2 <- -
+
+Pid 2 -> mkdir /nonempty_dir_1/mydir4 0o777
+Tau
+Pid 2 <- -
+
+Pid 2 -> mkdir /nonempty_dir_2/mydir 0o777
+Tau
+Pid 2 <- -
+
+Pid 2 -> stat /nonempty_dir_1/mydir2
+Tau
+Pid 2 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=2;st_gid=2;st_rdev=0;st_size=4096;st_atim={tv_sec=0;tv_nsec=0;}; st_mtim={ tv_sec=0;tv_nsec=0;};st_ctim={ tv_sec=0;tv_nsec=0;};}
+
+Pid 2 -> stat /nonempty_dir_1/mydir3
+Tau
+Pid 2 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=2;st_gid=2;st_rdev=0;st_size=4096;st_atim={tv_sec=0;tv_nsec=0;}; st_mtim={ tv_sec=0;tv_nsec=0;};st_ctim={ tv_sec=0;tv_nsec=0;};}
+
+Pid 2 -> stat /nonempty_dir_1/mydir4
+Tau
+Pid 2 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=2;st_gid=2;st_rdev=0;st_size=4096;st_atim={tv_sec=0;tv_nsec=0;}; st_mtim={ tv_sec=0;tv_nsec=0;};st_ctim={ tv_sec=0;tv_nsec=0;};}
+
+Pid 2 -> stat /nonempty_dir_2/mydir
+Tau
+Pid 2 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=2;st_gid=2;st_rdev=0;st_size=4096;st_atim={tv_sec=0;tv_nsec=0;}; st_mtim={ tv_sec=0;tv_nsec=0;};st_ctim={ tv_sec=0;tv_nsec=0;};}
+
+Pid 2 -> stat /nonempty_dir_1/
+Tau
+Pid 2 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=5;st_uid=2;st_gid=2;st_rdev=0;st_size=4096;st_atim={tv_sec=0;tv_nsec=0;}; st_mtim={ tv_sec=0;tv_nsec=0;};st_ctim={ tv_sec=0;tv_nsec=0;};}
+
+Pid 2 -> stat /nonempty_dir_2/
+Tau
+Pid 2 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=3;st_uid=2;st_gid=2;st_rdev=0;st_size=4096;st_atim={tv_sec=0;tv_nsec=0;}; st_mtim={ tv_sec=0;tv_nsec=0;};st_ctim={ tv_sec=0;tv_nsec=0;};}
+
+# end of state setup
+
+dump-internal
+
+## test rename with two existing empty directories with different parent directories
+
+Pid 2 -> rename /nonempty_dir_1/mydir2 /nonempty_dir_2/mydir
+Pid 3 -> rename /nonempty_dir_1/mydir3 /nonempty_dir_2/mydir
+Pid 4 -> rename /nonempty_dir_1/mydir4 /nonempty_dir_2/mydir
+Tau
+Tau
+Tau
+Pid 2 <- -
+Pid 3 <- -
+Pid 4 <- -
+
+dump-internal
+
+# rename should alter the st_mtime and st_ctime of the parent directory of the old file (see RENAME_TS in fs_spec/posix/rename.md)
+
+Pid 2 -> stat /nonempty_dir_1/
+Tau
+Pid 2 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=3;st_uid=2;st_gid=2;st_rdev=0;st_size=4096;st_atim={tv_sec=0;tv_nsec=0;}; st_mtim={ tv_sec=5;tv_nsec=0;};st_ctim={ tv_sec=5;tv_nsec=0;};}
+
+Pid 3 -> stat /nonempty_dir_1/
+Tau
+Pid 3 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=3;st_uid=2;st_gid=2;st_rdev=0;st_size=4096;st_atim={tv_sec=0;tv_nsec=0;}; st_mtim={ tv_sec=5;tv_nsec=0;};st_ctim={ tv_sec=5;tv_nsec=0;};}
+
+Pid 4 -> stat /nonempty_dir_1/
+Tau
+Pid 4 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=3;st_uid=2;st_gid=2;st_rdev=0;st_size=4096;st_atim={tv_sec=0;tv_nsec=0;}; st_mtim={ tv_sec=5;tv_nsec=0;};st_ctim={ tv_sec=5;tv_nsec=0;};}
+
+# rename should alter the st_mtime and st_ctime of the parent directory of the renamed file (see RENAME_TS in fs_spec/posix/rename.md)
+
+Pid 2 -> stat /nonempty_dir_2/
+Tau
+Pid 2 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=3;st_uid=2;st_gid=2;st_rdev=0;st_size=4096;st_atim={tv_sec=0;tv_nsec=0;}; st_mtim={ tv_sec=5;tv_nsec=0;};st_ctim={ tv_sec=5;tv_nsec=0;};}
+
+Pid 3 -> stat /nonempty_dir_2/
+Tau
+Pid 3 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=3;st_uid=2;st_gid=2;st_rdev=0;st_size=4096;st_atim={tv_sec=0;tv_nsec=0;}; st_mtim={ tv_sec=5;tv_nsec=0;};st_ctim={ tv_sec=5;tv_nsec=0;};}
+
+Pid 4 -> stat /nonempty_dir_2/
+Tau
+Pid 4 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=3;st_uid=2;st_gid=2;st_rdev=0;st_size=4096;st_atim={tv_sec=0;tv_nsec=0;}; st_mtim={ tv_sec=5;tv_nsec=0;};st_ctim={ tv_sec=5;tv_nsec=0;};}
+
+# rename should not modify the timestamps of the renamed file
+
+Pid 1 -> stat /nonempty_dir_2/mydir
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=2;st_gid=2;st_rdev=0;st_size=4096;st_atim={tv_sec=0;tv_nsec=0;}; st_mtim={ tv_sec=0;tv_nsec=0;};st_ctim={ tv_sec=0;tv_nsec=0;};}
+
+dump-internal

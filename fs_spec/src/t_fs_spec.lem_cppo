@@ -2155,7 +2155,7 @@ module Fs_time = struct
          (ops.fops_set_timestamp fs_state entry t (Logical_timestamp(ops.fops_get_clock fs_state)))
        else fs_state)
     in
-    List.foldl (fun s0 t -> update_timestamp s0 t) s0 types
+    List.foldl (fun s0' t -> update_timestamp s0' t) s0 types
 
   (* [update_timestamps_os_state] assigns concrete time values to the
   timestamps of the given [entry] by using the operating system state
@@ -6202,7 +6202,7 @@ module Os_transition_system = struct
     (* in immediate mode we don't want Mup timestamps; these only arise in Tau transitions *)
     let ss = (
       match lbl with
-      | OS_TAU -> (
+      | OS_TAU ->  (
         if ((architecture_of_ty_arch env.env_arch).arch_is_periodic)
         then finset_bigunion_image (do_periodic_update env) ss
         else finset_image (update_all_marked_timestamps env) ss)

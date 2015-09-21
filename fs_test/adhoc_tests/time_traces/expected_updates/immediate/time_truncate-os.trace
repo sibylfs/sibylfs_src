@@ -1,0 +1,76 @@
+@type trace
+# truncate tests about timestamp assignment in an immediate architecture
+
+Pid 1 -> mkdir /nonempty_dir_1/ 0o777
+Tau
+Pid 1 <- -
+
+Pid 1 -> open_close /nonempty_dir_1/f1.txt [O_CREAT;O_RDWR] 0o666
+Tau
+Pid 1 <- -
+
+Pid 1 -> stat /nonempty_dir_1/f1.txt
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFREG;st_perm=0o644;st_nlink=1;st_uid=0;st_gid=0;st_rdev=0;st_size=0;st_atim={tv_sec=1;tv_nsec=0;};st_mtim={tv_sec=1;tv_nsec=0;};st_ctim={tv_sec=1;tv_nsec=0;};}
+
+# end of state setup
+
+Pid 1 -> truncate /nonempty_dir_1/f1.txt 0
+Tau
+Pid 1 <- -
+
+# truncate should not modify the timestamps of the a file with an unmodified size
+
+Pid 1 -> stat /nonempty_dir_1/f1.txt
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFREG;st_perm=0o644;st_nlink=1;st_uid=0;st_gid=0;st_rdev=0;st_size=0;st_atim={tv_sec=1;tv_nsec=0;};st_mtim={tv_sec=1;tv_nsec=0;};st_ctim={tv_sec=1;tv_nsec=0;};}
+
+
+Pid 1 -> open /nonempty_dir_1/f1.txt [O_RDWR] 0o666
+Tau
+Pid 1 <- -
+
+# for testing that truncate actually modify the file we need to be sure
+# that write modify the file, i.e. this write call must be deterministic
+
+Pid 1 -> write! (FD 3) "alphaomega" 10
+Tau
+Pid 1 <- -
+
+Pid 1 -> close (FD 3)
+Tau
+Pid 1 <- -
+
+Pid 1 -> stat /nonempty_dir_1/f1.txt
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFREG;st_perm=0o644;st_nlink=1;st_uid=0;st_gid=0;st_rdev=0;st_size=10;st_atim={tv_sec=1;tv_nsec=0;};st_mtim={tv_sec=2;tv_nsec=0;};st_ctim={tv_sec=2;tv_nsec=0;};}
+
+Pid 1 -> truncate /nonempty_dir_1/f1.txt 3
+Tau
+Pid 1 <- -
+
+# truncate should modify the st_ctime and st_mtime of the file when the file size is modified (see TRUNCATE_TS in fs_spec/posix/truncate)
+
+Pid 1 -> stat /nonempty_dir_1/f1.txt
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFREG;st_perm=0o644;st_nlink=1;st_uid=0;st_gid=0;st_rdev=0;st_size=3;st_atim={tv_sec=1;tv_nsec=0;};st_mtim={tv_sec=2;tv_nsec=0;};st_ctim={tv_sec=2;tv_nsec=0;};}
+
+
+Pid 1 -> open /nonempty_dir_1/f1.txt [O_RDWR] 0o666
+Tau
+Pid 1 <- -
+
+# for testing that truncate actually modify the file we need to be sure
+# that write modify the file, i.e. this write call must be deterministic
+
+Pid 1 -> write! (FD 3) "alphaomega" 10
+Tau
+Pid 1 <- -
+
+Pid 1 -> close (FD 3)
+Tau
+Pid 1 <- -
+
+Pid 1 -> stat /nonempty_dir_1/f1.txt
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFREG;st_perm=0o644;st_nlink=1;st_uid=0;st_gid=0;st_rdev=0;st_size=10;st_atim={tv_sec=1;tv_nsec=0;};st_mtim={tv_sec=3;tv_nsec=0;};st_ctim={tv_sec=3;tv_nsec=0;};}

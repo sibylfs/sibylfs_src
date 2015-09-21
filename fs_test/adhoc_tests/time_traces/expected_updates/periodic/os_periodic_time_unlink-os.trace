@@ -1,0 +1,59 @@
+@type trace
+
+# unlink tests about timestamp assignment in an periodic architecture
+
+Pid 1 -> mkdir /tmp_dir_1490/ 0o777
+Tau
+Pid 1 <- -
+
+Pid 1 -> stat /tmp_dir_1490/
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=0;st_gid=0;st_rdev=0;st_size=4096;st_atim={tv_sec=2;tv_nsec=0;}; st_mtim={ tv_sec=2;tv_nsec=0;};st_ctim={ tv_sec=2;tv_nsec=0;};}
+
+Pid 1 -> open_close /tmp_dir_1490/f1.txt [O_CREAT;O_RDWR] 0o666
+Tau
+Pid 1 <- -
+
+Pid 1 -> link /tmp_dir_1490/f1.txt /tmp_dir_1490/my_link
+Tau
+Pid 1 <- -
+
+Pid 1 -> stat /tmp_dir_1490/f1.txt
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFREG;st_perm=0o644;st_nlink=2;st_uid=0;st_gid=0;st_rdev=0;st_size=0;st_atim={tv_sec=3;tv_nsec=0;};st_mtim={tv_sec=3;tv_nsec=0;};st_ctim={tv_sec=3;tv_nsec=0;};}
+
+Pid 1 -> unlink /tmp_dir_1490/my_link
+Tau
+Pid 1 <- -
+
+# unlink should make st_ctime of the file Marked
+# and st_ctime and st_mtime of the parent dir
+
+dump-internal
+
+
+# unlink should alter the st_ctime of the file (see UNLINK_TS:2 in fs_spec/posix/unlink)
+
+Pid 1 -> stat /tmp_dir_1490/f1.txt
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFREG;st_perm=0o644;st_nlink=1;st_uid=0;st_gid=0;st_rdev=0;st_size=0;st_atim={tv_sec=3;tv_nsec=0;};st_mtim={tv_sec=3;tv_nsec=0;};st_ctim={tv_sec=20;tv_nsec=0;};}
+
+# unlink should alter the st_ctime and st_mtime of the parent directory (see UNLINK_TS:1 in fs_spec/posix/unlink.md)
+
+Pid 1 -> stat /tmp_dir_1490/
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=0;st_gid=0;st_rdev=0;st_size=4096;st_atim={tv_sec=2;tv_nsec=0;}; st_mtim={ tv_sec=23;tv_nsec=0;};st_ctim={ tv_sec=23;tv_nsec=0;};}
+
+Pid 1 -> unlink /tmp_dir_1490/f1.txt
+Tau
+Pid 1 <- -
+
+# should make the st_ctime and st_mtime of the parent dir Marked (not those of the file that has link count 0)
+
+dump-internal
+
+# unlink should alter the st_ctime and st_mtime of the parent directory (see UNLINK_TS:1 in fs_spec/posix/unlink.md)
+
+Pid 1 -> stat /tmp_dir_1490/
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=0;st_gid=0;st_rdev=0;st_size=4096;st_atim={tv_sec=2;tv_nsec=0;}; st_mtim={ tv_sec=29;tv_nsec=0;};st_ctim={ tv_sec=29;tv_nsec=0;};}

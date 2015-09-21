@@ -1,0 +1,36 @@
+@type trace
+# This trace tests that Marked timestamps of a file are set to a time
+# value after all processes ends using a file (see FILE_CLOSED_TS in
+# fs_spec/posix/timestamps). The Marked timestamps of other files
+# should remain as before.
+
+Pid 2 -> create User_id 2 Group_id 2
+Pid 3 -> create User_id 3 Group_id 3
+
+Pid 2 -> add_user_to_group User_id 3 Group_id 2
+Tau
+Pid 2 <- -
+
+Pid 2 -> mkdir /tmp_dir_1490/ <-wx--x--->
+Tau
+Pid 2 <- -
+
+Pid 2 -> open /tmp_dir_1490/f1.txt [O_CREAT;O_RDWR] <---rwx--->
+Tau
+Pid 2 <- -
+
+Pid 3 -> open /tmp_dir_1490/f1.txt [O_RDONLY]
+Tau
+Pid 3 <- -
+
+dump-internal
+
+Pid 2 -> close (FD 3)
+Tau
+Pid 2 <- -
+
+Pid 3 -> close (FD 3)
+Tau
+Pid 3 <- -
+
+dump-internal

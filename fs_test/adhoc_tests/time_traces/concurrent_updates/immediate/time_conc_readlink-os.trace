@@ -1,0 +1,43 @@
+@type trace
+
+# concurrent unlink tests about timestamp assignment in an immediate architecture
+
+Pid 2 -> create User_id 2 Group_id 2
+Pid 3 -> create User_id 2 Group_id 2
+Pid 4 -> create User_id 2 Group_id 2
+
+Pid 1 -> add_user_to_group User_id 2 Group_id 2
+Tau
+Pid 1 <- -
+
+Pid 2 -> mkdir /nonempty_dir_1/ 0o777
+Tau
+Pid 2 <- -
+
+Pid 2 -> symlink "bla" /my_symlink
+Tau
+Pid 2 <- -
+
+Pid 2 -> lstat /my_symlink
+Tau
+Pid 2 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFLNK;st_perm=0o777;st_nlink=1;st_uid=0;st_gid=0;st_rdev=2;st_size=3;st_atim={tv_sec=0;tv_nsec=0;};st_mtim={tv_sec=0;tv_nsec=0;};st_ctim={tv_sec=0;tv_nsec=0;};}
+
+# end of state setup
+
+dump-internal
+
+Pid 2 -> readlink /my_symlink
+Pid 3 -> readlink /my_symlink
+Pid 4 -> readlink /my_symlink
+Tau
+Tau
+Tau
+Pid 2 <- -
+Pid 3 <- -
+Pid 4 <- -
+
+Pid 2 -> lstat /my_symlink
+Tau
+Pid 2 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFLNK;st_perm=0o777;st_nlink=1;st_uid=0;st_gid=0;st_rdev=2;st_size=3;st_atim={tv_sec=2;tv_nsec=0;};st_mtim={tv_sec=0;tv_nsec=0;};st_ctim={tv_sec=0;tv_nsec=0;};}
+
+dump-internal

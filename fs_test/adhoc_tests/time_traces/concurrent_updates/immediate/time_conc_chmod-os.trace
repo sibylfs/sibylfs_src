@@ -1,0 +1,105 @@
+@type trace
+# concurrent chmod tests about timestamp assignment in an immediate architecture
+
+Pid 2 -> create User_id 2 Group_id 2
+Pid 3 -> create User_id 2 Group_id 2
+Pid 4 -> create User_id 2 Group_id 2
+
+Pid 1 -> add_user_to_group User_id 2 Group_id 2
+Tau
+Pid 1 <- -
+
+Pid 1 -> add_user_to_group User_id 3 Group_id 2
+Tau
+Pid 1 <- -
+
+Pid 1 -> add_user_to_group User_id 4 Group_id 2
+Tau
+Pid 1 <- -
+
+Pid 2 -> mkdir /empty_dir_1/ 0o777
+Tau
+Pid 2 <- -
+
+Pid 2 -> stat /empty_dir_1/
+Tau
+Pid 2 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=2;st_gid=2;st_rdev=0;st_size=4096;st_atim={tv_sec=2;tv_nsec=0;}; st_mtim={ tv_sec=2;tv_nsec=0;};st_ctim={ tv_sec=2;tv_nsec=0;};}
+
+# end of state setup
+
+dump-internal
+
+## test that all the processes see the same timestamps after a chmod
+
+Pid 2 -> chmod /empty_dir_1/ 1000
+Pid 3 -> chmod /empty_dir_1/ 0o755
+Pid 4 -> chmod /empty_dir_1/ 0o757
+
+Tau
+Tau
+Tau
+
+Pid 2 <- -
+Pid 3 <- -
+Pid 4 <- -
+
+dump-internal
+
+# chmod should update the st_ctime of the file (see CHMOD_TS in fs_spec/posix/chmod)
+
+Pid 2 -> stat /empty_dir_1/
+Tau
+Pid 2 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o757;st_nlink=2;st_uid=2;st_gid=2;st_rdev=0;st_size=4096;st_atim={tv_sec=2;tv_nsec=0;}; st_mtim={ tv_sec=2;tv_nsec=0;};st_ctim={ tv_sec=8;tv_nsec=0;};}
+
+Pid 3 -> stat /empty_dir_1/
+Tau
+Pid 3 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o757;st_nlink=2;st_uid=2;st_gid=2;st_rdev=0;st_size=4096;st_atim={tv_sec=2;tv_nsec=0;}; st_mtim={ tv_sec=2;tv_nsec=0;};st_ctim={ tv_sec=8;tv_nsec=0;};}
+
+Pid 4 -> stat /empty_dir_1/
+Tau
+Pid 4 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o757;st_nlink=2;st_uid=2;st_gid=2;st_rdev=0;st_size=4096;st_atim={tv_sec=2;tv_nsec=0;}; st_mtim={ tv_sec=2;tv_nsec=0;};st_ctim={ tv_sec=8;tv_nsec=0;};}
+
+## we test the same for chmod on a file
+
+Pid 2 -> open /f1.txt [O_CREAT;O_RDWR] 0o666
+Tau
+Pid 2 <- -
+
+Pid 2 -> close (FD 3)
+Tau
+Pid 2 <- -
+
+Pid 2 -> stat /f1.txt
+Tau
+Pid 2 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFREG;st_perm=0o644;st_nlink=1;st_uid=2;st_gid=2;st_rdev=0;st_size=0;st_atim={tv_sec=9;tv_nsec=0;};st_mtim={tv_sec=9;tv_nsec=0;};st_ctim={tv_sec=9;tv_nsec=0;};}
+
+dump-internal
+
+Pid 3 -> chmod /f1.txt 0o755
+Pid 4 -> chmod /f1.txt  0o757
+Pid 2 -> chmod /f1.txt 1000
+
+Tau
+Tau
+Tau
+
+Pid 3 <- -
+Pid 4 <- -
+Pid 2 <- -
+
+dump-internal
+
+Pid 2 -> stat /f1.txt
+Tau
+Pid 2 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFREG;st_perm=0o1750;st_nlink=1;st_uid=2;st_gid=2;st_rdev=0;st_size=0;st_atim={tv_sec=9;tv_nsec=0;};st_mtim={tv_sec=9;tv_nsec=0;};st_ctim={tv_sec=10;tv_nsec=0;};}
+
+
+Pid 3 -> stat /f1.txt
+Tau
+Pid 3 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFREG;st_perm=0o1750;st_nlink=1;st_uid=2;st_gid=2;st_rdev=0;st_size=0;st_atim={tv_sec=9;tv_nsec=0;};st_mtim={tv_sec=9;tv_nsec=0;};st_ctim={tv_sec=10;tv_nsec=0;};}
+
+Pid 4 -> stat /f1.txt
+Tau
+Pid 4 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFREG;st_perm=0o1750;st_nlink=1;st_uid=2;st_gid=2;st_rdev=0;st_size=0;st_atim={tv_sec=9;tv_nsec=0;};st_mtim={tv_sec=9;tv_nsec=0;};st_ctim={tv_sec=10;tv_nsec=0;};}
+
+dump-internal

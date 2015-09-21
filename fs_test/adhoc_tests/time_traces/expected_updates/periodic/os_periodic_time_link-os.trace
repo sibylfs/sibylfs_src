@@ -1,0 +1,47 @@
+@type trace
+# link tests about timestamp assignment in a periodic architecture
+
+Pid 1 -> mkdir /nonempty_dir_1/ 0o777
+Tau
+Pid 1 <- -
+
+Pid 1 -> stat /nonempty_dir_1/
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=0;st_gid=0;st_rdev=0;st_size=4096;st_atim={tv_sec=2;tv_nsec=0;}; st_mtim={ tv_sec=2;tv_nsec=0;};st_ctim={ tv_sec=2;tv_nsec=0;};}
+
+Pid 1 -> open /nonempty_dir_1/f1.txt [O_CREAT;O_RDWR] 0o666
+Tau
+Pid 1 <- -
+
+Pid 1 -> stat /nonempty_dir_1/
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=0;st_gid=0;st_rdev=0;st_size=4096;st_atim={tv_sec=2;tv_nsec=0;}; st_mtim={ tv_sec=3;tv_nsec=0;};st_ctim={ tv_sec=3;tv_nsec=0;};}
+
+Pid 1 -> stat /nonempty_dir_1/f1.txt
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFREG;st_perm=0o644;st_nlink=1;st_uid=0;st_gid=0;st_rdev=0;st_size=0;st_atim={tv_sec=3;tv_nsec=0;};st_mtim={tv_sec=3;tv_nsec=0;};st_ctim={tv_sec=3;tv_nsec=0;};}
+
+# end of state setup
+
+Pid 1 -> link /nonempty_dir_1/f1.txt  /nonempty_dir_1/new_link
+Tau
+Pid 1 <- -
+
+# link alters the c_time of the file  (see LINK_TS:1 in fs_spec/posix/link.md)
+# the st_ctime of the file should be Marked
+
+dump-internal
+
+Pid 1 -> stat /nonempty_dir_1/f1.txt
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFREG;st_perm=0o644;st_nlink=2;st_uid=0;st_gid=0;st_rdev=0;st_size=0;st_atim={tv_sec=3;tv_nsec=0;};st_mtim={tv_sec=3;tv_nsec=0;};st_ctim={tv_sec=4;tv_nsec=0;};}
+
+
+# the st_ctime and st_mtime of the containing dir should be Marked
+
+dump-internal
+
+# link alters the c_time and m_time of the dir containing the link  (see LINK_TS:2 in fs_spec/posix/link.md)
+Pid 1 -> stat /nonempty_dir_1/
+Tau
+Pid 1 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=0;st_gid=0;st_rdev=0;st_size=4096;st_atim={tv_sec=2;tv_nsec=0;}; st_mtim={ tv_sec=5;tv_nsec=0;};st_ctim={ tv_sec=5;tv_nsec=0;};}

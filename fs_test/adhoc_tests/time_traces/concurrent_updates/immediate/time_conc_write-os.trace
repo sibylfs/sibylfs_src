@@ -1,0 +1,81 @@
+@type trace
+
+# concurrent write tests about timestamp assignment in an immediate architecture
+
+Pid 2 -> create User_id 2 Group_id 2
+Pid 3 -> create User_id 2 Group_id 2
+Pid 4 -> create User_id 2 Group_id 2
+
+Pid 1 -> add_user_to_group User_id 2 Group_id 2
+Tau
+Pid 1 <- -
+
+Pid 2 -> mkdir /nonempty_dir_1/ 0o777
+Tau
+Pid 2 <- -
+
+Pid 2 -> open /nonempty_dir_1/f1.txt [O_CREAT;O_RDWR] 0o666
+Tau
+Pid 2 <- -
+
+Pid 3 -> open /nonempty_dir_1/f1.txt [O_RDWR] 0o666
+Tau
+Pid 3 <- -
+
+Pid 4 -> open /nonempty_dir_1/f1.txt [O_RDWR] 0o666
+Tau
+Pid 4 <- -
+
+Pid 2 -> stat /nonempty_dir_1/f1.txt
+Tau
+Pid 2 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFREG;st_perm=0o644;st_nlink=1;st_uid=2;st_gid=2;st_rdev=0;st_size=0;st_atim={tv_sec=0;tv_nsec=0;};st_mtim={tv_sec=0;tv_nsec=0;};st_ctim={tv_sec=0;tv_nsec=0;};}
+
+
+Pid 2 -> stat /nonempty_dir_1/
+Tau
+Pid 2 <- RV_stat {st_dev=2049;st_ino=1;st_kind=S_IFDIR;st_perm=0o755;st_nlink=2;st_uid=2;st_gid=2;st_rdev=0;st_size=4096;st_atim={tv_sec=0;tv_nsec=0;}; st_mtim={ tv_sec=0;tv_nsec=0;};st_ctim={ tv_sec=0;tv_nsec=0;};}
+
+
+# end of state setup
+
+dump-internal
+
+## we need deterministic write to avoid having errors with the stat
+
+Pid 2 -> write! (FD 3) "a" 1
+Pid 3 -> write! (FD 3) "b" 1
+Pid 4 -> write! (FD 3) "c" 1
+Tau
+Tau
+Tau
+Pid 2 <- -
+Pid 4 <- -
+Pid 3 <- -
+
+# the size will be 1 because there is a race condition
+
+Pid 2 -> stat /nonempty_dir_1/f1.txt
+Tau
+Pid 2 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFREG;st_perm=0o644;st_nlink=1;st_uid=2;st_gid=2;st_rdev=0;st_size=1;st_atim={tv_sec=0;tv_nsec=0;};st_mtim={tv_sec=2;tv_nsec=0;};st_ctim={tv_sec=2;tv_nsec=0;};}
+
+dump-internal
+
+## test that write with 0 lenght does not alter timestamps
+
+Pid 2 -> write! (FD 3) "a" 0
+Pid 3 -> write! (FD 3) "b" 0
+Pid 4 -> write! (FD 3) "c" 0
+Tau
+Tau
+Tau
+Pid 2 <- -
+Pid 4 <- -
+Pid 3 <- -
+
+# the size will be 1 because there is a race condition
+
+Pid 2 -> stat /nonempty_dir_1/f1.txt
+Tau
+Pid 2 <- RV_stat {st_dev=2049;st_ino=2;st_kind=S_IFREG;st_perm=0o644;st_nlink=1;st_uid=2;st_gid=2;st_rdev=0;st_size=1;st_atim={tv_sec=0;tv_nsec=0;};st_mtim={tv_sec=2;tv_nsec=0;};st_ctim={tv_sec=2;tv_nsec=0;};}
+
+dump-internal
