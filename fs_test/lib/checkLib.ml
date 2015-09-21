@@ -459,7 +459,6 @@ let keep_cwd fn =
   r
 
 let possible_results_for_pid pid ss =
-    let _ = print_endline (string_of_int (List.length (list_from_finset ss))) in
     finset_cleanup (=) (finset_bigunion_image (M.allowed_results_for_pid pid) ss)
 
 (** [select_return_value pid ss] chooses a return value from those
