@@ -1,0 +1,12 @@
+S src_ext/p3
+S build_spec
+S fs_test
+S fs_test/lib
+
+B src_ext/p3
+B build_spec
+B fs_test
+B fs_test/lib
+
+PKG unix cmdliner fd-send-recv str bigarray num sha sexplib cow
+PKG unix-errno unix-fcntl
