@@ -1,0 +1,29 @@
+# -*- mode: makefile -*-
+
+install:
+	cd fs_test && cp check.native  fs_test  fs_test.sh  posix.native  run_trace  tgen debug/debug.native debug/check2.native /tmp/l/bin/tmp
+
+uninstall:
+	cd /tmp/l/bin/tmp && rm -f check.native  fs_test  fs_test.sh  posix.native  run_trace  tgen debug.native check2.native
+
+sibylfs_OS_ARCH.tar.gz: FORCE
+	-chmod -R ugo+w /tmp/sibylfs
+	-rm -rf /tmp/sibylfs
+	-mkdir /tmp/sibylfs
+	cp -R result/bin /tmp/sibylfs
+	# cp result/fs_test/lib/fs_test_version.ml /tmp/sibylfs
+	tar -C /tmp -cvzf $@ sibylfs
+	#cp /tmp/$@ sibylfs_OS_ARCH.tar.gz
+
+
+# http://sandervanderburg.blogspot.co.uk/2014/07/backing-up-nix-and-hydra-builds.html
+
+sibylfs_nix_OS_ARCH.closure: FORCE
+	nix-store --export $$(nix-store --query --requisites ./result) > $@
+#	nix-store --export $$(nix-store --query --requisites --include-outputs ./result) > $@
+
+
+clean_not_lib:
+	cd fs_test && $(MAKE) clean_not_lib
+
+FORCE:
