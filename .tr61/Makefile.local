@@ -6,7 +6,11 @@ install:
 uninstall:
 	cd /tmp/l/bin/tmp && rm -f check.native  fs_test  fs_test.sh  posix.native  run_trace  tgen debug.native check2.native
 
+plain_binaries: sibylfs_OS_ARCH.tar.gz FORCE
+
+# assumes result is present
 sibylfs_OS_ARCH.tar.gz: FORCE
+	./patchelf_nix-build.sh
 	-chmod -R ugo+w /tmp/sibylfs
 	-rm -rf /tmp/sibylfs
 	-mkdir /tmp/sibylfs
@@ -17,6 +21,8 @@ sibylfs_OS_ARCH.tar.gz: FORCE
 
 
 # http://sandervanderburg.blogspot.co.uk/2014/07/backing-up-nix-and-hydra-builds.html
+
+nix_binaries: sibylfs_nix_OS_ARCH.closure FORCE
 
 sibylfs_nix_OS_ARCH.closure: FORCE
 	nix-store --export $$(nix-store --query --requisites ./result) > $@

@@ -1,0 +1,19 @@
+Notes on releasing
+
+
+  - "installing prebuilt binaries via nix"
+    - make nix_binaries
+    - rename closure (change ARCH to linux or mac)
+      - eg mv sibylfs_nix_OS_ARCH.closure sibylfs_nix_linux_amd64.closure 
+    - create a release on github https://github.com/sibylfs/sibylfs_binaries
+    - add closures to release
+
+
+  - "plain binaries"
+    - make plain_binaries
+    - rename .tar.gz
+      - eg mv sibylfs_OS_ARCH.tar.gz sibylfs_linux_amd64.tar.gz 
+    - add to release on sibylfs_binaries
+
+
+

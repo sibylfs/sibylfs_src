@@ -8,5 +8,6 @@ chmod u+wx result/bin
 
 
 for f in result/bin/*; do
+    echo Patching $f
     patchelf --set-rpath "" --set-interpreter "/lib64/ld-linux-x86-64.so.2" $f
 done
