@@ -11,7 +11,7 @@ This consists of the following files:
 The files in the second line depend on the file in the first line;
 t_fs_spec.lem depends on the previous files and t_dir_heap on all.
 Files with the ending cppo need preprocessing via cppo. This preprocessing
-is able to include or exclude aspects of the precification like permissions
+is able to include or exclude aspects of the specification like permissions
 or timing. 
 
 There are also files stating high-level properties of the specification:
