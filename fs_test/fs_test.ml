@@ -456,7 +456,15 @@ let parse_fs params model_s =
   | "vfat"    -> Mount.vfat_if_available ()
   | "xfs"     -> Mount.xfs_if_available ()
   | "zfs"     -> Mount.zfs_if_available ()
-  | fs        -> raise (Invocation_error (Unknown_model fs))
+  | fs        -> match String.sub fs 0 5 with
+    | "path:" ->
+      let path = String.sub fs 5 (String.length fs - 5) in
+      let path = if path.[0] = '/'
+        then path
+        else exec_path / path
+      in
+      Mount.([local_target (Fs.Path path)])
+    | _ -> raise (Invocation_error (Unknown_model fs))
 
 let spec_params_of_params = function
   | []    -> []
@@ -512,8 +520,12 @@ let parse_fs_to_predicate = Fs.(function
     | _ -> false)
   | "fuse_ext2" -> (function Fuse_ext2_loop -> true | _ -> false)
   | "fuse_ext3" -> (function Fuse_ext3_loop -> true | _ -> false)
-  | fs        -> raise (Invocation_error (Unknown_model fs))
-  )
+  | fs        -> match String.sub fs 0 5 with
+    | "path:" ->
+      let path = String.sub fs 5 (String.length fs - 5) in
+      (function Path p when p = path -> true | _ -> false)
+    | _ -> raise (Invocation_error (Unknown_model fs))
+)
 
 let parse_model_to_predicate str =
   try let spec = Model.Spec { Spec.Descr.flavor = parse_spec [] str } in

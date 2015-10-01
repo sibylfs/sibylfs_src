@@ -67,6 +67,7 @@ module Fs = struct
   | Vfat_loop
   | Xfs_loop
   | Zfs_loop
+  | Path of string
   with sexp
 
   type version =
@@ -132,6 +133,7 @@ module Fs = struct
     | Vfat_loop    -> "vfat_loop"
     | Xfs_loop     -> "xfs_loop"
     | Zfs_loop     -> "zfs_loop"
+    | Path path    -> "path:"^path
 
   let versioned_name (fs,v) = (name fs)^"["^(name_of_version v)^"]"
 end

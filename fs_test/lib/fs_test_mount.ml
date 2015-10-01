@@ -352,6 +352,7 @@ let rec version_of_fs = Fs.(function
   | Vfat_loop -> vfat_version ()
   | Xfs_loop -> xfs_version ()
   | Zfs_loop -> zfs_version ()
+  | Path _   -> Version "unknown"
 )
 
 let local_target fs = fs, version_of_fs fs
@@ -663,6 +664,9 @@ let load_zfs_loop params fs = load_fs ~destroy:false params fs (fun env ->
   )
 )
 
+let load_path params path fs =
+  { fs; users = 1; mnt = path; params; subdir=None }
+
 let fuse_args arg_array ?(also=[]) = function
   | [] -> arg_array
   | params -> Array.append arg_array
@@ -702,6 +706,7 @@ let rec load params fs =
       | Vfat_loop     -> load_vfat_loop params fs
       | Xfs_loop      -> load_xfs_loop params fs
       | Zfs_loop      -> load_zfs_loop params fs
+      | Path path     -> load_path params path fs
     ) in
     Hashtbl.replace envs fs env;
     add_destructor env (fun () -> Hashtbl.remove envs fs);
