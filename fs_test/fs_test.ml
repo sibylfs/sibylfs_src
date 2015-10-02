@@ -95,8 +95,8 @@ let cmd_path = Filename.(
 )
 let mnt_path = exec_path / "mnt"
 
-let posix_command = cmd_path / "fs_test_posix"
-let check_command = cmd_path / "fs_test_check"
+let posix_command = ref (cmd_path / "fs_test_posix")
+let check_command = ref (cmd_path / "fs_test_check")
 
 let params = { Mount.size = fs_size; system; mnt_path }
 
@@ -269,7 +269,7 @@ let run_trace env file extra_args = match env with
       Array.append [|"-v"; file; "-arch"; arch; "-tmp"; dir|] extra_args
     in
     let process =
-      System.create_process posix_command args (Unix.environment ())
+      System.create_process !posix_command args (Unix.environment ())
     in
     Unix.close process.System.stdin;
     process
@@ -284,7 +284,7 @@ let run_trace env file extra_args = match env with
       Array.append [|"-v"; file; "-arch"; arch; "--root"|] extra_args
     in
     let process =
-      System.create_process check_command args (Unix.environment ())
+      System.create_process !check_command args (Unix.environment ())
     in
     Unix.close process.System.stdin;
     process
@@ -593,7 +593,7 @@ let spec_of_spec_descr ({ Spec.Descr.flavor }) = {
   fs_spec_version = version;
 }
 
-let libc_v = Lazy.from_fun (fun () -> libc_version posix_command)
+let libc_v = Lazy.from_fun (fun () -> libc_version !posix_command)
 
 let config_of_model model model_version = Fs_test_config.(
   Model.map (fun fs -> {
@@ -611,11 +611,15 @@ let model_of_config =
 let check_commands () =
   let open Unix in
   let check command =
-    try access command [X_OK]
-    with Unix_error ((EACCES | ENOENT),_,_) ->
-      eprintf "%s not found.\n" command;
-      eprintf "Please build %s.\n%!" command;
-      exit 1
+    match System.read_command ("which " ^ !command) with
+    | path::_ -> command := path
+    | [] ->
+      let cmd = !command in
+      try access cmd [X_OK]
+      with Unix_error ((EACCES | ENOENT),_,_) ->
+        eprintf "%s not found.\n" cmd;
+        eprintf "Please build %s.\n%!" cmd;
+        exit 1
   in
   check posix_command;
   check check_command
