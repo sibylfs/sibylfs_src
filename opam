@@ -16,17 +16,17 @@ build: [
   [make]
 ]
 depends: [
-  "ocamlfind"
   "base-unix"
   "base-bytes"
-  "sibylfs-lem"
+  "ocamlfind" { build }
+  "sibylfs-lem" { build }
+  "cppo" { build }
   "sha"
-  "cppo"
   "cmdliner"
   "fd-send-recv"
   "camlp4"
   "sexplib"
   "menhir"
   "cow"
-  "unix-fcntl"
+  "unix-fcntl" { >= "0.2.0" }
 ]
