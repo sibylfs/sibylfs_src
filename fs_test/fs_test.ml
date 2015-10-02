@@ -457,7 +457,7 @@ let parse_fs params model_s =
   | "xfs"     -> Mount.xfs_if_available ()
   | "zfs"     -> Mount.zfs_if_available ()
   | fs        -> match String.sub fs 0 5 with
-    | "path:" ->
+    | "path=" ->
       let path = String.sub fs 5 (String.length fs - 5) in
       let path = if path.[0] = '/'
         then path
@@ -521,7 +521,7 @@ let parse_fs_to_predicate = Fs.(function
   | "fuse_ext2" -> (function Fuse_ext2_loop -> true | _ -> false)
   | "fuse_ext3" -> (function Fuse_ext3_loop -> true | _ -> false)
   | fs        -> match String.sub fs 0 5 with
-    | "path:" ->
+    | "path=" ->
       let path = String.sub fs 5 (String.length fs - 5) in
       (function Path p when p = path -> true | _ -> false)
     | _ -> raise (Invocation_error (Unknown_model fs))

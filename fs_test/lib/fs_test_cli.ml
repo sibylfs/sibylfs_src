@@ -56,7 +56,7 @@ let models all_models = map List.flatten Arg.(
             ^all_s^"). When running fs_test exec, the models
             linux_spec, posix_spec, mac_os_x_spec, and freebsd_spec allow
             you to run tests directly against the spec. The special model
-            path:[path] allows you to use a file system path as the model
+            path=[path] allows you to use a file system path as the model
             to test against.")
   )
 
