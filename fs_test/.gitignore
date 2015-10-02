@@ -1,4 +1,6 @@
 fs_test
+fs_test_posix
+fs_test_check
 run_trace
 tgen
 2014-*

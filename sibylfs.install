@@ -1,0 +1,5 @@
+bin: [
+  "fs_test/fs_test"       {"fs_test"}
+  "fs_test/fs_test_posix" {"fs_test_posix"}
+  "fs_test/fs_test_check" {"fs_test_check"}
+]

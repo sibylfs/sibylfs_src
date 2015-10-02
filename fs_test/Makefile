@@ -41,8 +41,8 @@ PKGS:=$(CAMLLIBS),bytes,sexplib,sexplib.syntax,cmdliner,fd-send-recv,sha,cow,cow
 SUBDIRS:= ld_preload
 
 
-NATIVES=check.native \
-  posix.native \
+NATIVES=fs_test_check \
+  fs_test_posix \
   debug/check2.native \
 	debug/debug.native \
 	paths/testpath.native
@@ -74,10 +74,10 @@ debug/check2.native debug/debug.native: lib/fs_check_lib.cmxa
 
 OPTARGS:=-linkpkg -syntax camlp4o -package $(PKGS) $(LIBS) $(COMPFLAGS)
 
-check.native: check.ml
+fs_test_check: check.ml
 	$(OCAMLOPT) -o $@ $(OPTARGS) $<
 
-posix.native: posix.ml
+fs_test_posix: posix.ml
 	$(OCAMLOPT) -o $@ $(OPTARGS) $<
 
 run_trace: run_trace.ml

@@ -86,12 +86,17 @@ let system = System.get_system ()
 let exec_path = Unix.getcwd ()
 let cmd_path = Filename.dirname Sys.argv.(0)
 let cmd_path = Filename.(
-  if is_relative cmd_path then concat exec_path cmd_path else cmd_path
+  try
+    ignore (String.index Sys.argv.(0) '/');
+    if is_relative cmd_path
+    then concat exec_path cmd_path
+    else cmd_path
+  with Not_found -> ""
 )
 let mnt_path = exec_path / "mnt"
 
-let posix_command = cmd_path / "posix.native"
-let check_command = cmd_path / "check.native"
+let posix_command = cmd_path / "fs_test_posix"
+let check_command = cmd_path / "fs_test_check"
 
 let params = { Mount.size = fs_size; system; mnt_path }
 
