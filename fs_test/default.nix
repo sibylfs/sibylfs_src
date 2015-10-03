@@ -38,7 +38,7 @@ in stdenv.mkDerivation {
   
     installPhase = ''
 mkdir -p $out/bin
-cp *.native fs_test.sh fs_test run_trace tgen lib/fs_test_version.ml $out/bin
+cp fs_test fs_test_check fs_test_posix run_trace tgen lib/fs_test_version.ml $out/bin
 # paths/testpath.native testall.sh 
 ''; 
 
