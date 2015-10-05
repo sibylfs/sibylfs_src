@@ -25,7 +25,7 @@ open Cmdliner
 
 let man_trailer = [
   `S "BUGS";
-  `P "Report bugs on the web at <https://bitbucket.org/tomridge/fs>.";
+  `P "Report bugs on the web at <https://github.com/sibylfs/sibylfs_src>.";
 ]
 
 let map f x = Term.(pure f $ x)
