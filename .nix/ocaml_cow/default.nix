@@ -24,10 +24,10 @@ in stdenv.mkDerivation {
 #    patches = ./patch;
 
 
-  postConfigure = ''
-    substituteInPlace camlp4/META.in \
-    --replace +camlp4 $out/lib/ocaml/${ocaml_version}/site-lib/camlp4
-  '';
+#   postConfigure = ''
+#     substituteInPlace camlp4/META.in \
+#     --replace +camlp4 $out/lib/ocaml/${ocaml_version}/site-lib/camlp4
+#   '';
 
 #     substituteInPlace camlp4/config/Camlp4_config.ml \
 #     --replace \
@@ -39,7 +39,7 @@ in stdenv.mkDerivation {
 
     buildInputs = [ ocaml findlib pkgs.which strace ]; 
   
-    propagatedBuildInputs = [ dyntype omd op.type_conv op.camlp4 op.re ulex op.uri op.xmlm op.ezjsonm op.camlp4 cstruct ];
+    propagatedBuildInputs = [ dyntype omd op.type_conv op.re ulex op.uri op.xmlm op.ezjsonm op.camlp4 cstruct ];
 
    buildPhase = "
 export LD_LIBRARY_PATH=${cstruct}/lib/ocaml/${ocaml_version}/site-lib/cstruct
