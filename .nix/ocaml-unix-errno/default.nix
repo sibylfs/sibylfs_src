@@ -14,7 +14,7 @@ let
     src = fetchgit {
       url = https://github.com/dbuenzli/rresult.git;
       rev = "4524762a5";
-      sha256 = "249b97f25725f67d7358f046d0411071ee0b0dd200872b62f24e827e6be7d431";
+      sha256 = "1zriaj4xaj7a5zw848m6sp0rh69xk15zdazpnkpw899y39yv5a0p";
     };
   
     buildInputs = [ ocaml findlib pkgs.opam pkgs.ocamlPackages.ctypes ]; 
@@ -40,7 +40,7 @@ stdenv.mkDerivation {
     src = fetchgit {
       url = https://github.com/dsheets/ocaml-unix-errno.git;
       rev = "5b705b7";
-      sha256 = "ba478307f514c98431f2358dde4ef56e0c6a5401c809ebad3a50b852c58d10e5";
+      sha256 = "0pf54p7pcvbxhszh7scsw81m8p2yl7l3mqpy7mxz9nygaq6xibrp";
     };
   
     buildInputs = [ ocaml findlib pkgs.ocamlPackages.ctypes rresult ]; 

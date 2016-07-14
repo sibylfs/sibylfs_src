@@ -13,7 +13,7 @@ in stdenv.mkDerivation {
     src = fetchgit {
       url = https://tomridge@bitbucket.org/tomridge/lem.git;
       rev = "5b4a168"; 
-      sha256 = "baf5b311d236046c1a2ccafa0e25944eb507ff8052faa57ecb07122c94832c7c";
+      sha256 = "19642yadi089p8si87n0rbn0mwwxyvzjrv33g848gaqy811i0zak";
     };
   
     buildInputs = [ ocaml git pkgs.perl  ]; # isabelle pkgs.pkgconfig findlib 
