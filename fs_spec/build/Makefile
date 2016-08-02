@@ -19,7 +19,7 @@ BISECT?= # or "-package bisect" to build with bisect
 CAMLC:=ocamlfind ocamlc $(BISECT)
 CAMLOPT:=ocamlfind ocamlopt $(BISECT)
 WARNINGS:=-w -26-8
-COMPFLAGS:=$(WARNINGS) 
+COMPFLAGS:=$(WARNINGS) -package sexplib,sexplib.syntax # might as well
 
 LEM:=$(LEMPATH)
 LEMFLAGS:=-only_changed_output -wl_unused_vars ign -wl_rename err
@@ -79,6 +79,7 @@ all:
 	$(MAKE) generated_tml
 	$(MAKE) generated_ml
 	$(MAKE) compile
+	$(MAKE) generated.tar # in case I forget to update it
 
 # need these present before we do anything
 before_all: $(EXTRACTCMA) $(EXTRACTCMXA) link
@@ -86,7 +87,7 @@ before_all: $(EXTRACTCMA) $(EXTRACTCMXA) link
 
 link: 
 	ln -sf ../src/* .
-	touch link
+	touch $@
 
 # currently switch manually between the versions 
 # TODO: add some more comfort
@@ -115,7 +116,7 @@ run_lem: $(DOTLEM)
 	cp t_fs_spec.ml t_fs_spec.ml.tmp
 	sed -f patch_lem.sed t_fs_spec.ml.tmp > t_fs_spec.ml
 	rm t_fs_spec.ml.tmp
-	touch run_lem
+	touch $@
 
 # make the t_ml files depend on actually running lem; lem processes all files at once
 $(GENERATED_TML): run_lem
@@ -137,44 +138,44 @@ generated_ml: $(GENERATED_ML)
 
 compile: cmo cmx fs_spec_lib.cma fs_spec_lib.cmxa
 
-cmo: generated_ml
-	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c abstract_string.mli
-	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c lem_support.mli
-	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c fs_interface.mli
-	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -c list_array.mli
-	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -c fs_prelude.mli
-	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c fs_spec.ml
-	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c dir_heap.ml
-	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -c fs_dict_wrappers.mli
-	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -package sha -c fs_dump.ml
-	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -c fs_printer.ml
-	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c fs_interface.mli
-	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c abstract_string.ml
-	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -c list_array.ml
-	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c lem_support.ml
-	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -c fs_prelude.ml
-	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -c fs_dict_wrappers.ml
-	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -c fs_interface.ml
+cmo: $(DOTML) $(DOTMLI)
+	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -syntax camlp4o -c abstract_string.mli
+	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -syntax camlp4o -c lem_support.mli
+	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -syntax camlp4o -c fs_interface.mli
+	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -c list_array.mli
+	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -c fs_prelude.mli
+	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -syntax camlp4o -c fs_spec.ml
+	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -syntax camlp4o -c dir_heap.ml
+	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -c fs_dict_wrappers.mli
+	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -syntax camlp4o -package sha -c fs_dump.ml
+	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -c fs_printer.ml
+	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -syntax camlp4o -c fs_interface.mli
+	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -syntax camlp4o -c abstract_string.ml
+	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -c list_array.ml
+	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -syntax camlp4o -c lem_support.ml
+	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -c fs_prelude.ml
+	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -c fs_dict_wrappers.ml
+	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -c fs_interface.ml
 	touch cmo
 
-cmx: generated_ml
-	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c abstract_string.mli
-	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c lem_support.mli
-	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c fs_interface.mli
-	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -c list_array.mli
-	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -c fs_prelude.mli
-	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c fs_spec.ml
-	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c dir_heap.ml
-	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -c fs_dict_wrappers.mli
-	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -package sha -c fs_dump.ml
-	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -c fs_printer.ml
-	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c fs_interface.mli
-	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c abstract_string.ml
-	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -c list_array.ml
-	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c lem_support.ml
-	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -c fs_prelude.ml
-	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -c fs_dict_wrappers.ml
-	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -c fs_interface.ml
+cmx: $(DOTML) $(DOTMLI)
+	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -syntax camlp4o -c abstract_string.mli
+	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -syntax camlp4o -c lem_support.mli
+	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -syntax camlp4o -c fs_interface.mli
+	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -c list_array.mli
+	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -c fs_prelude.mli
+	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -syntax camlp4o -c fs_spec.ml
+	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -syntax camlp4o -c dir_heap.ml
+	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -c fs_dict_wrappers.mli
+	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -syntax camlp4o -package sha -c fs_dump.ml
+	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -c fs_printer.ml
+	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -syntax camlp4o -c fs_interface.mli
+	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -syntax camlp4o -c abstract_string.ml
+	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -c list_array.ml
+	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -syntax camlp4o -c lem_support.ml
+	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -c fs_prelude.ml
+	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -c fs_dict_wrappers.ml
+	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -c fs_interface.ml
 	touch cmx
 
 # -g flag turns on debugging info (e.g. for stacktrace)
@@ -188,12 +189,46 @@ interface_only: generated_ml
 	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c abstract_string.mli -c lem_support.mli fs_interface.mli
 	touch $@
 
+define generated_files
+
+t_fs_spec_fs_command_properties.lem
+t_dir_heap.lem
+t_fs_spec.lem
+t_fs_spec_properties_perms.lem
+
+t_dir_heap.ml
+t_fs_prelude.ml
+t_fs_spec_fs_command_properties.ml
+t_fs_spec.ml
+t_fs_spec_properties.ml
+t_fs_spec_properties_perms.ml
+t_list_arrayAuxiliary.ml
+t_list_array.ml
+
+dir_heap.ml
+fs_prelude.ml
+fs_spec_fs_command_properties.ml
+fs_spec.ml
+fs_spec_properties.ml
+fs_spec_properties_perms.ml
+list_array.ml
+
+endef
+
+generated.tar: generated_ml FORCE
+	$(file >files_in_tar,$(generated_files))
+	tar cvf $@  --files-from files_in_tar
+
+generated: FORCE
+	tar --touch -xvf generated.tar
+
 # FIXME tidy this
+# NB don't delete generated.tar - this is part of the "source" and should be upto date
 clean: FORCE
 	rm -f $(GENERATED_LEM) $(GENERATED_TML) $(GENERATED_ML)
-	rm -f *.cm[iox] *.a *.o
-	rm -f fs_spec_lib.cma fs_spec_lib.cmxa
-	rm -f generated_lem generated_tml generated_ml
+	rm -f *.cm[iox] *.a *.o *.cma *.cmxa
+	rm -f link generated_lem run_lem generated_tml generated_ml cmo cmx interface_only files_in_tar
+	find . -maxdepth 1 -type l -exec rm \{\} \;	
 	rm -f depend.{dot,pdf} .depend.min
 	rm -f $(patsubst %.lem, %Auxiliary.lem, $(DOTLEM))
 	rm -f $(patsubst %.lem, %Auxiliary.ml, $(DOTLEM))
@@ -204,9 +239,6 @@ clean: FORCE
 	rm -f *Script.sml
 	rm -f a.out
 	rm -rf ocamldoc ocamldoc* depend.svg fs_spec.html fs_spec.ml.md # t_fs_spec.lem_cppo.{html,md}
-	find . -maxdepth 1 -type l -exec rm \{\} \;
-	rm -f run_lem link
 	rm -f *.tmp
-	rm -f interface_only cmo cmx
 
 FORCE:
