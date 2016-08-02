@@ -1,18 +1,17 @@
 #S HELL:=bash
 
+include ../../config.sh
 
 BISECT?= # or "bisect" to build with bisect
-OCAMLDEP:=ocamlfind ocamldep -package sexplib,sexplib.syntax -syntax camlp4o 
-OCAMLDOC:=ocamlfind ocamldoc -package sha -package sexplib,sexplib.syntax -syntax camlp4o 
+# OCAMLDEP:=ocamlfind ocamldep -package sexplib,sexplib.syntax -syntax camlp4o 
 CAMLC:=ocamlfind ocamlc -package sha -package sexplib,sexplib.syntax,$(BISECT) -syntax camlp4o
 CAMLOPT:=ocamlfind ocamlopt -package sha -package sexplib,sexplib.syntax,$(BISECT) -syntax camlp4o
 WARNINGS:=-w -26-8
 COMPFLAGS:=$(WARNINGS) 
 
 # use a local lem if it exists, otherwise default to path
-LEM:=$(shell command -v ../../src_ext/lem/lem || command -v lem)
+LEM:=$(LEMPATH)/lem
 LEMFLAGS:=-only_changed_output -wl_unused_vars ign -wl_rename err
-EXTRACTDIR:=$(shell dirname $(LEM))/ocaml-lib/_build
 EXTRACTCMA:=$(EXTRACTDIR)/extract.cma
 EXTRACTCMXA:=$(EXTRACTDIR)/extract.cmxa
 
@@ -111,7 +110,7 @@ fs_spec_lib.cmxa: $(CMO:.cmo=.cmx)
 # includes 
 
 include Makefile.doc
-include Makefile.depend
+# include Makefile.depend
 include Makefile.cppo_to_lem
 include Makefile.lem_to_tml
 include Makefile.tml_to_ml

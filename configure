@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+echo "Please edit file `config.sh` to ensure paths are set appropriately."
