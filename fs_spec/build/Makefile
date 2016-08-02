@@ -202,6 +202,6 @@ clean: FORCE
 	find . -maxdepth 1 -type l -exec rm \{\} \;
 	rm -f run_lem link
 	rm -f *.tmp
-	rm interface_only cmo cmx
+	rm -f interface_only cmo cmx
 
 FORCE:
