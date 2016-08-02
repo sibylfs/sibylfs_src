@@ -1,6 +1,0 @@
-This directory should contain links to external repositories that we
-use when building SibylFS from source using opam and ocamlfind. For
-example, one external repository is Lem.
-
-For Lem: see the instructions for installing Lem here:
-<https://sibylfs.github.io/install.html>

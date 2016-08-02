@@ -1,4 +1,3 @@
-S src_ext/p3
 S build_spec
 S fs_test
 S fs_test/lib
