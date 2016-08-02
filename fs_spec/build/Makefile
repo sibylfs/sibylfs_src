@@ -1,23 +1,28 @@
-#S HELL:=bash
-
 include ../../config.sh
+ifndef SIBYLFS_CONFIG
+$(error SIBYLFS_CONFIG is not defined; check ../../config.sh)
+else
+endif
 
-BISECT?= # or "bisect" to build with bisect
-# OCAMLDEP:=ocamlfind ocamldep -package sexplib,sexplib.syntax -syntax camlp4o 
-CAMLC:=ocamlfind ocamlc -package sha -package sexplib,sexplib.syntax,$(BISECT) -syntax camlp4o
-CAMLOPT:=ocamlfind ocamlopt -package sha -package sexplib,sexplib.syntax,$(BISECT) -syntax camlp4o
+# do we want to be very cautious? let's just check LEMPATH as well
+ifndef LEMPATH
+$(error)
+else
+endif
+
+BISECT?= # or "-package bisect" to build with bisect
+CAMLC:=ocamlfind ocamlc $(BISECT)
+CAMLOPT:=ocamlfind ocamlopt $(BISECT)
 WARNINGS:=-w -26-8
 COMPFLAGS:=$(WARNINGS) 
 
-# use a local lem if it exists, otherwise default to path
-LEM:=$(LEMPATH)/lem
+LEM:=$(LEMPATH)
 LEMFLAGS:=-only_changed_output -wl_unused_vars ign -wl_rename err
 EXTRACTCMA:=$(EXTRACTDIR)/extract.cma
 EXTRACTCMXA:=$(EXTRACTDIR)/extract.cmxa
 
 CAMLCINCLUDES:=-I $(EXTRACTDIR) extract.cma
 CAMLOPTINCLUDES:=$(CAMLCINCLUDES:.cma=.cmxa)
-
 
 DOTCPPO:=\
 t_fs_spec.lem_cppo \
@@ -34,7 +39,12 @@ t_fs_prelude.lem \
 t_fs_spec_properties.lem \
 $(GENERATED_LEM)
 
-DOTMLI:=$(wildcard *.mli)
+DOTMLI:=abstract_string.mli \
+fs_dict_wrappers.mli        \
+fs_interface.mli            \
+fs_prelude.mli              \
+lem_support.mli             \
+list_array.mli
 
 GENERATED_TML:=$(patsubst %.lem,%.ml,$(DOTLEM)) 
 
@@ -55,25 +65,6 @@ fs_interface.ml
 
 CMO:=$(DOTML:.ml=.cmo)
 
-
-# Lem build process
-#
-# t_xxx.lem_cppo
-#  |  generated_lem
-#  \/
-# t_xxx.lem ---------------+-----------------------+
-#  |  generated_tml       |  lem_hol              |  lem_isa
-#  \/                      \/                      \/
-# t_xxx.ml                 t_xxxScript.sml         T_xxx.thy
-#  |  generated_ml
-#  \/
-# xxx.ml
-#  |
-#  \/
-# 
-# Other build commands: lem_hol_copy, lem_isa_copy
-
-
 # this makefile is phased: the following phases must be run in order;
 # it should be possible to type: `make before_all`, and then to make
 # any of the subsequent targets e.g. `make compile`
@@ -92,11 +83,94 @@ link:
 	ln -sf ../src/* .
 	touch link
 
-compile: $(CMO) fs_spec_lib.cma fs_spec_lib.cmxa #lem_latex
-.PHONY: compile
+# currently switch manually between the versions 
+# TODO: add some more comfort
+# -D xxx include something
+# -U xxx exclude something
+# -n don't output source annotations
+# by default all aspects are present, if you want to turn them off,
+# use command line argument 'CPPO_ARGS="xxxx"'
 
-cmo: $(CMO)
-.PHONY: cmo
+ifndef CPPO_ARGS
+CPPO_ARGS:=-D aspect_perms
+endif
+
+$(GENERATED_LEM): %.lem: %.lem_cppo
+	if [ -f $*.lem ]; then chmod ugo+w $*.lem; fi
+	$(CPPO) $(CPPO_ARGS) $*.lem_cppo -o $*.lem
+	chmod ugo-w $*.lem
+
+# don't use this in rules - just for triggering build of generated lem files
+generated_lem: $(GENERATED_LEM)
+	touch $@
+
+run_lem: $(DOTLEM)
+	echo building for $@
+	$(LEM) $(LEMFLAGS) -ocaml $(DOTLEM)
+	cp t_fs_spec.ml t_fs_spec.ml.tmp
+	sed -f patch_lem.sed t_fs_spec.ml.tmp > t_fs_spec.ml
+	rm t_fs_spec.ml.tmp
+	touch run_lem
+
+# make the t_ml files depend on actually running lem; lem processes all files at once
+$(GENERATED_TML): run_lem
+
+generated_tml: $(GENERATED_TML)
+	touch $@
+
+# the following sets up a dependency known to make, between t_*.ml and *.ml
+$(GENERATED_ML): %.ml: t_%.ml
+	if [ -f $@ ]; then chmod ugo+w $@; fi
+	cp $< $@.tmp
+	sed -f patch_gen_ml.sed $@.tmp >$@
+	rm -f $@.tmp
+	chmod ugo-w $@
+
+# don't use this in rules - just for triggering build of generated ml files
+generated_ml: $(GENERATED_ML)
+	touch $@
+
+compile: cmo cmx fs_spec_lib.cma fs_spec_lib.cmxa
+
+cmo: generated_ml
+	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c abstract_string.mli
+	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c lem_support.mli
+	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c fs_interface.mli
+	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -c list_array.mli
+	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -c fs_prelude.mli
+	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c fs_spec.ml
+	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c dir_heap.ml
+	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -c fs_dict_wrappers.mli
+	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -package sha -c fs_dump.ml
+	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -c fs_printer.ml
+	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c fs_interface.mli
+	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c abstract_string.ml
+	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -c list_array.ml
+	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c lem_support.ml
+	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -c fs_prelude.ml
+	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -c fs_dict_wrappers.ml
+	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -c fs_interface.ml
+	touch cmo
+
+cmx: generated_ml
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c abstract_string.mli
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c lem_support.mli
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c fs_interface.mli
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -c list_array.mli
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -c fs_prelude.mli
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c fs_spec.ml
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c dir_heap.ml
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -c fs_dict_wrappers.mli
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -package sha -c fs_dump.ml
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -c fs_printer.ml
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c fs_interface.mli
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c abstract_string.ml
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -c list_array.ml
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c lem_support.ml
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -c fs_prelude.ml
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -c fs_dict_wrappers.ml
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -c fs_interface.ml
+	touch cmx
 
 # -g flag turns on debugging info (e.g. for stacktrace)
 fs_spec_lib.cma: $(CMO)
@@ -105,34 +179,11 @@ fs_spec_lib.cma: $(CMO)
 fs_spec_lib.cmxa: $(CMO:.cmo=.cmx)
 	$(CAMLOPT) -g -a -o $@ $(CMO:.cmo=.cmx)
 
+interface_only: generated_ml
+	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c abstract_string.mli -c lem_support.mli fs_interface.mli
+	touch $@
 
-########################################################################
-# includes 
-
-include Makefile.doc
-# include Makefile.depend
-include Makefile.cppo_to_lem
-include Makefile.lem_to_tml
-include Makefile.tml_to_ml
-include Makefile.lem_non_ml
--include Makefile.local # for any extra local targets
-
-########################################################################
-# Default rules
-
-.SUFFIXES: .ml .mli .cmo .cmi .cmx
-
-.ml.cmo:
-	$(CAMLC) $(COMPFLAGS) $(CAMLCINCLUDES) -c $<
-
-.mli.cmi:
-	$(CAMLC) $(COMPFLAGS) $(CAMLCINCLUDES) -c $<
-
-.ml.cmx:
-	$(CAMLOPT) $(COMPFLAGS) $(CAMLOPTINCLUDES) -c $<
-
-
-########################################################################
+# FIXME tidy this
 clean: FORCE
 	rm -f $(GENERATED_LEM) $(GENERATED_TML) $(GENERATED_ML)
 	rm -f *.cm[iox] *.a *.o
@@ -151,5 +202,6 @@ clean: FORCE
 	find . -maxdepth 1 -type l -exec rm \{\} \;
 	rm -f run_lem link
 	rm -f *.tmp
+	rm interface_only cmo cmx
 
 FORCE:

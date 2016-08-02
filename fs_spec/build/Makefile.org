@@ -1,14 +1,14 @@
 #+TITLE: Sibylfs makefile
 #+AUTHOR: Tom Ridge
-#+OPTIONS: title:true toc:nil
+#+OPTIONS: title:true 
 
-#+PROPERTY: header-args :tangle Makefile.tmp :exports code 
+# ignore #PROPERTY: header-args :tangle Makefile :exports code 
 
 * Meta
 
 To tangle this file, call org-tangle-file with a filename, eg
 
-#+BEGIN_SRC sh
+#+BEGIN_SRC emacs-lisp
 (org-babel-tangle-file "Makefile.org" "Makefile" "makefile")
 #+END_SRC
 
@@ -72,6 +72,7 @@ CAMLOPT:=ocamlfind ocamlopt $(BISECT)
 WARNINGS:=-w -26-8
 COMPFLAGS:=$(WARNINGS) 
 
+LEM:=$(LEMPATH)
 LEMFLAGS:=-only_changed_output -wl_unused_vars ign -wl_rename err
 EXTRACTCMA:=$(EXTRACTDIR)/extract.cma
 EXTRACTCMXA:=$(EXTRACTDIR)/extract.cmxa
@@ -173,7 +174,7 @@ endif
 
 $(GENERATED_LEM): %.lem: %.lem_cppo
 	if [ -f $*.lem ]; then chmod ugo+w $*.lem; fi
-	$(CPPO) $*.lem_cppo -o $*.lem
+	$(CPPO) $(CPPO_ARGS) $*.lem_cppo -o $*.lem
 	chmod ugo-w $*.lem
 
 # don't use this in rules - just for triggering build of generated lem files
@@ -244,27 +245,27 @@ cmo: generated_ml
 	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -c fs_prelude.ml
 	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -c fs_dict_wrappers.ml
 	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -c fs_interface.ml
-  touch cmo
+	touch cmo
 
 cmx: generated_ml
-	$(CAMLOPT) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c abstract_string.mli
-	$(CAMLOPT) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c lem_support.mli
-	$(CAMLOPT) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c fs_interface.mli
-	$(CAMLOPT) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -c list_array.mli
-	$(CAMLOPT) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -c fs_prelude.mli
-	$(CAMLOPT) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c fs_spec.ml
-	$(CAMLOPT) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c dir_heap.ml
-	$(CAMLOPT) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -c fs_dict_wrappers.mli
-	$(CAMLOPT) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -package sha -c fs_dump.ml
-	$(CAMLOPT) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -c fs_printer.ml
-	$(CAMLOPT) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c fs_interface.mli
-	$(CAMLOPT) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c abstract_string.ml
-	$(CAMLOPT) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -c list_array.ml
-	$(CAMLOPT) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c lem_support.ml
-	$(CAMLOPT) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -c fs_prelude.ml
-	$(CAMLOPT) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -c fs_dict_wrappers.ml
-	$(CAMLOPT) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -c fs_interface.ml
-  touch cmx
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c abstract_string.mli
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c lem_support.mli
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c fs_interface.mli
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -c list_array.mli
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -c fs_prelude.mli
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c fs_spec.ml
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c dir_heap.ml
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -c fs_dict_wrappers.mli
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -package sha -c fs_dump.ml
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -c fs_printer.ml
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c fs_interface.mli
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c abstract_string.ml
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -c list_array.ml
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c lem_support.ml
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -c fs_prelude.ml
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -c fs_dict_wrappers.ml
+	$(CAMLOPT) $(CAMLOPTINCLUDES) -package sexplib,sexplib.syntax -c fs_interface.ml
+	touch cmx
 
 # -g flag turns on debugging info (e.g. for stacktrace)
 fs_spec_lib.cma: $(CMO)
@@ -274,6 +275,16 @@ fs_spec_lib.cmxa: $(CMO:.cmo=.cmx)
 	$(CAMLOPT) -g -a -o $@ $(CMO:.cmo=.cmx)
 #+END_SRC
 
+* Interface only
+
+The interface files have reduced dependencies. Thus, it is possible to
+build fs_interface.cmi very simply.
+
+#+BEGIN_SRC makefile
+interface_only: generated_ml
+	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c abstract_string.mli -c lem_support.mli fs_interface.mli
+	touch $@
+#+END_SRC
 
 * Clean
 
@@ -297,6 +308,7 @@ clean: FORCE
 	find . -maxdepth 1 -type l -exec rm \{\} \;
 	rm -f run_lem link
 	rm -f *.tmp
+	rm interface_only cmo cmx
 
 FORCE:
 
@@ -306,4 +318,5 @@ FORCE:
 
 Local variables:
 indent-tabs-mode: 't
+org-src-preserve-indentation: 't
 End:
