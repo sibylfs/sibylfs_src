@@ -230,6 +230,48 @@ generated_ml: $(GENERATED_ML)
 
 * Actually do the compile (target: compile)
 
+camlp4o is slow; ocamldep is slow with camlp4o; rather than track
+dependencies etc, we record the dependencies as:
+
+#+BEGIN_SRC dot :file /tmp/tmp.png :exports results
+digraph {
+ list_array -> abstract_string
+fs_prelude -> lem_support
+fs_dict_wrappers -> fs_prelude
+fs_dict_wrappers -> lem_support
+fs_spec -> list_array
+fs_spec -> abstract_string
+fs_spec -> fs_prelude
+fs_spec -> lem_support
+dir_heap -> fs_spec
+dir_heap -> list_array
+dir_heap -> fs_prelude
+dir_heap -> lem_support
+fs_dump -> dir_heap
+fs_dump -> list_array
+fs_dump -> fs_spec
+fs_dump -> fs_dict_wrappers
+fs_printer -> list_array
+fs_printer -> fs_spec
+fs_printer -> fs_dict_wrappers
+fs_printer -> lem_support
+fs_interface -> fs_dump
+fs_interface -> dir_heap
+fs_interface -> fs_printer
+fs_interface -> fs_spec
+fs_interface -> abstract_string
+fs_interface -> lem_support
+
+}
+#+END_SRC
+
+#+RESULTS:
+[[file:/tmp/tmp.png]]
+
+
+We construct the order of the calls to camlc manually; we add camlp4
+only for those sources that require it.
+
 #+BEGIN_SRC makefile
 compile: cmo cmx fs_spec_lib.cma fs_spec_lib.cmxa
 
