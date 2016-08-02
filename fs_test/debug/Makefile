@@ -1,11 +1,11 @@
 # build fs_spec/build and fs_test/lib first
 
+-include ../../config.sh
+
 OCAMLFIND:=ocamlfind
 CAMLC:=$(OCAMLFIND) ocamlc
 CAMLOPT:=$(OCAMLFIND) ocamlopt
 
-LEM:=$(shell command -v ../../src_ext/lem/lem || command -v lem)
-EXTRACTDIR:=$(shell dirname $(LEM))/ocaml-lib/_build
 EXTRACTCMA:=$(EXTRACTDIR)/extract.cma
 EXTRACTCMXA:=$(EXTRACTDIR)/extract.cmxa
 

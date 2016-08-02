@@ -22,7 +22,7 @@ WARNINGS:=-w -26-8
 COMPFLAGS:=$(WARNINGS) -package sexplib,sexplib.syntax # might as well
 
 LEM:=$(LEMPATH)
-LEMFLAGS:=-only_changed_output -wl_unused_vars ign -wl_rename err
+LEMFLAGS:=-lib $(LEMLIB) -only_changed_output -wl_unused_vars ign -wl_rename err
 EXTRACTCMA:=$(EXTRACTDIR)/extract.cma
 EXTRACTCMXA:=$(EXTRACTDIR)/extract.cmxa
 
