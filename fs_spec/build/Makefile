@@ -1,3 +1,8 @@
+# WARNING! WARNING! WARNING!
+# This file is generated from Makefile.org using emacs, org, babel, tangle
+# WARNING! WARNING! WARNING!
+
+
 -include ../../config.sh # we may be using env vars instead of a config.sh
 ifndef SIBYLFS_CONFIG
 $(error SIBYLFS_CONFIG is not defined; check ../../config.sh)
