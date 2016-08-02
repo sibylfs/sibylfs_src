@@ -21,6 +21,8 @@ in stdenv.mkDerivation {
     export LEMLIB=${lem}/lem/library
     export PATH=$LEMPATH:$PATH
     export LD_LIBRARY_PATH=${cstruct}/lib/ocaml/${ocaml_version}/site-lib/cstruct
+    export EXTRACTDIR=${lem}/lem/ocaml-lib/_build
+    export SIBYLFS_CONFIG=true
     make -C build
     mkdir -p $out
     cp -RL build $out

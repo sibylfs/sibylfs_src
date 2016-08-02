@@ -1,4 +1,4 @@
-include ../../config.sh
+-include ../../config.sh # we may be using env vars instead of a config.sh
 ifndef SIBYLFS_CONFIG
 $(error SIBYLFS_CONFIG is not defined; check ../../config.sh)
 else
