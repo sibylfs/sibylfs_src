@@ -71,8 +71,8 @@ Now we declare some variables.
 
 #+BEGIN_SRC makefile
 BISECT?= # or "-package bisect" to build with bisect
-CAMLC:=ocamlfind ocamlc $(BISECT)
-CAMLOPT:=ocamlfind ocamlopt $(BISECT)
+OCAMLC:=ocamlfind ocamlc $(BISECT)
+OCAMLOPT:=ocamlfind ocamlopt $(BISECT)
 WARNINGS:=-w -26-8
 COMPFLAGS:=$(WARNINGS) -package sexplib,sexplib.syntax # might as well
 
@@ -81,8 +81,9 @@ LEMFLAGS:=-lib $(LEMLIB) -only_changed_output -wl_unused_vars ign -wl_rename err
 EXTRACTCMA:=$(EXTRACTDIR)/extract.cma
 EXTRACTCMXA:=$(EXTRACTDIR)/extract.cmxa
 
-CAMLCINCLUDES:=-I $(EXTRACTDIR) extract.cma
-CAMLOPTINCLUDES:=$(CAMLCINCLUDES:.cma=.cmxa)
+OCAMLC_ARGS:=-I $(EXTRACTDIR) extract.cma -package sexplib,sexplib.syntax,sha -c
+OCAMLOPT_ARGS:=$(OCAMLC_ARGS:.cma=.cmxa)
+
 #+END_SRC
 
 * More variables: files
@@ -233,32 +234,16 @@ dependencies etc, we record the dependencies as:
 
 #+BEGIN_SRC dot :file /tmp/tmp.png :exports results
 digraph {
- list_array -> abstract_string
-fs_prelude -> lem_support
-fs_dict_wrappers -> fs_prelude
-fs_dict_wrappers -> lem_support
-fs_spec -> list_array
-fs_spec -> abstract_string
-fs_spec -> fs_prelude
-fs_spec -> lem_support
-dir_heap -> fs_spec
-dir_heap -> list_array
-dir_heap -> fs_prelude
-dir_heap -> lem_support
-fs_dump -> dir_heap
-fs_dump -> list_array
-fs_dump -> fs_spec
-fs_dump -> fs_dict_wrappers
-fs_printer -> list_array
-fs_printer -> fs_spec
-fs_printer -> fs_dict_wrappers
-fs_printer -> lem_support
-fs_interface -> fs_dump
-fs_interface -> dir_heap
-fs_interface -> fs_printer
-fs_interface -> fs_spec
-fs_interface -> abstract_string
-fs_interface -> lem_support
+abstract_string -> {  }
+dir_heap -> { fs_spec list_array fs_prelude lem_support }
+fs_dict_wrappers -> { fs_prelude lem_support }
+fs_dump -> { dir_heap list_array fs_spec fs_dict_wrappers }
+fs_interface -> { fs_dump dir_heap fs_printer fs_spec abstract_string lem_support }
+fs_prelude -> { lem_support }
+fs_printer -> { list_array fs_spec fs_dict_wrappers lem_support }
+fs_spec -> { list_array abstract_string fs_prelude lem_support }
+lem_support -> {  }
+list_array -> { abstract_string }
 
 }
 #+END_SRC
@@ -277,52 +262,17 @@ makefile is simpler (no dependencies).
 #+BEGIN_SRC makefile
 compile: cmo cmx fs_spec_lib.cma fs_spec_lib.cmxa
 
-cmo: $(DOTML) $(DOTMLI)
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -syntax camlp4o -c abstract_string.mli
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -syntax camlp4o -c lem_support.mli
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -syntax camlp4o -c fs_interface.mli
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -c list_array.mli
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -c fs_prelude.mli
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -syntax camlp4o -c fs_spec.ml
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -syntax camlp4o -c dir_heap.ml
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -c fs_dict_wrappers.mli
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -syntax camlp4o -package sha -c fs_dump.ml
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -c fs_printer.ml
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -syntax camlp4o -c fs_interface.mli
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -syntax camlp4o -c abstract_string.ml
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -c list_array.ml
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -syntax camlp4o -c lem_support.ml
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -c fs_prelude.ml
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -c fs_dict_wrappers.ml
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -c fs_interface.ml
-	touch cmo
-
-cmx: $(DOTML) $(DOTMLI)
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -syntax camlp4o -c abstract_string.mli
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -syntax camlp4o -c lem_support.mli
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -syntax camlp4o -c fs_interface.mli
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -c list_array.mli
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -c fs_prelude.mli
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -syntax camlp4o -c fs_spec.ml
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -syntax camlp4o -c dir_heap.ml
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -c fs_dict_wrappers.mli
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -syntax camlp4o -package sha -c fs_dump.ml
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -c fs_printer.ml
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -syntax camlp4o -c fs_interface.mli
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -syntax camlp4o -c abstract_string.ml
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -c list_array.ml
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -syntax camlp4o -c lem_support.ml
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -c fs_prelude.ml
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -c fs_dict_wrappers.ml
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -c fs_interface.ml
-	touch cmx
+cmo: $(CMO)
+	touch $@
+cmx: $(CMO:.cmo=.cmx)
+	touch $@
 
 # -g flag turns on debugging info (e.g. for stacktrace)
 fs_spec_lib.cma: $(CMO)
-	$(CAMLC) -g -a -o $@ $(CMO)
+	$(OCAMLC) -g -a -o $@ $(CMO)
 
 fs_spec_lib.cmxa: $(CMO:.cmo=.cmx)
-	$(CAMLOPT) -g -a -o $@ $(CMO:.cmo=.cmx)
+	$(OCAMLOPT) -g -a -o $@ $(CMO:.cmo=.cmx)
 #+END_SRC
 
 * Interface only
@@ -332,7 +282,7 @@ build fs_interface.cmi very simply.
 
 #+BEGIN_SRC makefile
 interface_only: generated_ml
-	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c abstract_string.mli -c lem_support.mli fs_interface.mli
+	$(OCAMLC) $(OCAMLC_ARGS) -syntax camlp4o -c abstract_string.mli -c lem_support.mli fs_interface.mli
 	touch $@
 #+END_SRC
 
@@ -391,7 +341,7 @@ generated: FORCE
 # NB don't delete generated.tar - this is part of the "source" and should be upto date
 clean: FORCE
 	rm -f $(GENERATED_LEM) $(GENERATED_TML) $(GENERATED_ML)
-	rm -f *.cm[iox] *.a *.o *.cma *.cmxa
+	rm -f *.cm[iox] *.a *.o *.cma *.cmxa dir_heap.mli fs_dump.mli fs_printer.mli fs_spec.mli
 	rm -f link generated_lem run_lem generated_tml generated_ml cmo cmx interface_only files_in_tar
 	find . -maxdepth 1 -type l -exec rm \{\} \;	
 	rm -f depend.{dot,pdf} .depend.min
@@ -408,6 +358,12 @@ clean: FORCE
 
 FORCE:
 
+#+END_SRC
+
+* Detailed dependencies
+
+#+BEGIN_SRC makefile
+include Makefile.deps
 #+END_SRC
 
 * Emacs local variables

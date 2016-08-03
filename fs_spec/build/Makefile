@@ -16,8 +16,8 @@ else
 endif
 
 BISECT?= # or "-package bisect" to build with bisect
-CAMLC:=ocamlfind ocamlc $(BISECT)
-CAMLOPT:=ocamlfind ocamlopt $(BISECT)
+OCAMLC:=ocamlfind ocamlc $(BISECT)
+OCAMLOPT:=ocamlfind ocamlopt $(BISECT)
 WARNINGS:=-w -26-8
 COMPFLAGS:=$(WARNINGS) -package sexplib,sexplib.syntax # might as well
 
@@ -26,8 +26,8 @@ LEMFLAGS:=-lib $(LEMLIB) -only_changed_output -wl_unused_vars ign -wl_rename err
 EXTRACTCMA:=$(EXTRACTDIR)/extract.cma
 EXTRACTCMXA:=$(EXTRACTDIR)/extract.cmxa
 
-CAMLCINCLUDES:=-I $(EXTRACTDIR) extract.cma
-CAMLOPTINCLUDES:=$(CAMLCINCLUDES:.cma=.cmxa)
+OCAMLC_ARGS:=-I $(EXTRACTDIR) extract.cma -package sexplib,sexplib.syntax,sha -c
+OCAMLOPT_ARGS:=$(OCAMLC_ARGS:.cma=.cmxa)
 
 DOTCPPO:=\
 t_fs_spec.lem_cppo \
@@ -138,55 +138,20 @@ generated_ml: $(GENERATED_ML)
 
 compile: cmo cmx fs_spec_lib.cma fs_spec_lib.cmxa
 
-cmo: $(DOTML) $(DOTMLI)
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -syntax camlp4o -c abstract_string.mli
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -syntax camlp4o -c lem_support.mli
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -syntax camlp4o -c fs_interface.mli
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -c list_array.mli
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -c fs_prelude.mli
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -syntax camlp4o -c fs_spec.ml
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -syntax camlp4o -c dir_heap.ml
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -c fs_dict_wrappers.mli
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -syntax camlp4o -package sha -c fs_dump.ml
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -c fs_printer.ml
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -syntax camlp4o -c fs_interface.mli
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -syntax camlp4o -c abstract_string.ml
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -c list_array.ml
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -syntax camlp4o -c lem_support.ml
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -c fs_prelude.ml
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -c fs_dict_wrappers.ml
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -c fs_interface.ml
-	touch cmo
-
-cmx: $(DOTML) $(DOTMLI)
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -syntax camlp4o -c abstract_string.mli
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -syntax camlp4o -c lem_support.mli
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -syntax camlp4o -c fs_interface.mli
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -c list_array.mli
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -c fs_prelude.mli
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -syntax camlp4o -c fs_spec.ml
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -syntax camlp4o -c dir_heap.ml
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -c fs_dict_wrappers.mli
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -syntax camlp4o -package sha -c fs_dump.ml
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -c fs_printer.ml
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -syntax camlp4o -c fs_interface.mli
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -syntax camlp4o -c abstract_string.ml
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -c list_array.ml
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -syntax camlp4o -c lem_support.ml
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -c fs_prelude.ml
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -c fs_dict_wrappers.ml
-	$(CAMLOPT) $(CAMLOPTINCLUDES) $(COMPFLAGS) -c fs_interface.ml
-	touch cmx
+cmo: $(CMO)
+	touch $@
+cmx: $(CMO:.cmo=.cmx)
+	touch $@
 
 # -g flag turns on debugging info (e.g. for stacktrace)
 fs_spec_lib.cma: $(CMO)
-	$(CAMLC) -g -a -o $@ $(CMO)
+	$(OCAMLC) -g -a -o $@ $(CMO)
 
 fs_spec_lib.cmxa: $(CMO:.cmo=.cmx)
-	$(CAMLOPT) -g -a -o $@ $(CMO:.cmo=.cmx)
+	$(OCAMLOPT) -g -a -o $@ $(CMO:.cmo=.cmx)
 
 interface_only: generated_ml
-	$(CAMLC) $(CAMLCINCLUDES) -package sexplib,sexplib.syntax -syntax camlp4o -c abstract_string.mli -c lem_support.mli fs_interface.mli
+	$(OCAMLC) $(OCAMLC_ARGS) -syntax camlp4o -c abstract_string.mli -c lem_support.mli fs_interface.mli
 	touch $@
 
 define generated_files
@@ -226,7 +191,7 @@ generated: FORCE
 # NB don't delete generated.tar - this is part of the "source" and should be upto date
 clean: FORCE
 	rm -f $(GENERATED_LEM) $(GENERATED_TML) $(GENERATED_ML)
-	rm -f *.cm[iox] *.a *.o *.cma *.cmxa
+	rm -f *.cm[iox] *.a *.o *.cma *.cmxa dir_heap.mli fs_dump.mli fs_printer.mli fs_spec.mli
 	rm -f link generated_lem run_lem generated_tml generated_ml cmo cmx interface_only files_in_tar
 	find . -maxdepth 1 -type l -exec rm \{\} \;	
 	rm -f depend.{dot,pdf} .depend.min
@@ -242,3 +207,5 @@ clean: FORCE
 	rm -f *.tmp
 
 FORCE:
+
+include Makefile.deps

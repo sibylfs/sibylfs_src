@@ -1,0 +1,112 @@
+abstract_string.cmo abstract_string.cmx: abstract_string.cmi  
+
+abstract_string.cmo: abstract_string.ml 
+	$(OCAMLC) $(OCAMLC_ARGS) -syntax camlp4o abstract_string.ml 
+abstract_string.cmx: abstract_string.ml 
+	$(OCAMLOPT) $(OCAMLOPT_ARGS) -syntax camlp4o abstract_string.ml 
+
+abstract_string.cmi: abstract_string.mli  
+	$(OCAMLOPT) $(OCAMLOPT_ARGS) -syntax camlp4o abstract_string.mli 
+
+dir_heap.cmo dir_heap.cmx: dir_heap.cmi fs_spec.cmi list_array.cmi fs_prelude.cmi lem_support.cmi 
+
+dir_heap.cmo: dir_heap.ml 
+	$(OCAMLC) $(OCAMLC_ARGS) -syntax camlp4o dir_heap.ml 
+dir_heap.cmx: dir_heap.ml 
+	$(OCAMLOPT) $(OCAMLOPT_ARGS) -syntax camlp4o dir_heap.ml 
+
+dir_heap.cmi: dir_heap.mli fs_spec.cmi list_array.cmi fs_prelude.cmi lem_support.cmi 
+	$(OCAMLOPT) $(OCAMLOPT_ARGS) -syntax camlp4o dir_heap.mli 
+
+dir_heap.mli: dir_heap.ml fs_spec.cmi list_array.cmi fs_prelude.cmi lem_support.cmi  
+	$(OCAMLC) $(OCAMLC_ARGS) -syntax camlp4o -i dir_heap.ml > dir_heap.mli 
+
+fs_dict_wrappers.cmo fs_dict_wrappers.cmx: fs_dict_wrappers.cmi fs_prelude.cmi lem_support.cmi 
+
+fs_dict_wrappers.cmo: fs_dict_wrappers.ml 
+	$(OCAMLC) $(OCAMLC_ARGS)  fs_dict_wrappers.ml 
+fs_dict_wrappers.cmx: fs_dict_wrappers.ml 
+	$(OCAMLOPT) $(OCAMLOPT_ARGS)  fs_dict_wrappers.ml 
+
+fs_dict_wrappers.cmi: fs_dict_wrappers.mli fs_prelude.cmi lem_support.cmi 
+	$(OCAMLOPT) $(OCAMLOPT_ARGS)  fs_dict_wrappers.mli 
+
+fs_dump.cmo fs_dump.cmx: fs_dump.cmi dir_heap.cmi list_array.cmi fs_spec.cmi fs_dict_wrappers.cmi 
+
+fs_dump.cmo: fs_dump.ml 
+	$(OCAMLC) $(OCAMLC_ARGS) -syntax camlp4o fs_dump.ml 
+fs_dump.cmx: fs_dump.ml 
+	$(OCAMLOPT) $(OCAMLOPT_ARGS) -syntax camlp4o fs_dump.ml 
+
+fs_dump.cmi: fs_dump.mli dir_heap.cmi list_array.cmi fs_spec.cmi fs_dict_wrappers.cmi 
+	$(OCAMLOPT) $(OCAMLOPT_ARGS) -syntax camlp4o fs_dump.mli 
+
+fs_dump.mli: fs_dump.ml dir_heap.cmi list_array.cmi fs_spec.cmi fs_dict_wrappers.cmi  
+	$(OCAMLC) $(OCAMLC_ARGS) -syntax camlp4o -i fs_dump.ml > fs_dump.mli 
+
+fs_interface.cmo fs_interface.cmx: fs_interface.cmi fs_dump.cmi dir_heap.cmi fs_printer.cmi fs_spec.cmi abstract_string.cmi lem_support.cmi 
+
+fs_interface.cmo: fs_interface.ml 
+	$(OCAMLC) $(OCAMLC_ARGS) -syntax camlp4o fs_interface.ml 
+fs_interface.cmx: fs_interface.ml 
+	$(OCAMLOPT) $(OCAMLOPT_ARGS) -syntax camlp4o fs_interface.ml 
+
+fs_interface.cmi: fs_interface.mli fs_dump.cmi dir_heap.cmi fs_printer.cmi fs_spec.cmi abstract_string.cmi lem_support.cmi 
+	$(OCAMLOPT) $(OCAMLOPT_ARGS) -syntax camlp4o fs_interface.mli 
+
+fs_prelude.cmo fs_prelude.cmx: fs_prelude.cmi lem_support.cmi 
+
+fs_prelude.cmo: fs_prelude.ml 
+	$(OCAMLC) $(OCAMLC_ARGS)  fs_prelude.ml 
+fs_prelude.cmx: fs_prelude.ml 
+	$(OCAMLOPT) $(OCAMLOPT_ARGS)  fs_prelude.ml 
+
+fs_prelude.cmi: fs_prelude.mli lem_support.cmi 
+	$(OCAMLOPT) $(OCAMLOPT_ARGS)  fs_prelude.mli 
+
+fs_printer.cmo fs_printer.cmx: fs_printer.cmi list_array.cmi fs_spec.cmi fs_dict_wrappers.cmi lem_support.cmi 
+
+fs_printer.cmo: fs_printer.ml 
+	$(OCAMLC) $(OCAMLC_ARGS) -syntax camlp4o fs_printer.ml 
+fs_printer.cmx: fs_printer.ml 
+	$(OCAMLOPT) $(OCAMLOPT_ARGS) -syntax camlp4o fs_printer.ml 
+
+fs_printer.cmi: fs_printer.mli list_array.cmi fs_spec.cmi fs_dict_wrappers.cmi lem_support.cmi 
+	$(OCAMLOPT) $(OCAMLOPT_ARGS) -syntax camlp4o fs_printer.mli 
+
+fs_printer.mli: fs_printer.ml list_array.cmi fs_spec.cmi fs_dict_wrappers.cmi lem_support.cmi  
+	$(OCAMLC) $(OCAMLC_ARGS) -syntax camlp4o -i fs_printer.ml > fs_printer.mli 
+
+fs_spec.cmo fs_spec.cmx: fs_spec.cmi list_array.cmi abstract_string.cmi fs_prelude.cmi lem_support.cmi 
+
+fs_spec.cmo: fs_spec.ml 
+	$(OCAMLC) $(OCAMLC_ARGS) -syntax camlp4o fs_spec.ml 
+fs_spec.cmx: fs_spec.ml 
+	$(OCAMLOPT) $(OCAMLOPT_ARGS) -syntax camlp4o fs_spec.ml 
+
+fs_spec.cmi: fs_spec.mli list_array.cmi abstract_string.cmi fs_prelude.cmi lem_support.cmi 
+	$(OCAMLOPT) $(OCAMLOPT_ARGS) -syntax camlp4o fs_spec.mli 
+
+fs_spec.mli: fs_spec.ml list_array.cmi abstract_string.cmi fs_prelude.cmi lem_support.cmi  
+	$(OCAMLC) $(OCAMLC_ARGS) -syntax camlp4o -i fs_spec.ml > fs_spec.mli 
+
+lem_support.cmo lem_support.cmx: lem_support.cmi  
+
+lem_support.cmo: lem_support.ml 
+	$(OCAMLC) $(OCAMLC_ARGS)  lem_support.ml 
+lem_support.cmx: lem_support.ml 
+	$(OCAMLOPT) $(OCAMLOPT_ARGS)  lem_support.ml 
+
+lem_support.cmi: lem_support.mli  
+	$(OCAMLOPT) $(OCAMLOPT_ARGS)  lem_support.mli 
+
+list_array.cmo list_array.cmx: list_array.cmi abstract_string.cmi 
+
+list_array.cmo: list_array.ml 
+	$(OCAMLC) $(OCAMLC_ARGS)  list_array.ml 
+list_array.cmx: list_array.ml 
+	$(OCAMLOPT) $(OCAMLOPT_ARGS)  list_array.ml 
+
+list_array.cmi: list_array.mli abstract_string.cmi 
+	$(OCAMLOPT) $(OCAMLOPT_ARGS)  list_array.mli 
+
