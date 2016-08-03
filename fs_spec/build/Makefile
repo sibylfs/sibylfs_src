@@ -2,18 +2,27 @@
 # This file is generated from Makefile.org using emacs, org, babel, tangle
 # WARNING! WARNING! WARNING!
 
+# http://stackoverflow.com/questions/20389064/using-gnu-make-functions-to-check-if-variables-are-defined
+check-var-defined = $(if $(1),,$(error $(1) is not defined))
 
 -include ../../config.sh # we may be using env vars instead of a config.sh
-ifndef SIBYLFS_CONFIG
-$(error SIBYLFS_CONFIG is not defined; check ../../config.sh)
-else
-endif
+
+$(call check-var-defined,SIBYLFS_CONFIG)
+# ifndef SIBYLFS_CONFIG
+# $(error SIBYLFS_CONFIG is not defined; check ../../config.sh)
+# else
+# endif
 
 # do we want to be very cautious? let's just check LEMPATH as well
-ifndef LEMPATH
-$(error)
-else
-endif
+# ifndef LEM
+# $(error)
+# else
+# endif
+
+$(call check-var-defined,LEM)
+$(call check-var-defined,LEMLIB)
+$(call check-var-defined,EXTRACTDIR)
+$(call check-var-defined,CPPO)
 
 BISECT?= # or "-package bisect" to build with bisect
 OCAMLC:=ocamlfind ocamlc $(BISECT)
@@ -21,7 +30,7 @@ OCAMLOPT:=ocamlfind ocamlopt $(BISECT)
 WARNINGS:=-w -26-8
 # COMPFLAGS:=$(WARNINGS) -package sexplib,sexplib.syntax # might as well
 
-LEM:=$(LEMPATH)
+# LEM:= from env
 LEMFLAGS:=-lib $(LEMLIB) -only_changed_output -wl_unused_vars ign -wl_rename err
 EXTRACTCMA:=$(EXTRACTDIR)/extract.cma
 EXTRACTCMXA:=$(EXTRACTDIR)/extract.cmxa
@@ -136,12 +145,62 @@ $(GENERATED_ML): %.ml: t_%.ml
 generated_ml: $(GENERATED_ML)
 	touch $@
 
-compile: cmo cmx fs_spec_lib.cma fs_spec_lib.cmxa
+DEPS_abstract_string=
+DEPS_lem_support=
+DEPS_list_array=abstract_string.cmi
+DEPS_fs_prelude=lem_support.cmi
+DEPS_fs_dict_wrappers=fs_prelude.cmi lem_support.cmi
+DEPS_fs_spec=list_array.cmi abstract_string.cmi fs_prelude.cmi lem_support.cmi
+DEPS_dir_heap=fs_spec.cmi list_array.cmi fs_prelude.cmi lem_support.cmi
+DEPS_fs_dump=dir_heap.cmi list_array.cmi fs_spec.cmi fs_dict_wrappers.cmi
+DEPS_fs_printer=list_array.cmi fs_spec.cmi fs_dict_wrappers.cmi lem_support.cmi
+DEPS_fs_interface=fs_dump.cmi dir_heap.cmi fs_printer.cmi fs_spec.cmi abstract_string.cmi lem_support.cmi
 
-cmo: $(CMO)
-	touch $@
-cmx: $(CMO:.cmo=.cmx)
-	touch $@
+# add camlp4o only for those .ml files (and .mli interfaces) that need it
+camlp4o=-syntax camlp4o
+EXTRA_abstract_string.ml=$(camlp4o)
+EXTRA_fs_spec.ml=$(camlp4o)
+EXTRA_dir_heap.ml=$(camlp4o)
+EXTRA_fs_dump.ml=$(camlp4o)
+EXTRA_fs_printer.ml=$(camlp4o)
+EXTRA_fs_interface.ml=$(camlp4o)
+
+# cm[ox] depend on cmi; had to move these to associated rules
+# %.cmo: %.cmi
+# %.cmx: %.cmi
+
+# cmo depends on ml 
+%.cmo: %.ml %.cmi
+	$(OCAMLC) $(OCAMLC_ARGS) $(EXTRA_$*.ml) $*.ml
+
+%.cmx: %.ml %.cmi
+	$(OCAMLOPT) $(OCAMLOPT_ARGS) $(EXTRA_$*.ml) $*.ml
+
+# cmi depends on mli and dependent cmi; this makefile syntax not working
+%.cmi: %.mli # FIXME won't work $(DEPS_$*)
+	$(OCAMLOPT) $(OCAMLOPT_ARGS) $(EXTRA_$*.ml) $*.mli
+
+# an alternative to $(DEPS_$*); ugly; FIXME
+list_array.cmi: $(DEPS_list_array)
+fs_prelude.cmi: $(DEPS_fs_prelude)
+fs_dict_wrappers.cmi: $(DEPS_fs_dict_wrappers)
+fs_spec.cmi: $(DEPS_fs_spec)
+dir_heap.cmi: $(DEPS_dir_heap)
+fs_dump.cmi: $(DEPS_fs_dump)
+fs_printer.cmi: $(DEPS_fs_printer)
+fs_interface.cmi: $(DEPS_fs_interface)
+
+# mli files we need to create (others exist already)
+dir_heap.mli fs_dump.mli fs_printer.mli fs_spec.mli: %.mli: %.ml # won't work $(DEPS_$*)
+	$(OCAMLC) $(OCAMLC_ARGS) $(EXTRA_$*.ml) -i $*.ml > $*.mli
+
+# ugly FIXME
+fs_spec.mli: $(DEPS_fs_spec)
+dir_heap.mli: $(DEPS_dir_heap)
+fs_dump.mli: $(DEPS_fs_dump)
+fs_printer.mli: $(DEPS_fs_printer)
+
+compile: $(CMO:.cmo=.cmi) $(CMO) $(CMO:.cmo=.cmx) fs_spec_lib.cma fs_spec_lib.cmxa
 
 # -g flag turns on debugging info (e.g. for stacktrace)
 fs_spec_lib.cma: $(CMO)
@@ -207,5 +266,3 @@ clean: FORCE
 	rm -f *.tmp
 
 FORCE:
-
-include Makefile.deps
