@@ -145,25 +145,28 @@ $(GENERATED_ML): %.ml: t_%.ml
 generated_ml: $(GENERATED_ML)
 	touch $@
 
-DEPS_abstract_string=
-DEPS_lem_support=
-DEPS_list_array=abstract_string.cmi
-DEPS_fs_prelude=lem_support.cmi
-DEPS_fs_dict_wrappers=fs_prelude.cmi lem_support.cmi
-DEPS_fs_spec=list_array.cmi abstract_string.cmi fs_prelude.cmi lem_support.cmi
-DEPS_dir_heap=fs_spec.cmi list_array.cmi fs_prelude.cmi lem_support.cmi
-DEPS_fs_dump=dir_heap.cmi list_array.cmi fs_spec.cmi fs_dict_wrappers.cmi
-DEPS_fs_printer=list_array.cmi fs_spec.cmi fs_dict_wrappers.cmi lem_support.cmi
-DEPS_fs_interface=fs_dump.cmi dir_heap.cmi fs_printer.cmi fs_spec.cmi abstract_string.cmi lem_support.cmi
+# mli files we need to create (others exist already)
+MISSING_MLI:=dir_heap.mli fs_dump.mli fs_printer.mli fs_spec.mli
+
+abstract_string.cmi: 
+lem_support.cmi: 
+list_array.cmi: abstract_string.cmi
+fs_prelude.cmi: lem_support.cmi
+fs_dict_wrappers.cmi: fs_prelude.cmi lem_support.cmi
+fs_spec.mli fs_spec.cmi: list_array.cmi abstract_string.cmi fs_prelude.cmi lem_support.cmi
+dir_heap.mli dir_heap.cmi: fs_spec.cmi list_array.cmi fs_prelude.cmi lem_support.cmi
+fs_dump.mli fs_dump.cmi: dir_heap.cmi list_array.cmi fs_spec.cmi fs_dict_wrappers.cmi
+fs_printer.mli fs_printer.cmi: list_array.cmi fs_spec.cmi fs_dict_wrappers.cmi lem_support.cmi
+fs_interface.cmi: fs_dump.cmi dir_heap.cmi fs_printer.cmi fs_spec.cmi abstract_string.cmi lem_support.cmi
 
 # add camlp4o only for those .ml files (and .mli interfaces) that need it
-camlp4o=-syntax camlp4o
-EXTRA_abstract_string.ml=$(camlp4o)
-EXTRA_fs_spec.ml=$(camlp4o)
-EXTRA_dir_heap.ml=$(camlp4o)
-EXTRA_fs_dump.ml=$(camlp4o)
-EXTRA_fs_printer.ml=$(camlp4o)
-EXTRA_fs_interface.ml=$(camlp4o)
+camlp4o:=-syntax camlp4o
+EXTRA_abstract_string.ml:=$(camlp4o)
+EXTRA_fs_spec.ml:=$(camlp4o)
+EXTRA_dir_heap.ml:=$(camlp4o)
+EXTRA_fs_dump.ml:=$(camlp4o)
+EXTRA_fs_printer.ml:=$(camlp4o)
+EXTRA_fs_interface.ml:=$(camlp4o)
 
 # cm[ox] depend on cmi; had to move these to associated rules
 # %.cmo: %.cmi
@@ -186,32 +189,8 @@ export OCAMLC_ARGS export OCAMLOPT_ARGS
 %.cmi: %.mli 
 	$(OCAMLOPT) $$OCAMLOPT_ARGS $(EXTRA_$*.ml) $*.mli
 
-# FIXME following is ugly (see below for link)
-define cmi_rules
-$(1).cmi: $(DEPS_$(1))
-endef
-
-$(foreach i,$(CMO:.cmo=),$(eval $(call cmi_rules,$(i))))
-
-# mli files we need to create (others exist already)
-MISSING_MLI:=dir_heap.mli fs_dump.mli fs_printer.mli fs_spec.mli
-
-# FIXME following is ugly
-
-# http://stackoverflow.com/questions/9691508/how-can-i-use-macros-to-generate-multiple-makefile-targets-rules-inside-foreach
-
-# the following macro allows to produce deps like: fs_spec.mli:
-# $(DEPS_fs_spec)
-define missing_mli_rules
-$(1).mli: $(DEPS_$(1))
-
-$(1).mli: $(1).ml
-#	$(OCAMLC) $(OCAMLC_ARGS) $(EXTRA_$(1).ml) -i $(1).ml > $(1).mli
-	$(OCAMLC) $$$$OCAMLC_ARGS $(EXTRA_$(1).ml) -i $(1).ml > $(1).mli # NB horrible $ escaping
-endef
-
-# restrict to particular targets
-$(foreach i,$(MISSING_MLI:.mli=),$(eval $(call missing_mli_rules,$(i))))
+$(MISSING_MLI): %.mli: %.ml
+	$(OCAMLC) $$OCAMLC_ARGS   $(EXTRA_$*.ml) -i $*.ml > $*.mli
 
 compile: $(CMO:.cmo=.cmi) $(CMO) $(CMO:.cmo=.cmx) fs_spec_lib.cma fs_spec_lib.cmxa
 
