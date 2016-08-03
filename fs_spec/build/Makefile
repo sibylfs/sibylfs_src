@@ -148,6 +148,9 @@ generated_ml: $(GENERATED_ML)
 # mli files we need to create (others exist already)
 MISSING_MLI:=dir_heap.mli fs_dump.mli fs_printer.mli fs_spec.mli
 
+# note .mli targets in following
+
+# cmi depends on mli and dependent cmi
 abstract_string.cmi: 
 lem_support.cmi: 
 list_array.cmi: abstract_string.cmi
@@ -174,7 +177,8 @@ EXTRA_fs_interface.ml:=$(camlp4o)
 
 # make invocations of commands slightly more succinct by exporting to
 # bash env
-export OCAMLC_ARGS export OCAMLOPT_ARGS
+export OCAMLC_ARGS 
+export OCAMLOPT_ARGS
 
 # cmo depends on ml 
 # FIXME is the following supported? it is
@@ -184,8 +188,7 @@ export OCAMLC_ARGS export OCAMLOPT_ARGS
 %.cmx: %.ml %.cmi
 	$(OCAMLOPT) $$OCAMLOPT_ARGS $(EXTRA_$*.ml) $*.ml
 
-# cmi depends on mli and dependent cmi; for dependent cmi we resort to
-# macros :(  won't work $(DEPS_$*)
+# cmi depends on mli and dependent cmi
 %.cmi: %.mli 
 	$(OCAMLOPT) $$OCAMLOPT_ARGS $(EXTRA_$*.ml) $*.mli
 
