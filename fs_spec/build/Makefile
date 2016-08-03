@@ -25,8 +25,8 @@ $(call check-var-defined,EXTRACTDIR)
 $(call check-var-defined,CPPO)
 
 BISECT?= # or "-package bisect" to build with bisect
-OCAMLC:=ocamlfind ocamlc $(BISECT)
-OCAMLOPT:=ocamlfind ocamlopt $(BISECT)
+  OCAMLC:=ocamlfind ocamlc $(BISECT)   #
+OCAMLOPT:=ocamlfind ocamlopt $(BISECT) #
 WARNINGS:=-w -26-8
 # COMPFLAGS:=$(WARNINGS) -package sexplib,sexplib.syntax # might as well
 
@@ -171,45 +171,53 @@ EXTRA_fs_interface.ml=$(camlp4o)
 
 # make invocations of commands slightly more succinct by exporting to
 # bash env
-
 export OCAMLC_ARGS export OCAMLOPT_ARGS
 
 # cmo depends on ml 
-%.cmo: %.ml %.cmi
-	$(OCAMLC) $$OCAMLC_ARGS $(EXTRA_$*.ml) $*.ml
+# FIXME is the following supported? it is
+%.cmo: %.ml %.cmi 
+	$(OCAMLC) $$OCAMLC_ARGS   $(EXTRA_$*.ml) $*.ml
 
 %.cmx: %.ml %.cmi
 	$(OCAMLOPT) $$OCAMLOPT_ARGS $(EXTRA_$*.ml) $*.ml
 
-# cmi depends on mli and dependent cmi; this makefile syntax not working
-%.cmi: %.mli # FIXME won't work $(DEPS_$*)
+# cmi depends on mli and dependent cmi; for dependent cmi we resort to
+# macros :(  won't work $(DEPS_$*)
+%.cmi: %.mli 
 	$(OCAMLOPT) $$OCAMLOPT_ARGS $(EXTRA_$*.ml) $*.mli
 
-# an alternative to $(DEPS_$*); ugly; FIXME
-list_array.cmi: $(DEPS_list_array)
-fs_prelude.cmi: $(DEPS_fs_prelude)
-fs_dict_wrappers.cmi: $(DEPS_fs_dict_wrappers)
-fs_spec.cmi: $(DEPS_fs_spec)
-dir_heap.cmi: $(DEPS_dir_heap)
-fs_dump.cmi: $(DEPS_fs_dump)
-fs_printer.cmi: $(DEPS_fs_printer)
-fs_interface.cmi: $(DEPS_fs_interface)
+# FIXME following is ugly (see below for link)
+define cmi_rules
+$(1).cmi: $(DEPS_$(1))
+endef
+
+$(foreach i,$(CMO:.cmo=),$(eval $(call cmi_rules,$(i))))
 
 # mli files we need to create (others exist already)
-dir_heap.mli fs_dump.mli fs_printer.mli fs_spec.mli: %.mli: %.ml # won't work $(DEPS_$*)
-	$(OCAMLC) $$OCAMLC_ARGS $(EXTRA_$*.ml) -i $*.ml > $*.mli
+MISSING_MLI:=dir_heap.mli fs_dump.mli fs_printer.mli fs_spec.mli
 
-# ugly FIXME
-fs_spec.mli: $(DEPS_fs_spec)
-dir_heap.mli: $(DEPS_dir_heap)
-fs_dump.mli: $(DEPS_fs_dump)
-fs_printer.mli: $(DEPS_fs_printer)
+# FIXME following is ugly
+
+# http://stackoverflow.com/questions/9691508/how-can-i-use-macros-to-generate-multiple-makefile-targets-rules-inside-foreach
+
+# the following macro allows to produce deps like: fs_spec.mli:
+# $(DEPS_fs_spec)
+define missing_mli_rules
+$(1).mli: $(DEPS_$(1))
+
+$(1).mli: $(1).ml
+#	$(OCAMLC) $(OCAMLC_ARGS) $(EXTRA_$(1).ml) -i $(1).ml > $(1).mli
+	$(OCAMLC) $$$$OCAMLC_ARGS $(EXTRA_$(1).ml) -i $(1).ml > $(1).mli # NB horrible $ escaping
+endef
+
+# restrict to particular targets
+$(foreach i,$(MISSING_MLI:.mli=),$(eval $(call missing_mli_rules,$(i))))
 
 compile: $(CMO:.cmo=.cmi) $(CMO) $(CMO:.cmo=.cmx) fs_spec_lib.cma fs_spec_lib.cmxa
 
 # -g flag turns on debugging info (e.g. for stacktrace)
 fs_spec_lib.cma: $(CMO)
-	$(OCAMLC) -g -a -o $@ $(CMO)
+	$(OCAMLC)   -g -a -o $@ $(CMO)
 
 fs_spec_lib.cmxa: $(CMO:.cmo=.cmx)
 	$(OCAMLOPT) -g -a -o $@ $(CMO:.cmo=.cmx)
@@ -253,6 +261,10 @@ generated: FORCE
 
 # FIXME tidy this
 # NB don't delete generated.tar - this is part of the "source" and should be upto date
+
+clean_ocaml:
+	rm -f *.cm[iox] *.a *.o *.cma *.cmxa dir_heap.mli fs_dump.mli fs_printer.mli fs_spec.mli
+
 clean: FORCE
 	rm -f $(GENERATED_LEM) $(GENERATED_TML) $(GENERATED_ML)
 	rm -f *.cm[iox] *.a *.o *.cma *.cmxa dir_heap.mli fs_dump.mli fs_printer.mli fs_spec.mli

@@ -1,3 +1,5 @@
+-include ../../config.sh
+
 include Makefile.common
 
 FS:=$(shell cat .depend.linear)
