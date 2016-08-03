@@ -74,14 +74,14 @@ BISECT?= # or "-package bisect" to build with bisect
 OCAMLC:=ocamlfind ocamlc $(BISECT)
 OCAMLOPT:=ocamlfind ocamlopt $(BISECT)
 WARNINGS:=-w -26-8
-COMPFLAGS:=$(WARNINGS) -package sexplib,sexplib.syntax # might as well
+# COMPFLAGS:=$(WARNINGS) -package sexplib,sexplib.syntax # might as well
 
 LEM:=$(LEMPATH)
 LEMFLAGS:=-lib $(LEMLIB) -only_changed_output -wl_unused_vars ign -wl_rename err
 EXTRACTCMA:=$(EXTRACTDIR)/extract.cma
 EXTRACTCMXA:=$(EXTRACTDIR)/extract.cmxa
 
-OCAMLC_ARGS:=-I $(EXTRACTDIR) extract.cma -package sexplib,sexplib.syntax,sha -c
+OCAMLC_ARGS:=-I $(EXTRACTDIR) extract.cma -package sexplib,sexplib.syntax,sha $(WARNINGS) -c 
 OCAMLOPT_ARGS:=$(OCAMLC_ARGS:.cma=.cmxa)
 
 #+END_SRC
