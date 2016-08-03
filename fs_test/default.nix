@@ -27,6 +27,7 @@ in stdenv.mkDerivation {
     export GIT_REV="$out"
     export DIRTY_FLAG=""
     export BUILD=${fs_spec}/build
+    export SIBYLFS_CONFIG=true
     make
     mkdir -p $out
 
