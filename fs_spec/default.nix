@@ -18,7 +18,7 @@ in stdenv.mkDerivation {
   
     buildPhase = ''
     export CPPO=${cppo}/bin/cppo
-    export LEMPATH=${lem}/lem/lem
+    export LEM=${lem}/lem/lem
     export LEMLIB=${lem}/lem/library
     export PATH=$LEMPATH:$PATH
     export LD_LIBRARY_PATH=${cstruct}/lib/ocaml/${ocaml_version}/site-lib/cstruct
