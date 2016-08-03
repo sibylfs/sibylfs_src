@@ -20,7 +20,7 @@ in stdenv.mkDerivation {
     buildInputs = [ ocaml findlib cppo sexplib sha op.ctypes op.cmdliner fd_send_recv lem pkgs.coreutils pkgs.git op.menhir ocaml_cow ocaml-unix-fcntl ocaml-unix-errno ocaml-unix-errno.rresult fs_spec ]; # git for version num
   
     buildPhase = ''
-    export LEMPATH=${lem}/lem
+    export LEM=${lem}/lem
     export PATH=$LEMPATH:$PATH
     export LEMLIB=${lem}/lem/library
     export LD_LIBRARY_PATH=${cstruct}/lib/ocaml/${ocaml_version}/site-lib/cstruct
