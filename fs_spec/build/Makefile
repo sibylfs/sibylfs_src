@@ -169,16 +169,21 @@ EXTRA_fs_interface.ml=$(camlp4o)
 # %.cmo: %.cmi
 # %.cmx: %.cmi
 
+# make invocations of commands slightly more succinct by exporting to
+# bash env
+
+export OCAMLC_ARGS export OCAMLOPT_ARGS
+
 # cmo depends on ml 
 %.cmo: %.ml %.cmi
-	$(OCAMLC) $(OCAMLC_ARGS) $(EXTRA_$*.ml) $*.ml
+	$(OCAMLC) $$OCAMLC_ARGS $(EXTRA_$*.ml) $*.ml
 
 %.cmx: %.ml %.cmi
-	$(OCAMLOPT) $(OCAMLOPT_ARGS) $(EXTRA_$*.ml) $*.ml
+	$(OCAMLOPT) $$OCAMLOPT_ARGS $(EXTRA_$*.ml) $*.ml
 
 # cmi depends on mli and dependent cmi; this makefile syntax not working
 %.cmi: %.mli # FIXME won't work $(DEPS_$*)
-	$(OCAMLOPT) $(OCAMLOPT_ARGS) $(EXTRA_$*.ml) $*.mli
+	$(OCAMLOPT) $$OCAMLOPT_ARGS $(EXTRA_$*.ml) $*.mli
 
 # an alternative to $(DEPS_$*); ugly; FIXME
 list_array.cmi: $(DEPS_list_array)
@@ -192,7 +197,7 @@ fs_interface.cmi: $(DEPS_fs_interface)
 
 # mli files we need to create (others exist already)
 dir_heap.mli fs_dump.mli fs_printer.mli fs_spec.mli: %.mli: %.ml # won't work $(DEPS_$*)
-	$(OCAMLC) $(OCAMLC_ARGS) $(EXTRA_$*.ml) -i $*.ml > $*.mli
+	$(OCAMLC) $$OCAMLC_ARGS $(EXTRA_$*.ml) -i $*.ml > $*.mli
 
 # ugly FIXME
 fs_spec.mli: $(DEPS_fs_spec)
@@ -210,7 +215,7 @@ fs_spec_lib.cmxa: $(CMO:.cmo=.cmx)
 	$(OCAMLOPT) -g -a -o $@ $(CMO:.cmo=.cmx)
 
 interface_only: generated_ml
-	$(OCAMLC) $(OCAMLC_ARGS) -syntax camlp4o -c abstract_string.mli -c lem_support.mli fs_interface.mli
+	$(OCAMLC) $$OCAMLC_ARGS -syntax camlp4o -c abstract_string.mli -c lem_support.mli fs_interface.mli
 	touch $@
 
 define generated_files
@@ -239,7 +244,7 @@ list_array.ml
 
 endef
 
-generated.tar: generated_ml FORCE
+generated.tar: generated_ml
 	$(file >files_in_tar,$(generated_files))
 	tar cvf $@  --files-from files_in_tar
 
