@@ -353,9 +353,10 @@ touch run_lem
       cppo_to_lem()
       run_lem()
       rename_tml()
+      val linear = "lem_support abstract_string fs_prelude list_array fs_dict_wrappers fs_spec fs_printer dir_heap fs_dump fs_interface" : List[String]
       val targets = 
         //deps.keys.flatMap( f => (f.to(".cmi")::f.to(".cmo")::f.to(".cmx")))
-        deps.keys.flatMap( f => (f.to(".cmi")::f.to(".cmx")))
+        linear.flatMap( f => (f.to(".cmi")::f.to(".cmx")))
       make(targets)
     }
 
