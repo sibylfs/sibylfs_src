@@ -74,8 +74,10 @@ s3: s2 $(fs3)
 
 # need to get .cmo in right order
 mls:=$(filter %.ml,$(fs1) $(fs2) $(fs3))
-fs_spec_lib.cma fs_spec_lib.cmxa: s3
+fs_spec_lib.cma: s3
 	ocamlfind ocamlc -g -a -o $@ $(mls:.ml=.cmo)
+
+fs_spec_lib.cmxa: s3
 	ocamlfind ocamlopt -g -a -o $@ $(mls:.ml=.cmx)
 
 
