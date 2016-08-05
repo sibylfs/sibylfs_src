@@ -50,35 +50,25 @@ stage1: run_cp
 	touch $@
 
 include .depend
-%_x: %.mli %.ml stage1
+%.x: %.mli %.ml stage1
 	$$ocamlc -c $*.mli $*.ml
 	$$ocamlopt -c $*.mli $*.ml
 	touch $@
 
-%_x: %.ml stage1
+%.x: %.ml stage1
 	$$ocamlc -c $*.ml
 	$$ocamlopt -c $*.ml
 	touch $@
 
 # need to get .cmo in right order
-xs:=abstract_string_x lem_support_x list_array_x fs_prelude_x fs_spec_x dir_heap_x fs_dict_wrappers_x fs_dump_x fs_printer_x fs_interface_x
+xs:=abstract_string.x lem_support.x list_array.x fs_prelude.x fs_spec.x dir_heap.x fs_dict_wrappers.x fs_dump.x fs_printer.x fs_interface.x
 
 fs_spec_lib.cma: $(xs)
-	ocamlfind ocamlc -g -a -o $@ $(xs:_x=.cmo)
+	ocamlfind ocamlc -g -a -o $@ $(xs:.x=.cmo)
 
 fs_spec_lib.cmxa: $(xs)
-	ocamlfind ocamlopt -g -a -o $@ $(xs:_x=.cmx)
+	ocamlfind ocamlopt -g -a -o $@ $(xs:.x=.cmx)
 
-
-# those things we can clean if we are in src
-# clean_src:
-# 	rm -f *.cmi *.cmo *.cmx *.o *_x *.cma *.cmxa *.a
-deps.dot: 
-	echo "digraph {" >$@
-	sed -e 's/[:]\([^#]*\)/-> \{ \1 \} /' .depend  >>$@
-	echo "}" >>$@
-deps.pdf: deps.dot
-	dot -Tpdf $< >$@
 
 to_delete: FORCE
 	(cd ../src && ls -1 |sort) >src_files
