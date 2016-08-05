@@ -24,8 +24,7 @@ all:
 # no dep tracking: if anything changes in fs_spec you have to make clean
 include: 
 	mkdir -p include
-	cp $$CMIS include
-	cp $$SPEC_BUILD/fs_spec_lib.cma $$SPEC_BUILD/fs_spec_lib.cmxa include
+	cp $$from_lem $$from_spec include
 	chmod u+w include/* # in case we need to overwrite, and they are readonly from nix
 	touch include
 

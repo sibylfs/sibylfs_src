@@ -7,21 +7,33 @@ set -a
 SPEC_BUILD="${SPEC_BUILD:-../fs_spec/_build}" # default value
 
 # cmis from elsewhere
-CMIS="$EXTRACTDIR/*.cmi 
+from_lem="
+$EXTRACTDIR/*.cmi 
+$EXTRACTDIR/extract.cma 
+$EXTRACTDIR/extract.cmxa
+$EXTRACTDIR/extract.a
+"
+from_spec="
 $SPEC_BUILD/lem_support.cmi 
 $SPEC_BUILD/abstract_string.cmi 
 $SPEC_BUILD/fs_interface.cmi
 $SPEC_BUILD/fs_dict_wrappers.cmi
-$SPEC_BUILD/fs_prelude.cmi"
-
+$SPEC_BUILD/fs_prelude.cmi
+$SPEC_BUILD/fs_spec_lib.cma
+$SPEC_BUILD/fs_spec_lib.cmxa
+$SPEC_BUILD/fs_spec_lib.a
+"
 
 COREPKGS="unix,bigarray,str,num,bytes"
 XTRAPKGS="bytes,sexplib,sexplib.syntax,cmdliner,fd-send-recv,sha,cow,cow.syntax,unix-fcntl,$BISECT"
 PKGS="-package $COREPKGS,$XTRAPKGS -syntax camlp4o"
 WARN="-w @f@p@u@s@40"
 CCFLAGS="-g"
-ocamlc="ocamlfind ocamlc $WARN $CCFLAGS -I $EXTRACTDIR extract.cma -I $PKGS"
-ocamlopt="ocamlfind ocamlopt $WARN $CCFLAGS -I $EXTRACTDIR extract.cmxa -I $SPEC_BUILD fs_spec_lib.cmxa $PKGS"
+  ocamlc="ocamlfind ocamlc   $WARN $CCFLAGS -I ../include extract.cma  fs_spec_lib.cma  -I ../lib fs_check_lib.cma $PKGS"
+ocamlopt="ocamlfind ocamlopt $WARN $CCFLAGS -I ../include extract.cmxa fs_spec_lib.cmxa -I ../lib fs_check_lib.cmxa $PKGS"
+
+# ocamlc="ocamlfind ocamlc $WARN $CCFLAGS -I $EXTRACTDIR extract.cma -I $PKGS"
+# ocamlopt="ocamlfind ocamlopt $WARN $CCFLAGS -I $EXTRACTDIR extract.cmxa -I $SPEC_BUILD fs_spec_lib.cmxa $PKGS"
 # 	-I lib fs_check_lib.cmxa \
 # 	lib/syscall_stubs.o
 

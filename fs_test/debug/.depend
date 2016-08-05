@@ -1,7 +1,2 @@
-check2.cmo : checklib_2.cmi
-check2.cmx : checklib_2.cmx
-checklib_2.cmo : checklib_2.cmi
-checklib_2.cmx : checklib_2.cmi
-debug.cmo : checklib_2.cmi
-debug.cmx : checklib_2.cmx
-checklib_2.cmi :
+check2.x: checklib_2.x
+debug.x: checklib_2.x
