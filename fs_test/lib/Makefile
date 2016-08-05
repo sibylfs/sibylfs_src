@@ -1,80 +1,73 @@
--include ../../config.sh
+SHELL:=/bin/bash
 
-include Makefile.common
+# bash will read this config file first
+BASH_ENV=bash_env.sh
+export BASH_ENV
 
-FS:=$(shell cat .depend.linear)
-
-MLS:=$(filter-out %.mli,$(FS))
-
-#$(info MLS=$(MLS)!  FS=$(FS)!)
-
-WARNINGS=-w @f@p@u@s@40
-COMPFLAGS=$(WARNINGS) -g
+xs:=diff.x fs_path.x dump.x fs_ast.x fs_lr_parser.x fs_lexer.x fs_test_config.x syscall.x trace.x stat.x checklib_shared_types.x fs_test_system.x posix_agent.x fs_test_util.x checkLib.x fs_test_version.x fs_test_index.x posix_ops.x fs_test_mount.x fs_test_html.x checkLib_with_posix.x
 
 LIB:=fs_check_lib
 
-all: 
-	$(MAKE) before_all
-	$(MAKE) srcs
-	$(MAKE) cmo cmx
+######################################## all, srcs, before_all
+all: before_all srcs
 	$(MAKE) $(LIB).cma $(LIB).cmxa syscall_stubs.o
 
-srcs: FORCE
+
+srcs: # FIXME depends?
 	$(MAKE) -f Makefile.srcs srcs
 
 before_all:
 	$(MAKE) -C .. include
 
-depend: srcs
-	$(MAKE) -f Makefile.depend
 
 
-########################################################################
-cmo: $(MLS:.ml=.cmo)
-	touch cmo
+######################################## compile
 
-cmx: $(MLS:.ml=.cmx)
-	touch cmx
+compile: $(xs)
 
-$(LIB).cma: cmo
-	$(CAMLC) -g -a -o $@ $(MLS:.ml=.cmo)
+include .depend
 
-$(LIB).cmxa: cmx
-	$(CAMLOPT) -g -a -o $@ $(MLS:.ml=.cmx)
+%.x: %.mli %.ml srcs
+	$$ocamlc -c $*.mli $*.ml
+	$$ocamlopt -c $*.mli $*.ml
+	touch $@
 
-# those that don't depend on syscall_stubs.c
-TOP_LEVEL_MLS:=diff.ml fs_path.ml posix_agent.ml stat.ml dump.ml \
-  checklib_shared_types.ml fs_ast.ml fs_lr_parser.ml fs_lexer.ml trace.ml checkLib.ml
+%.x: %.ml srcs
+	$$ocamlc -c $*.ml
+	$$ocamlopt -c $*.ml
+	touch $@
 
-top_level_lib.cma: $(TOP_LEVEL_MLS:.ml=.cmo)
-	$(CAMLC) -g -a -o $@ $(TOP_LEVEL_MLS:.ml=.cmo)
+$(LIB).cma: $(xs)
+	ocamlfind ocamlc -g -a -o $@ $(xs:.x=.cmo)
 
-.SUFFIXES: .ml .mli .cmo .cmi .cmx .o .c
+$(LIB).cmxa: $(xs)
+	ocamlfind ocamlopt -g -a -o $@ $(xs:.x=.cmx)
+
+
+.SUFFIXES: .o .c
 
 CFLAGS:=-I $(shell ocamlc -where) -fPIC -Wall -Wextra -Werror -std=c99
 
 %.o: %.c
 	cc $(CFLAGS) -o $*.o -c $*.c
 
-.ml.cmo:
-	$(CAMLC) $(COMPFLAGS) $(CAMLCINCLUDES) -c $<
-
-.mli.cmi:
-	$(CAMLC) $(COMPFLAGS) $(CAMLCINCLUDES) -c $<
-
-.ml.cmx:
-	$(CAMLOPT) $(COMPFLAGS) $(CAMLOPTINCLUDES) -c $<
-
 clean:
-	rm -f ./*.cmi ./*.cmx ./*.cmo ./*.o ./*.a ./*.cmxa ./*.cma
-	rm -f ./fs_lexer.ml ./fs_lr_parser.mli ./fs_lr_parser.ml
-	rm -f cmo cmx srcs
-	rm -f depend.dot depend.pdf
+	rm -f *.cmi *.cmo *.cmx *.o *.x *.cma *.cmxa *.a a.out
+	rm -f *.x
+	rm -f fs_lexer.ml fs_lr_parser.mli fs_lr_parser.ml
 	rm -f fs_test_version.ml
+	rm -f srcs
 	rm -rf ocamldoc
 
-include Makefile.doc
--include .depend
+# include Makefile.doc
 -include Makefile.local # for any local additions to Makefile
 
 FORCE:
+
+
+
+## local vars
+# Local variables:
+# mode: outline-minor
+# outline-regexp: "[#][#]+ .*"
+# End:

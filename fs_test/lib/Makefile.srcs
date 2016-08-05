@@ -1,49 +1,43 @@
+# -*- mode: makefile -*-
+SHELL:=/bin/bash
+
+# bash will read this config file first
+BASH_ENV=bash_env.sh
+export BASH_ENV
+
 ########################################################################
 # srcs
 
 # this is self-contained: we don't have the .depend info before we
 # build the srcs
 
-INCLUDE:=../include
-COMPFLAGS:=
-
 srcs: fs_lr_parser.mli fs_lr_parser.ml fs_lexer.ml fs_test_version.ml
 	touch srcs
 
-# allow override in case not git repo
-DIRTY_FLAG?=$(shell git diff-index --quiet HEAD || echo "dirty")
-ifeq ($(DIRTY_FLAG),dirty)
-DIRTY=true
-else
-DIRTY=false
-endif
-
-# allow override in case not git repo
-GIT_REV?=$(shell git rev-parse HEAD | tr -d '\n')
-
-# note we don't force this to be rebuilt every time, but the sources
-# could change from clean to dirty
-fs_test_version.ml: 
-	printf "let git_rev = \""                > fs_test_version.ml
-	echo -n "$(GIT_REV)"                    >> fs_test_version.ml
-	printf "\"\nlet git_dirty = $(DIRTY)\n" >> fs_test_version.ml
-
 FS_AST_MLIS:=diff.mli fs_path.mli dump.mli fs_ast.mli
+
 fs_ast.cmi: $(FS_AST_MLIS)
-	ocamlfind ocamlc $(COMPFLAGS) -syntax camlp4o -package sexplib.syntax \
-		-I $(INCLUDE) $(FS_AST_MLIS)
+	$$ocamlc $(FS_AST_MLIS)
 
 fs_lr_parser.mli: fs_lr_parser.mly fs_ast.cmi
-	menhir --explain --infer --ocamlc "ocamlc -I ../include" $<
+	menhir --explain --infer --ocamlc "$$ocamlc" $<
 
 # following is a dummy rule so that make only runs menhir once
 # http://stackoverflow.com/questions/2973445/gnu-makefile-rule-generating-a-few-targets-from-a-single-source-file
 # http://stackoverflow.com/questions/12322823/semi-colon-in-makefile-rule-definition
 fs_lr_parser.ml: fs_lr_parser.mli ;
 
-
 fs_lr_parser.cmi: fs_lr_parser.mli fs_ast.cmi # fs_ast.cmi will already exist
-	ocamlc $(COMPFLAGS) -I $(INCLUDE) fs_lr_parser.mli
+	$$ocamlc fs_lr_parser.mli
 
 fs_lexer.ml: fs_lexer.mll fs_lr_parser.cmi
 	ocamllex $<
+
+
+
+########################################
+# fs_test_version.ml
+
+fs_test_version.ml:
+	./mk_fs_test_version.sh
+

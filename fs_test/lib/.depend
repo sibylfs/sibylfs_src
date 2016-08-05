@@ -1,58 +1,22 @@
-checkLib.cmo : trace.cmi stat.cmi dump.cmi diff.cmi checklib_shared_types.cmi checkLib.cmi
-checkLib.cmx : trace.cmx stat.cmx dump.cmx diff.cmx checklib_shared_types.cmx checkLib.cmi
-checkLib_with_posix.cmo : posix_ops.cmi checkLib.cmi checkLib_with_posix.cmi
-checkLib_with_posix.cmx : posix_ops.cmx checkLib.cmx checkLib_with_posix.cmi
-checklib_shared_types.cmo : dump.cmi checklib_shared_types.cmi
-checklib_shared_types.cmx : dump.cmx checklib_shared_types.cmi
-diff.cmo : diff.cmi
-diff.cmx : diff.cmi
-dump.cmo : fs_path.cmi diff.cmi dump.cmi
-dump.cmx : fs_path.cmx diff.cmx dump.cmi
-fs_ast.cmo : dump.cmi fs_ast.cmi
-fs_ast.cmx : dump.cmx fs_ast.cmi
-fs_lexer.cmo : fs_lr_parser.cmi fs_ast.cmi
-fs_lexer.cmx : fs_lr_parser.cmx fs_ast.cmx
-fs_lr_parser.cmo : fs_ast.cmi dump.cmi fs_lr_parser.cmi
-fs_lr_parser.cmx : fs_ast.cmx dump.cmx fs_lr_parser.cmi
-fs_path.cmo : fs_path.cmi
-fs_path.cmx : fs_path.cmi
-fs_test_cli.cmo :
-fs_test_cli.cmx :
-fs_test_config.cmo :
-fs_test_config.cmx :
-fs_test_html.cmo : trace.cmi stat.cmi fs_test_version.cmo fs_test_index.cmo fs_test_config.cmo dump.cmi checkLib.cmi
-fs_test_html.cmx : trace.cmx stat.cmx fs_test_version.cmx fs_test_index.cmx fs_test_config.cmx dump.cmx checkLib.cmx
-fs_test_index.cmo : fs_test_config.cmo
-fs_test_index.cmx : fs_test_config.cmx
-fs_test_mount.cmo : fs_test_system.cmi fs_test_config.cmo
-fs_test_mount.cmx : fs_test_system.cmx fs_test_config.cmx
-fs_test_system.cmo : syscall.cmi fs_test_config.cmo fs_test_system.cmi
-fs_test_system.cmx : syscall.cmx fs_test_config.cmx fs_test_system.cmi
-fs_test_util.cmo : fs_test_util.cmi
-fs_test_util.cmx : fs_test_util.cmi
-fs_test_version.cmo :
-fs_test_version.cmx :
-posix_agent.cmo :
-posix_agent.cmx :
-posix_ops.cmo : syscall.cmi posix_agent.cmo fs_test_system.cmi fs_path.cmi dump.cmi checklib_shared_types.cmi posix_ops.cmi
-posix_ops.cmx : syscall.cmx posix_agent.cmx fs_test_system.cmx fs_path.cmx dump.cmx checklib_shared_types.cmx posix_ops.cmi
-stat.cmo : diff.cmi stat.cmi
-stat.cmx : diff.cmx stat.cmi
-syscall.cmo : syscall.cmi
-syscall.cmx : syscall.cmi
-trace.cmo : fs_lr_parser.cmi fs_lexer.cmo fs_ast.cmi dump.cmi trace.cmi
-trace.cmx : fs_lr_parser.cmx fs_lexer.cmx fs_ast.cmx dump.cmx trace.cmi
-checkLib.cmi : trace.cmi stat.cmi dump.cmi diff.cmi checklib_shared_types.cmi
-checkLib_with_posix.cmi : posix_ops.cmi checkLib.cmi
-checklib_shared_types.cmi : dump.cmi
-diff.cmi :
-dump.cmi : fs_path.cmi diff.cmi
-fs_ast.cmi : dump.cmi
-fs_lr_parser.cmi : fs_ast.cmi
-fs_path.cmi :
-fs_test_system.cmi : fs_test_config.cmo
-fs_test_util.cmi :
-posix_ops.cmi : checklib_shared_types.cmi
-stat.cmi : diff.cmi
-syscall.cmi :
-trace.cmi : dump.cmi
+checkLib.x : trace.x stat.x dump.x diff.x checklib_shared_types.x    
+checkLib_with_posix.x : checkLib.x posix_ops.x    
+checklib_shared_types.x : dump.x    
+diff.x :     
+dump.x : diff.x fs_path.x    
+fs_ast.x : dump.x    
+fs_lexer.x : fs_ast.x fs_lr_parser.x    
+fs_lr_parser.x : dump.x fs_ast.x    
+fs_path.x :     
+fs_test_cli.x :     
+fs_test_config.x :     
+fs_test_html.x : trace.x fs_test_util.x stat.x checkLib.x fs_test_version.x dump.x fs_test_index.x fs_test_config.x    
+fs_test_index.x : fs_test_config.x    
+fs_test_mount.x : fs_test_config.x fs_test_system.x    
+fs_test_system.x : fs_test_config.x syscall.x    
+fs_test_util.x :     
+fs_test_version.x :     
+posix_agent.x :     
+posix_ops.x : fs_path.x dump.x fs_test_system.x posix_agent.x syscall.x checklib_shared_types.x    
+stat.x : diff.x    
+syscall.x :     
+trace.x : fs_lexer.x fs_lr_parser.x dump.x fs_ast.x    

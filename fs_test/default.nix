@@ -6,7 +6,7 @@ let
     inherit (op) findlib cppo sexplib cstruct;
     sha = import ../.nix/sha { };
     fd_send_recv = import ../.nix/fd-send-recv { };
-    lem = import ../.nix/lem { };
+    lem_in_nix = import ../.nix/lem { };
     ocaml_cow = import ../.nix/ocaml_cow { };
     ocaml_dyntype = import ../.nix/dyntype { };
     ocaml-unix-fcntl = import ../.nix/ocaml-unix-fcntl { };
@@ -17,17 +17,15 @@ in stdenv.mkDerivation {
     name = "fs_test";
   
     src = ./.;  
-    buildInputs = [ ocaml findlib cppo sexplib sha op.ctypes op.cmdliner fd_send_recv lem pkgs.coreutils pkgs.git op.menhir ocaml_cow ocaml-unix-fcntl ocaml-unix-errno ocaml-unix-errno.rresult fs_spec ]; # git for version num
+    buildInputs = [ ocaml findlib cppo sexplib sha op.ctypes op.cmdliner fd_send_recv lem_in_nix pkgs.coreutils pkgs.git op.menhir ocaml_cow ocaml-unix-fcntl ocaml-unix-errno ocaml-unix-errno.rresult fs_spec ]; # git for version num
   
     buildPhase = ''
-    export LEM=${lem}/lem
-    export PATH=$LEMPATH:$PATH
-    export LEMLIB=${lem}/lem/library
+    export lem=${lem_in_nix}/lem/lem
+    export LEMLIB=${lem_in_nix}/lem/library
     export LD_LIBRARY_PATH=${cstruct}/lib/ocaml/${ocaml_version}/site-lib/cstruct
     export GIT_REV="$out"
     export DIRTY_FLAG=""
-    export BUILD=${fs_spec}/build
-    export SIBYLFS_CONFIG=true
+    export SPEC_BUILD=${fs_spec}/_build
     make
     mkdir -p $out
 

@@ -22,7 +22,7 @@ run_cppo: $(wildcard *.lem *.lem_cppo)
 
 # we have to invoke lem with the files in the right order
 
-lem:=\
+dot_lem:=\
 t_list_array.lem \
 t_fs_prelude.lem \
   t_fs_spec_properties.lem \
@@ -31,8 +31,8 @@ t_fs_spec.lem \
   t_fs_spec_properties_perms.lem \
 t_dir_heap.lem
 
-run_lem: run_cppo $(lem)
-	$$lem -lib $$LEMLIB $$LEMFLAGS -ocaml $(lem)
+run_lem: run_cppo $(dot_lem)
+	$$lem -lib $$LEMLIB $$LEMFLAGS -ocaml $(dot_lem)
 	sed -i.bak -f patch_lem.sed t_fs_spec.ml
 	touch $@
 

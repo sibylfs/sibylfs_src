@@ -1,7 +1,7 @@
 # export all vars
 set -a 
 
-test -f ../../config.sh && . ../../config.sh
+test -f ../../config.sh && . ../../config.sh # if using nix, this may not be present
 
 CPPO_ARGS="-D aspect_perms"
 LEMFLAGS="-lib $LEMLIB -only_changed_output -wl_unused_vars ign -wl_rename err"

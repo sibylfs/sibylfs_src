@@ -1,8 +1,0 @@
-INCLUDE:=../include
-PKGS:=bytes,sexplib,sexplib.syntax,cmdliner,fd-send-recv,sha,cow,cow.syntax,unix-fcntl,unix-errno,ctypes
-CAMLC:=ocamlfind ocamlc -package $(PKGS) -syntax camlp4o $(COMPFLAGS)
-CAMLOPT:=ocamlfind ocamlopt -package $(PKGS) -syntax camlp4o $(COMPFLAGS)
-CAMLCINCLUDES:=-I ../include
-CAMLOPTINCLUDES:=$(CAMLCINCLUDES)
-OCAMLDEP:=ocamlfind ocamldep -package $(PKGS) -syntax camlp4o
-OCAMLDOC:=ocamlfind ocamldoc -package $(PKGS) -syntax camlp4o
