@@ -1,0 +1,10 @@
+abstract_string.x : # camlp4o
+lem_support.x : 
+list_array.x : abstract_string.x
+fs_prelude.x : lem_support.x
+fs_dict_wrappers.x : fs_prelude.x lem_support.x
+fs_spec.x : list_array.x abstract_string.x fs_prelude.x lem_support.x  # camlp4o
+dir_heap.x : fs_spec.x list_array.x fs_prelude.x lem_support.x # camlp4o
+fs_dump.x : dir_heap.x list_array.x fs_spec.x fs_dict_wrappers.x # camlp4o
+fs_printer.x : list_array.x fs_spec.x fs_dict_wrappers.x lem_support.x # camlp4o
+fs_interface.x : fs_dump.x dir_heap.x fs_printer.x fs_spec.x abstract_string.x lem_support.x # camlp4o
