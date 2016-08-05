@@ -25,10 +25,10 @@ run_cppo: $(wildcard *.lem *.lem_cppo)
 lem:=\
 t_list_array.lem \
 t_fs_prelude.lem \
-t_fs_spec_properties.lem \
+  t_fs_spec_properties.lem \
 t_fs_spec.lem \
-t_fs_spec_fs_command_properties.lem \
-t_fs_spec_properties_perms.lem \
+  t_fs_spec_fs_command_properties.lem \
+  t_fs_spec_properties_perms.lem \
 t_dir_heap.lem
 
 run_lem: run_cppo $(lem)
@@ -50,35 +50,39 @@ stage1: run_cp
 	touch $@
 
 include .depend
-%.x: %.mli %.ml stage1
+%_x: %.mli %.ml stage1
 	$$ocamlc -c $*.mli $*.ml
 	$$ocamlopt -c $*.mli $*.ml
 	touch $@
 
-%.x: %.ml stage1
+%_x: %.ml stage1
 	$$ocamlc -c $*.ml
 	$$ocamlopt -c $*.ml
 	touch $@
 
 # need to get .cmo in right order
-xs:=abstract_string.x lem_support.x list_array.x fs_prelude.x fs_spec.x dir_heap.x fs_dict_wrappers.x fs_dump.x fs_printer.x fs_interface.x
+xs:=abstract_string_x lem_support_x list_array_x fs_prelude_x fs_spec_x dir_heap_x fs_dict_wrappers_x fs_dump_x fs_printer_x fs_interface_x
 
 fs_spec_lib.cma: $(xs)
-	ocamlfind ocamlc -g -a -o $@ $(xs:.x=.cmo)
+	ocamlfind ocamlc -g -a -o $@ $(xs:_x=.cmo)
 
 fs_spec_lib.cmxa: $(xs)
-	ocamlfind ocamlopt -g -a -o $@ $(xs:.x=.cmx)
+	ocamlfind ocamlopt -g -a -o $@ $(xs:_x=.cmx)
 
 
 # those things we can clean if we are in src
 # clean_src:
-# 	rm -f *.cmi *.cmo *.cmx *.o *.x *.cma *.cmxa *.a
+# 	rm -f *.cmi *.cmo *.cmx *.o *_x *.cma *.cmxa *.a
+deps.dot: 
+	echo "digraph {" >$@
+	sed -e 's/[:]\([^#]*\)/-> \{ \1 \} /' .depend  >>$@
+	echo "}" >>$@
+deps.pdf: deps.dot
+	dot -Tpdf $< >$@
 
-src_files:
-	(cd ../src && ls -1 |sort) >$@
-build_files:
-	(ls -1 |sort) >$@
-to_delete: src_files build_files
+to_delete: FORCE
+	(cd ../src && ls -1 |sort) >src_files
+	(ls -1 |sort) >build_files
 	-comm -13 src_files build_files >$@ # comm may not exist on all systems
 
 clean: to_delete FORCE
