@@ -1,3 +1,3 @@
-source ../../config.sh
+test -f ../../config.sh && source ../../config.sh
 source ../config.sh
 source ./config.sh
