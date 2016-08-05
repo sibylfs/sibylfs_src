@@ -13,7 +13,7 @@ endif
 all:  mycommand.native libtestlib.so a.out
 
 mycommand.native: mycommand.ml
-	ocamlbuild $@ # make produce a /bin/sh: 1: tput: not found error; not sure why
+	ocamlbuild $@ # may produce a /bin/sh: 1: tput: not found error; not sure why
 	cp $@ /tmp
 
 # http://stackoverflow.com/questions/14884126/build-so-file-from-c-file-using-gcc-command-line

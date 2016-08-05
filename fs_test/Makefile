@@ -4,13 +4,7 @@ SHELL:=/bin/bash
 BASH_ENV=bash_env.sh
 export BASH_ENV
 
-define natives
-debug/check2.native debug/debug.native 
-paths/testpath.native 
-fs_test_check fs_test_posix
-fs_test run_trace tgen
-endef
-NATIVES:=$(shell echo $(natives))
+NATIVES:=debug/check2.native debug/debug.native paths/testpath.native fs_test_check fs_test_posix fs_test run_trace tgen 
 
 ######################################## target: all
 all:
@@ -34,28 +28,25 @@ include:
 debug/check2.native debug/debug.native: lib/fs_check_lib.cmxa
 	$(MAKE) -C debug/
 
-OPTARGS:=-linkpkg -syntax camlp4o -package $(PKGS) $(LIBS) $(COMPFLAGS)
-
 ## paths/testpath.native tgen
 paths/testpath.native: paths/testpath.ml 
-	$(OCAMLOPT) -o $@ $(OPTARGS) $<
+	$$ocamlopt -linkpkg -o $@ $<
 
 tgen: test_generation/tgen.ml
-	$(OCAMLOPT) -o $@ $(OPTARGS) $<
-
+	$$ocamlopt -linkpkg -o $@ $<
 
 ## other executables: fs_test_check fs_test_posix run_trace fs_test tgen
 fs_test_check: check.ml
-	$(OCAMLOPT) -o $@ $(OPTARGS) $<
+	$$ocamlopt -linkpkg -o $@ $<
 
 fs_test_posix: posix.ml
-	$(OCAMLOPT) -o $@ $(OPTARGS) $<
+	$$ocamlopt -linkpkg -o $@ $<
 
 run_trace: run_trace.ml
-	$(OCAMLOPT) -o $@ $(OPTARGS) $<
+	$$ocamlopt -linkpkg -o $@ $<
 
 fs_test: fs_test.ml
-	$(OCAMLOPT) -o $@ $(OPTARGS) $<
+	$$ocamlopt -linkpkg -o $@ $<
 
 
 ######################################## clean

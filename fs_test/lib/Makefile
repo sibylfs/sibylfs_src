@@ -4,7 +4,7 @@ SHELL:=/bin/bash
 BASH_ENV=bash_env.sh
 export BASH_ENV
 
-xs:=diff.x fs_path.x dump.x fs_ast.x fs_lr_parser.x fs_lexer.x fs_test_config.x syscall.x trace.x stat.x checklib_shared_types.x fs_test_system.x posix_agent.x fs_test_util.x checkLib.x fs_test_version.x fs_test_index.x posix_ops.x fs_test_mount.x fs_test_html.x checkLib_with_posix.x
+xs:=fs_test_version.x posix_agent.x syscall.x fs_test_config.x fs_test_system.x fs_test_mount.x fs_path.x fs_test_cli.x diff.x fs_test_index.x dump.x checklib_shared_types.x posix_ops.x fs_ast.x fs_lr_parser.x fs_lexer.x trace.x fs_test_util.x stat.x checkLib.x checkLib_with_posix.x fs_test_html.x
 
 LIB:=fs_check_lib
 
