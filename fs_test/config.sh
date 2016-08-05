@@ -29,8 +29,10 @@ XTRAPKGS="bytes,sexplib,sexplib.syntax,cmdliner,fd-send-recv,sha,cow,cow.syntax,
 PKGS="-package $COREPKGS,$XTRAPKGS -syntax camlp4o"
 WARN="-w @f@p@u@s@40"
 CCFLAGS="-g"
-  ocamlc="ocamlfind ocamlc   $WARN $CCFLAGS -I ../include extract.cma  fs_spec_lib.cma  -I ../lib fs_check_lib.cma $PKGS"
-ocamlopt="ocamlfind ocamlopt $WARN $CCFLAGS -I ../include extract.cmxa fs_spec_lib.cmxa -I ../lib fs_check_lib.cmxa $PKGS"
+
+# FIXME we should include fs_check_lib when we know it has been built
+  ocamlc="ocamlfind ocamlc   $WARN $CCFLAGS -I ../include extract.cma  fs_spec_lib.cma  $PKGS"
+ocamlopt="ocamlfind ocamlopt $WARN $CCFLAGS -I ../include extract.cmxa fs_spec_lib.cmxa $PKGS"
 
 # ocamlc="ocamlfind ocamlc $WARN $CCFLAGS -I $EXTRACTDIR extract.cma -I $PKGS"
 # ocamlopt="ocamlfind ocamlopt $WARN $CCFLAGS -I $EXTRACTDIR extract.cmxa -I $SPEC_BUILD fs_spec_lib.cmxa $PKGS"
