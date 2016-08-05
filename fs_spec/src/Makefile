@@ -15,7 +15,7 @@ run_link:
 	ln -s ../src/{*cppo,*lem,*mli,*ml,*.sed} .
 	touch $@
 
-# expect link to have completed
+# expect link to have completed in an earlier invocation of make, so wildcard ok
 run_cppo: $(wildcard *.lem *.lem_cppo) 
 	for f in *.lem_cppo; do	$$cppo $$CPPO_ARGS $$f -o $${f/.lem_cppo/.lem}; done
 	touch $@
@@ -74,8 +74,13 @@ fs_spec_lib.cmxa: $(xs)
 # clean_src:
 # 	rm -f *.cmi *.cmo *.cmx *.o *.x *.cma *.cmxa *.a
 
-clean: FORCE
+src_files:
+	(cd ../src && ls -1 |sort) >$@
+build_files:
+	(ls -1 |sort) >$@
+to_delete: src_files build_files
+	-comm -13 src_files build_files >$@ # comm may not exist on all systems
+
+clean: to_delete FORCE
 	if [ `basename $(CURDIR)` = "src" ]; then false; fi # fail if in src!
-	rm -f *.lem_cppo *.lem *.mli *.ml *.cmi *.cmo *.cmx *.o *.x *.cma *.cmxa *.a
-	mv *.bak /tmp
-	rm run* stage1
+	-rm -rf `cat to_delete` src_files build_files to_delete
