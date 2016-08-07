@@ -1,7 +1,7 @@
 SHELL:=/bin/bash
 
 # bash will read this config file first
-BASH_ENV=config.sh
+BASH_ENV=bash_env.sh
 export BASH_ENV
 
 all: stage1 # do this first, so $(xs) expands correctly
@@ -51,29 +51,30 @@ stage1: run_cp
 
 include .depend
 %.x: %.mli %.ml stage1
-	$$ocamlc -c $*.mli $*.ml
-	$$ocamlopt -c $*.mli $*.ml
+	./ocamlc.sh -c $*.mli $*.ml
 	touch $@
 
 %.x: %.ml stage1
-	$$ocamlc -c $*.ml
-	$$ocamlopt -c $*.ml
+	./ocamlc.sh -c $*.ml
 	touch $@
 
 # need to get .cmo in right order
 xs:=abstract_string.x lem_support.x list_array.x fs_prelude.x fs_spec.x dir_heap.x fs_dict_wrappers.x fs_dump.x fs_printer.x fs_interface.x
 
 fs_spec_lib.cma: $(xs)
-	ocamlfind ocamlc -g -a -o $@ $(xs:.x=.cmo)
+	if [ "$$BUILD_BYTE" = "true" ]; then ocamlfind ocamlc -g -a -o $@ $(xs:.x=.cmo); fi
 
 fs_spec_lib.cmxa: $(xs)
-	ocamlfind ocamlopt -g -a -o $@ $(xs:.x=.cmx)
+	if [ "$$BUILD_NATIVE" = "true" ]; then ocamlfind ocamlopt -g -a -o $@ $(xs:.x=.cmx); fi
 
 
 to_delete: FORCE
 	(cd ../src && ls -1 |sort) >src_files
 	(ls -1 |sort) >build_files
 	-comm -13 src_files build_files >$@ # comm may not exist on all systems
+
+clean_ocaml: FORCE
+	rm -f *.cmi *.cmo *.cmx *.o *.x *.cma *.cmxa *.a a.out
 
 clean: to_delete FORCE
 	if [ `basename $(CURDIR)` = "src" ]; then false; fi # fail if in src!
