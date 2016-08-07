@@ -1,7 +1,8 @@
 # assume bash_env.sh sourced already
 
+# take -syntax from (last) target
 # what target? http://stackoverflow.com/questions/965053/extract-filename-and-extension-in-bash
-target1="${@: -1}" # last arg
+target1="${@: -1}" # last arg is target
 target1="${target1%.*}" # strip extension
 #echo "target1 is $target1"
 case "$target1" in
@@ -11,10 +12,9 @@ case "$target1" in
         SYNTAX="";;
 esac
 
-ocamlc="ocamlfind ocamlc -I $EXTRACTDIR extract.cma $PKGS $SYNTAX"
+  ocamlc="ocamlfind ocamlc -I $EXTRACTDIR   extract.cma  $PKGS $SYNTAX"
 ocamlopt="ocamlfind ocamlopt -I $EXTRACTDIR extract.cmxa $PKGS $SYNTAX"
 
-# assume at most 2 targets given
 if [ "$BUILD_BYTE" != false ]; then
     CMD="$ocamlc $SYNTAX $@"
     # echo $CMD

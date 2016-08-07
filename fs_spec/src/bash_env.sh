@@ -1,7 +1,7 @@
-root=$(realpath $(dirname $BASH_SOURCE))/../..
-
 set -a # export all vars
 # set -x # debug
+
+root=$(realpath $(dirname $BASH_SOURCE))/../..
 
  # if using nix, this may not be present
 test -f $root/config.sh && source $root/config.sh
