@@ -12,8 +12,13 @@ case "$target1" in
         SYNTAX="";;
 esac
 
-  ocamlc="ocamlfind ocamlc -I $EXTRACTDIR   extract.cma  $PKGS $SYNTAX"
-ocamlopt="ocamlfind ocamlopt -I $EXTRACTDIR extract.cmxa $PKGS $SYNTAX"
+# 8~"pattern-matching is not exhaustive"; 
+# 11~"this match case is unused";
+# 26~"unused variable s2"
+WARN="-w @f@p@u@s@40-8-11-26"
+
+  ocamlc="ocamlfind ocamlc   $WARN -I $EXTRACTDIR extract.cma  $PKGS $SYNTAX"
+ocamlopt="ocamlfind ocamlopt $WARN -I $EXTRACTDIR extract.cmxa $PKGS $SYNTAX"
 
 if [ "$BUILD_BYTE" != false ]; then
     CMD="$ocamlc $SYNTAX $@"

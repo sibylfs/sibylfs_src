@@ -7,7 +7,7 @@ root=$(realpath $(dirname $BASH_SOURCE))/../..
 test -f $root/config.sh && source $root/config.sh
 
 CPPO_ARGS="-D aspect_perms"
-LEMFLAGS="-lib $LEMLIB -only_changed_output -wl_unused_vars ign -wl_rename err"
+LEMFLAGS="-lib $LEMLIB -only_changed_output -wl_unused_vars ign -wl_rename err -wl_comp_message ign -wl_pat_exh ign"
 PKGS="-package sexplib,sexplib.syntax,sha"
 
 # these include syntax, so should work on all files; may be overridden in ocamlc.sh
