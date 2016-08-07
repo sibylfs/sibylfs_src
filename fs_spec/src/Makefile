@@ -31,7 +31,7 @@ t_fs_spec.lem \
   t_fs_spec_properties_perms.lem \
 t_dir_heap.lem
 
-run_lem: run_cppo
+run_lem: run_cppo $(wildcard *.lem)
 	$$lem -lib $$LEMLIB $$LEMFLAGS -ocaml $(dot_lem)
 	sed -i.bak -f patch_lem.sed t_fs_spec.ml
 	touch $@
