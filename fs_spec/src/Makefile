@@ -51,12 +51,14 @@ stage1: run_cp
 
 include .depend
 %.x: %.mli %.ml stage1
-	./ocamlc.sh -c $*.mli $*.ml
-	touch $@
+	@echo "* ocamlc/opt $*.mli $*.ml"
+	@./ocamlc.sh -c $*.mli $*.ml
+	@touch $@
 
 %.x: %.ml stage1
-	./ocamlc.sh -c $*.ml
-	touch $@
+	@echo "* ocamlc/opt $*.ml"
+	@./ocamlc.sh -c $*.ml
+	@touch $@
 
 fs_spec_lib.cma: $(xs)
 	(if [ "$$BUILD_BYTE" != "false" ]; then ocamlfind ocamlc -g -a -o $@ $(xs:.x=.cmo); fi)
