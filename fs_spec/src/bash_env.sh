@@ -1,8 +1,10 @@
-# export all vars
-set -a 
+root=$(realpath $(dirname $BASH_SOURCE))/../..
+
+set -a # export all vars
+# set -x # debug
 
  # if using nix, this may not be present
-test -f $SIBYLFS_SRC/config.sh && source $SIBYLFS_SRC/config.sh
+test -f $root/config.sh && source $root/config.sh
 
 CPPO_ARGS="-D aspect_perms"
 LEMFLAGS="-lib $LEMLIB -only_changed_output -wl_unused_vars ign -wl_rename err"

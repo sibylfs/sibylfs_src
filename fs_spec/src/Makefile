@@ -17,7 +17,7 @@ run_link:
 
 # expect link to have completed in an earlier invocation of make, so wildcard ok
 run_cppo: $(wildcard *.lem *.lem_cppo) 
-	for f in *.lem_cppo; do	$$cppo $$CPPO_ARGS $$f -o $${f/.lem_cppo/.lem}; done
+	(for f in *.lem_cppo; do	$$cppo $$CPPO_ARGS $$f -o $${f/.lem_cppo/.lem}; done)
 	touch $@
 
 # we have to invoke lem with the files in the right order
@@ -59,20 +59,14 @@ include .depend
 	touch $@
 
 fs_spec_lib.cma: $(xs)
-	if [ "$$BUILD_BYTE" != "false" ]; then ocamlfind ocamlc -g -a -o $@ $(xs:.x=.cmo); fi
+	(if [ "$$BUILD_BYTE" != "false" ]; then ocamlfind ocamlc -g -a -o $@ $(xs:.x=.cmo); fi)
 
 fs_spec_lib.cmxa: $(xs)
-	if [ "$$BUILD_NATIVE" != "false" ]; then ocamlfind ocamlopt -g -a -o $@ $(xs:.x=.cmx); fi
-
-
-to_delete: FORCE
-	(cd ../src && ls -1 |sort) >src_files
-	(ls -1 |sort) >build_files
-	-comm -13 src_files build_files >$@ # comm may not exist on all systems
+	(if [ "$$BUILD_NATIVE" != "false" ]; then ocamlfind ocamlopt -g -a -o $@ $(xs:.x=.cmx); fi)
 
 clean_ocaml: FORCE
 	rm -f *.cmi *.cmo *.cmx *.o *.x *.cma *.cmxa *.a a.out
 
-clean: to_delete FORCE
+clean: FORCE
 	if [ `basename $(CURDIR)` = "src" ]; then false; fi # fail if in src!
-	-rm -rf `cat to_delete` src_files build_files to_delete
+	-rm -rf $$(comm -13 <(cd ../src && ls -1 | sort) <(ls -1 |sort) ) # comm may not exist on all systems

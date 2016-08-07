@@ -1,3 +1,5 @@
+# assume bash_env.sh sourced already
+
 # what target? http://stackoverflow.com/questions/965053/extract-filename-and-extension-in-bash
 target1="${@: -1}" # last arg
 target1="${target1%.*}" # strip extension
@@ -13,13 +15,13 @@ ocamlc="ocamlfind ocamlc -I $EXTRACTDIR extract.cma $PKGS $SYNTAX"
 ocamlopt="ocamlfind ocamlopt -I $EXTRACTDIR extract.cmxa $PKGS $SYNTAX"
 
 # assume at most 2 targets given
-if [ "$BUILD_BYTE" = true ]; then
+if [ "$BUILD_BYTE" != false ]; then
     CMD="$ocamlc $SYNTAX $@"
     # echo $CMD
     $CMD
 fi
 
-if [ "$BUILD_NATIVE" = true ]; then
+if [ "$BUILD_NATIVE" != false ]; then
     CMD="$ocamlopt $SYNTAX $@"
     # echo $CMD
     $CMD
