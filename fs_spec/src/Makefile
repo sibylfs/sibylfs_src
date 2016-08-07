@@ -58,14 +58,11 @@ include .depend
 	./ocamlc.sh -c $*.ml
 	touch $@
 
-# need to get .cmo in right order
-xs:=abstract_string.x lem_support.x list_array.x fs_prelude.x fs_spec.x dir_heap.x fs_dict_wrappers.x fs_dump.x fs_printer.x fs_interface.x
-
 fs_spec_lib.cma: $(xs)
-	if [ "$$BUILD_BYTE" = "true" ]; then ocamlfind ocamlc -g -a -o $@ $(xs:.x=.cmo); fi
+	if [ "$$BUILD_BYTE" != "false" ]; then ocamlfind ocamlc -g -a -o $@ $(xs:.x=.cmo); fi
 
 fs_spec_lib.cmxa: $(xs)
-	if [ "$$BUILD_NATIVE" = "true" ]; then ocamlfind ocamlopt -g -a -o $@ $(xs:.x=.cmx); fi
+	if [ "$$BUILD_NATIVE" != "false" ]; then ocamlfind ocamlopt -g -a -o $@ $(xs:.x=.cmx); fi
 
 
 to_delete: FORCE
