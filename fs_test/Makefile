@@ -32,13 +32,13 @@ lib/fs_check_lib.cmxa:
 debug/check2.native debug/debug.native: lib/fs_check_lib.cmxa
 	$(MAKE) -C debug/
 
-debug/check2.native debug/debug.native paths/testpath.native: %.native: %.ml lib/fs_check_lib.cmxa
+paths/testpath.native: %.native: %.ml lib/fs_check_lib.cmxa
 	$$ocamlopt -linkpkg -o $@ $<
 
 %: %.ml lib/fs_check_lib.cmxa
 	$$ocamlopt -linkpkg -o $@ $<
 
-fs_test_check fs_test_posix:: fs_test_%: %.ml lib/fs_check_lib.cmxa
+fs_test_check fs_test_posix: fs_test_%: %.ml lib/fs_check_lib.cmxa
 	$$ocamlopt -linkpkg -o $@ $<
 
 
