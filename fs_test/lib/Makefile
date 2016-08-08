@@ -4,13 +4,9 @@ SHELL:=/bin/bash
 BASH_ENV=bash_env.sh
 export BASH_ENV
 
-xs:=fs_test_version.x posix_agent.x syscall.x fs_test_config.x fs_test_system.x fs_test_mount.x fs_path.x fs_test_cli.x diff.x fs_test_index.x dump.x checklib_shared_types.x posix_ops.x fs_ast.x fs_lr_parser.x fs_lexer.x trace.x fs_test_util.x stat.x checkLib.x checkLib_with_posix.x fs_test_html.x
-
-LIB:=fs_check_lib
-
 ######################################## all, srcs, before_all
 all: before_all srcs
-	$(MAKE) $(LIB).cma $(LIB).cmxa syscall_stubs.o
+	$(MAKE) fs_check_lib.cma fs_check_lib.cmxa syscall_stubs.o
 
 
 srcs: # FIXME depends?
@@ -18,7 +14,6 @@ srcs: # FIXME depends?
 
 before_all:
 	$(MAKE) -C .. include
-
 
 
 ######################################## compile
@@ -37,11 +32,11 @@ include .depend
 	$$ocamlopt -c $*.ml
 	touch $@
 
-$(LIB).cma: $(xs)
-	ocamlfind ocamlc -g -a -o $@ $(xs:.x=.cmo)
+fs_check_lib.cma: $(xs)
+	$$mk_cma -g -a -o $@ $(xs:.x=.cmo)
 
-$(LIB).cmxa: $(xs)
-	ocamlfind ocamlopt -g -a -o $@ $(xs:.x=.cmx)
+fs_check_lib.cmxa: $(xs)
+	$$mk_cmxa -g -a -o $@ $(xs:.x=.cmx)
 
 
 .SUFFIXES: .o .c
@@ -59,12 +54,9 @@ clean:
 	rm -f srcs
 	rm -rf ocamldoc
 
-# include Makefile.doc
--include Makefile.local # for any local additions to Makefile
+-include Makefile.local
 
 FORCE:
-
-
 
 ## local vars
 # Local variables:

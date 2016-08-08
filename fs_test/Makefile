@@ -49,14 +49,15 @@ clean_natives:
 clean_not_lib:
 	rm -f $(NATIVES) 
 	rm -rf include
-	$(MAKE) -C debug clean
-	$(MAKE) -C ld_preload clean
+	-$(MAKE) -C debug clean
+	-$(MAKE) -C ld_preload clean
 	rm -f paths/testpath.cmi paths/testpath.cmx paths/testpath.o paths/testpath.native
 	rm -f *.cmi *.cmx *.cmo *.o
 	rm -f test_generation/*.cmi test_generation/*.cmx test_generation/*.cmo test_generation/*.o 
+	rm -f ./result
 
 clean: clean_not_lib
-	$(MAKE) -C lib clean
+	-$(MAKE) -C lib clean
 
 FORCE:
 

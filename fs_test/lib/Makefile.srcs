@@ -17,10 +17,11 @@ srcs: fs_lr_parser.mli fs_lr_parser.ml fs_lexer.ml fs_test_version.ml
 FS_AST_MLIS:=diff.mli fs_path.mli dump.mli fs_ast.mli
 
 fs_ast.cmi: $(FS_AST_MLIS)
-	$$ocamlc $(FS_AST_MLIS)
+	(export DISABLE_NTVE=""; $$ocamlopt -c $(FS_AST_MLIS))
 
 fs_lr_parser.mli: fs_lr_parser.mly fs_ast.cmi
-	menhir --explain --infer --ocamlc "$$ocamlc" $<
+	run_menhir $<
+
 
 # following is a dummy rule so that make only runs menhir once
 # http://stackoverflow.com/questions/2973445/gnu-makefile-rule-generating-a-few-targets-from-a-single-source-file

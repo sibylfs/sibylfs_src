@@ -31,4 +31,4 @@ testlib: all
 
 clean:
 	rm -f a.out libtestlib.so *.o
-	ocamlbuild -clean
+	-ocamlbuild -clean
