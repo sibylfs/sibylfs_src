@@ -10,12 +10,6 @@ all: stage1
 
 FORCE:
 
-# # we expect to be in TMP, not in src
-# run_link: 
-# 	if [ `basename $(CURDIR)` = "src" ]; then false; fi # fail if in src
-# 	ln -s ../src/{*cppo,*lem,*mli,*ml,*.sed} .
-# 	touch $@
-
 run_cppo: $(wildcard *.lem_cppo) 
 	(for f in *.lem_cppo; do $$cppo $$CPPO_ARGS $$f -o $${f/.lem_cppo/.lem}; done)
 	touch $@

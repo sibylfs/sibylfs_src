@@ -1,7 +1,6 @@
-# #!/bin/bash 
+#!/bin/bash 
 
-# Edit this file to remove the exit, and ensure the paths are set
-# appropriately
+# Edit this file to ensure the paths are set appropriately
 
 # for debugging
 # set -x
@@ -24,8 +23,7 @@ cppo=/nix/store/lbfqdl6bxaqm6mzhwcqv9szn09lzzycj-cppo-1.3.2/bin/cppo
 # building manually
 LD_LIBRARY_PATH=/nix/store/gjc187wilf18d45c87s59xiqxb5vwisf-ocaml-cstruct-1.6.0/lib/ocaml/4.01.0/site-lib/cstruct
 
-BUILD_BYTE=false
-BUILD_NATIVE=true
+DISABLE_BYTE=true
 
 # needed?
-export lem LEMLIB EXTRACTDIR cppo LD_LIBRARY_PATH BUILD_BYTE BUILD_NATIVE
+export lem LEMLIB EXTRACTDIR cppo LD_LIBRARY_PATH DISABLE_BYTE
