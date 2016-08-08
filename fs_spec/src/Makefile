@@ -4,20 +4,20 @@ SHELL:=/bin/bash
 BASH_ENV=bash_env.sh
 export BASH_ENV
 
+# expect files to be linked in from ../Makefile
 all: stage1 
 	$(MAKE) fs_spec_lib.cma fs_spec_lib.cmxa # so deps are there
 
 FORCE:
 
-# we expect to be in TMP, not in src
-run_link: 
-	if [ `basename $(CURDIR)` = "src" ]; then false; fi # fail if in src
-	ln -s ../src/{*cppo,*lem,*mli,*ml,*.sed} .
-	touch $@
+# # we expect to be in TMP, not in src
+# run_link: 
+# 	if [ `basename $(CURDIR)` = "src" ]; then false; fi # fail if in src
+# 	ln -s ../src/{*cppo,*lem,*mli,*ml,*.sed} .
+# 	touch $@
 
-# expect link to have completed in an earlier invocation of make, so wildcard ok
 run_cppo: $(wildcard *.lem_cppo) 
-	(for f in *.lem_cppo; do	$$cppo $$CPPO_ARGS $$f -o $${f/.lem_cppo/.lem}; done)
+	(for f in *.lem_cppo; do $$cppo $$CPPO_ARGS $$f -o $${f/.lem_cppo/.lem}; done)
 	touch $@
 
 # we have to invoke lem with the files in the right order
@@ -48,20 +48,20 @@ stage1: run_cp
 
 include .depend
 %.x: %.mli %.ml stage1
-	@echo "* ocamlc/opt $*.mli $*.ml"
-	@./ocamlc.sh -c $*.mli $*.ml
-	@touch $@
+	$$ocamlc -c $*.mli $*.ml
+	$$ocamlopt -c $*.mli $*.ml
+	touch $@
 
 %.x: %.ml stage1
-	@echo "* ocamlc/opt $*.ml"
-	@./ocamlc.sh -c $*.ml
-	@touch $@
+	$$ocamlc -c $*.ml
+	$$ocamlopt -c $*.ml
+	touch $@
 
 fs_spec_lib.cma: $(xs)
-	if [ "$$BUILD_BYTE" != "false" ]; then ocamlfind ocamlc -g -a -o $@ $(xs:.x=.cmo); fi
+	$$mk_cma -g -a -o $@ $(xs:.x=.cmo)
 
 fs_spec_lib.cmxa: $(xs)
-	if [ "$$BUILD_NATIVE" != "false" ]; then ocamlfind ocamlopt -g -a -o $@ $(xs:.x=.cmx); fi
+	$$mk_cmxa -g -a -o $@ $(xs:.x=.cmx)
 
 clean_ocaml: FORCE
 	rm -f *.cmi *.cmo *.cmx *.o *.x *.cma *.cmxa *.a a.out

@@ -2,11 +2,10 @@ TMP:=_build
 
 all: 
 	mkdir -p $(TMP)
-	cd $(TMP) && ln -sf ../src/Makefile ../src/bash_env.sh ../src/ocamlc.sh ../src/.depend .
-	$(MAKE) -C $(TMP) run_link
+	cd $(TMP) && ln -sf ../src/* ../src/.depend .
 	$(MAKE) -C $(TMP)
 
 clean: FORCE
-	rm -rf $(TMP)
+	rm -rf $(TMP) ./result
 
 FORCE:
