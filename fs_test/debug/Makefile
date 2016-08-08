@@ -13,10 +13,10 @@ before_all: ../lib/fs_check_lib.cmxa
 
 # FIXME do we want to do this in .. ? then we can include all the libs
 check2.native: checklib_2.x check2.x
-	$$ocamlopt -linkpkg -o $@ checklib_2.cmx check2.cmx
+	$$mk_native -linkpkg -o $@ checklib_2.cmx check2.cmx
 
 debug.native: checklib_2.x debug.x
-	$$ocamlopt -linkpkg -o $@ checklib_2.cmx debug.cmx
+	$$mk_native -linkpkg -o $@ checklib_2.cmx debug.cmx
 
 include .depend
 

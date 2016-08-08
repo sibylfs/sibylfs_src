@@ -29,10 +29,11 @@ SYNTAX="-syntax camlp4o"
 WARN="-w @f@p@u@s@40"
 CCFLAGS="-g"
 
-# not safe is sourced from elsewhere
-test -f $BASH_DIR/lib/fs_check_lib.cmxa && FCLXA="-I $BASH_DIR/lib fs_check_lib.cmxa $BASH_DIR/lib/syscall_stubs.o"m
+WITH_FS_CHECK_LIB="-I $BASH_DIR/lib fs_check_lib.cmxa"
 
 # FIXME we should include fs_check_lib when we know it has been built
   ocamlc="$DISABLE_BYTE ocamlfind ocamlc   $WARN $CCFLAGS $PKGS -I $BASH_DIR/include extract.cma  fs_spec_lib.cma $SYNTAX"
-ocamlopt="$DISABLE_NTVE ocamlfind ocamlopt $WARN $CCFLAGS $PKGS -I $BASH_DIR/include extract.cmxa fs_spec_lib.cmxa $SYNTAX $FCLXA"
+ocamlopt="$DISABLE_NTVE ocamlfind ocamlopt $WARN $CCFLAGS $PKGS -I $BASH_DIR/include extract.cmxa fs_spec_lib.cmxa $SYNTAX"
 ocamldep="ocamlfind ocamldep $WARN $CCFLAGS $PKGS -I$BASH_DIR/include extract.cmxa fs_spec_lib.cmxa $SYNTAX $FCLXA"
+
+mk_native="$ocamlopt $WITH_FS_CHECK_LIB $BASH_DIR/lib/syscall_stubs.o"
