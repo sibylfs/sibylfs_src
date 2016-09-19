@@ -11,7 +11,7 @@ in stdenv.mkDerivation {
   
     src = fetchgit {
       url = https://github.com/dsheets/ocaml-unix-fcntl.git;
-      rev = "83ae867";
+      rev = "83ae867"; # july 27 2015
       sha256 = "06fznyvgkgfxkwk60v499ifb74y0ip6p5wwggckj2fspp0ljnlyg";
     };
   
