@@ -1,0 +1,8 @@
+
+# those that don't depend on syscall_stubs.c
+TOP_LEVEL_MLS:=diff.ml fs_path.ml posix_agent.ml stat.ml dump.ml \
+  checklib_shared_types.ml fs_ast.ml fs_lr_parser.ml fs_lexer.ml trace.ml checkLib.ml
+
+top_level_lib.cma: $(TOP_LEVEL_MLS:.ml=.cmo)
+	ocamlfind ocamlc -g -a -o $@ $(TOP_LEVEL_MLS:.ml=.cmo)
+

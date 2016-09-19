@@ -46,7 +46,7 @@ fs_spec/build/lem_support.mli
 fs_spec/build/link
 fs_spec/build/list_array.ml
 fs_spec/build/list_array.mli
-fs_spec/build/old
+
 fs_spec/build/run_lem
 fs_spec/build/t_dir_heap.lem
 fs_spec/build/t_dir_heap.lem_cppo

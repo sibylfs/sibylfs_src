@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+echo "Please edit file `config.sh` to ensure paths are set
+appropriately; alternatively make sure the paths are set in the
+environment (config.sh takes precedence). There is a sample in
+config.sh.in."
+
+false

@@ -1,10 +1,10 @@
 # FIXME we should probably make fs_test depend on fs_spec_lib.{cma,cmxa} rather than rebuilding everything
 
-SUBDIRS:=src_ext fs_spec/build fs_test 
+SUBDIRS:=fs_spec fs_test 
 
-all: src_ext fs_spec/build fs_test 
+all: fs_spec fs_test 
 
-fs_test: fs_spec/build
+FORCE:
 
 .PHONY: $(SUBDIRS) dep
 
