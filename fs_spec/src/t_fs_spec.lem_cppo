@@ -3586,8 +3586,9 @@ But this is surely not POSIX, and violates the invariant that a call that return
   val fsop_rename_checks_root : forall 'dir_ref 'file_ref 'impl.
      environment 'dir_ref 'file_ref 'impl ->
      res_name 'dir_ref 'file_ref ->
+     res_name 'dir_ref 'file_ref ->
      fsmonad 'impl ret_value
-  let fsop_rename_checks_root env rsrc = (fsm_get_state >>= (fun s0 -> (
+  let fsop_rename_checks_root env rsrc rdst = (fsm_get_state >>= (fun s0 -> (
     match rsrc with
     | RN_dir (d0_ref, _) -> (  (* attempt to rename root on linux or mac? *)
         if (Resolve.is_root_dir env.env_ops s0 d0_ref) then (
@@ -3596,7 +3597,15 @@ But this is surely not POSIX, and violates the invariant that a call that return
             (EISDIR,(is_mac_os_x_arch env || is_freebsd_arch env))]) (* http://fs.dsheets.name/2015-03-16_osx_hfsplus+fusexmp+sshfs/html/suite/rename/test/adhoc_rename_root-int.trace/index.html#23 *)
         else
           fsm_do_nothing) (* coverage:linux:mac_os_x:irrelevant *)
-    | _ -> fsm_do_nothing end)))
+    | _ -> fsm_do_nothing end)  
+      |||
+    (match rdst with
+    | RN_dir (d0_ref, _) -> (  (* attempt to rename something to root on linux or mac? *)
+        if (Resolve.is_root_dir env.env_ops s0 d0_ref) then (
+          fsm_cond_raises [ (EBUSY,(is_linux_arch env || is_mac_os_x_arch env)) ] )
+        else
+          fsm_do_nothing) (* coverage:linux:mac_os_x:irrelevant *)
+    end)  ))
 
 
   (* check that a directory is not renamed into a subdir of itself *)
@@ -3731,7 +3740,7 @@ But this is surely not POSIX, and violates the invariant that a call that return
     else 
       ( fsop_rename_checks_rsrc_rdst env rsrc rdst 
           |||
-        fsop_rename_checks_root env rsrc
+        fsop_rename_checks_root env rsrc rdst
           |||
         fsop_rename_checks_subdir env rsrc rdst 
           |||
