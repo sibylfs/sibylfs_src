@@ -4620,18 +4620,28 @@ module Os_operations = struct
     )
     
 
-  (* [get_smallest_free_fd pid s0] computes the file-descriptor
-     to use is state [s0] for process [pid]. Posix specifies,
-     that always the smallest free one is used. *)
-  val get_smallest_free_fd : forall 'dir_ref 'file_ref 'impl.
+  (* [get_smallest_free_fd pid s0] computes the file-descriptor to use
+     in state [s0] for process [pid]. Posix specifies, that always the
+     smallest free one is used. 
+
+     Posix effectively also requires that fd-s and dh-s use the same
+     space.
+
+     Posix does not specify, what dir-handles are or which ones are
+     used. For Posix, it is a pointer to a dir-structure. However, for
+     our model, we want some predictability, since we want use
+     dir-handles in our testing-traces. Therefore, we always return
+     the smallest free one. *)
+  val get_smallest_free_fd_or_dh : forall 'dir_ref 'file_ref 'impl.
     ty_pid -> 
     ty_os_state 'dir_ref 'file_ref 'impl -> 
-    ty_fd
-  let get_smallest_free_fd pid s0 = ( 
+    nat
+  let get_smallest_free_fd_or_dh pid s0 = ( 
     let pps = lookup_per_process_state s0 pid in
     let fdt = pps.pps_fd_table in
-    let free_check n = not (fmap_in_dom (FD n) fdt) in
-    let new_fd = FD (smallest_free_nat free_check 0 (fmap_size fdt)) in
+    let dht = pps.pps_dh_table in
+    let free_check n = not (fmap_in_dom (FD n) fdt) && not (fmap_in_dom (DH n) dht) in
+    let new_fd = (smallest_free_nat free_check 0 (fmap_size fdt)) in
     new_fd
   )
 
@@ -4661,7 +4671,7 @@ module Os_operations = struct
     ty_os_state 'dir_ref 'file_ref 'impl * ty_fd * ty_fid
   let create_fd ops pid entry oflags s0 = (
     (* get free fd and fid *)
-    let new_fd = get_smallest_free_fd pid s0 in
+    let new_fd = FD(get_smallest_free_fd_or_dh pid s0) in
     let new_fid = get_free_fid s0 in
 
     (* get initial states for them *)
@@ -4680,12 +4690,7 @@ module Os_operations = struct
   (* create_dh                     *)
   (*-------------------------------*)
 
-  (* [get_smallest_free_dh s0] gets a free dir-handle
-     is state [s0]. Posix does not specify, what dir-handles are
-     or which ones are used. For Posix, it is a pointer to a dir-structure.
-     However, for our model, we want some predictability, since we
-     want use dir-handles in our testing-traces. Therefore, we
-     always return the smallest free one. *)
+(*
   val get_smallest_free_dh : forall 'dir_ref 'file_ref 'impl.
     ty_pid -> 
     ty_os_state 'dir_ref 'file_ref 'impl -> 
@@ -4697,7 +4702,7 @@ module Os_operations = struct
     let new_dh = DH (smallest_free_nat free_check 1 (fmap_size dht + 1)) in
     new_dh
   )
-
+ *)
 
   (** [rewind_dh ops dhs fs0] rewinds directory handle state [dhs] in fs-state [fs0]. 
       It returns the updated dir-handle and fs-states. *)
@@ -4726,7 +4731,7 @@ module Os_operations = struct
     ty_os_state 'dir_ref 'file_ref 'impl * ty_dh
   let create_dh ops pid d0_ref s0 = (
     (* get free dh *)
-    let new_dh = get_smallest_free_dh pid s0 in
+    let new_dh = DH(get_smallest_free_fd_or_dh pid s0) in
 
     (* start observing the directory *)
     let (fs_st', oh) = ops.fops_observe_dir_register s0.oss_fs_state d0_ref in
