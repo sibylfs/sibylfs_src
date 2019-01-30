@@ -3,8 +3,10 @@ let
     pkgs = import <nixpkgs> {};
     stdenv = pkgs.stdenv;
     fetchurl = pkgs.fetchurl;
-    ocaml = pkgs.ocaml;
-    findlib = pkgs.ocamlPackages.findlib; # needed?
+    ocaml_old = import ./../ocaml_old {};
+    ocaml = ocaml_old.ocaml;
+    ocamlPackages = ocaml_old.ocamlPackages;
+    findlib = ocamlPackages.findlib; # needed?
 in stdenv.mkDerivation {
     name = "ocaml_sha";
   

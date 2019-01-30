@@ -3,8 +3,9 @@ let
     pkgs = import <nixpkgs> {};
     stdenv = pkgs.stdenv;
     fetchurl = pkgs.fetchurl;
-    ocaml = pkgs.ocaml;
-    op = pkgs.ocamlPackages;
+    ocaml_old = import ./../ocaml_old {};
+    ocaml = ocaml_old.ocaml;
+    op = ocaml_old.ocamlPackages;
 in stdenv.mkDerivation {
     name = "ocaml_dyntype";
   

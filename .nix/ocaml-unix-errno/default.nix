@@ -3,7 +3,8 @@ let
     pkgs = import <nixpkgs> {};
     stdenv = pkgs.stdenv;
     fetchgit = pkgs.fetchgit;
-    ocaml = pkgs.ocaml;
+    ocaml_old = import ./../ocaml_old {};
+    ocaml = ocaml_old.ocaml;
     findlib = pkgs.ocamlPackages.findlib; # needed?
     ocaml_version = (stdenv.lib.getVersion ocaml);
 in 

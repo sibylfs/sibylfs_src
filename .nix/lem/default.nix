@@ -3,7 +3,8 @@ let
     pkgs = import <nixpkgs> {};
     stdenv = pkgs.stdenv;
     fetchgit = pkgs.fetchgit;
-    ocaml = pkgs.ocaml;
+    ocaml_old = import ./../ocaml_old {};
+    ocaml = ocaml_old.ocaml;
     git = pkgs.git;
     findlib = pkgs.ocamlPackages.findlib; # needed?
 #    isabelle = import ./../isabelle { }; # not needed?
@@ -11,7 +12,7 @@ in stdenv.mkDerivation {
     name = "lem";
   
     src = fetchgit {
-      url = https://tomridge@bitbucket.org/tomridge/lem.git;
+      url = https://github.com/tomjridge/lem_from_tjr_bb.git;
       rev = "5b4a168"; 
       sha256 = "19642yadi089p8si87n0rbn0mwwxyvzjrv33g848gaqy811i0zak";
     };
@@ -24,7 +25,7 @@ in stdenv.mkDerivation {
       make
 
       echo "!!!"
-      make ocaml-libs
+      # make -j 1 ocaml-libs
 
       #mkdir -p $out/lem/.isabelle  # after build, need to copy these images to local .isabelle
       #export USER_HOME=$out/lem

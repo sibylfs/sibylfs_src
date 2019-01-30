@@ -3,7 +3,8 @@ let
     pkgs = import <nixpkgs> {};
     stdenv = pkgs.stdenv;
     fetchurl = pkgs.fetchurl;
-    ocaml = pkgs.ocaml;
+    ocaml_old = import ./../ocaml_old {};
+    ocaml = ocaml_old.ocaml;
     findlib = pkgs.ocamlPackages.findlib; # needed?
 in stdenv.mkDerivation {
     name = "ocaml_fd-send-recv";

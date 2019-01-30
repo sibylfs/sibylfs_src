@@ -1,8 +1,11 @@
 { }:
 let 
     pkgs = import <nixpkgs> {};
-    inherit (pkgs) stdenv fetchgit ocaml;
-    op = pkgs.ocamlPackages;
+    inherit (pkgs) stdenv fetchgit;
+    ocaml_old = import ./../.nix/ocaml_old {};
+    ocaml = ocaml_old.ocaml;
+    ocamlPackages = ocaml_old.ocamlPackages;
+    op = ocamlPackages;
     inherit (op) findlib cppo sexplib cstruct;
     sha = import ../.nix/sha { };
     fd_send_recv = import ../.nix/fd-send-recv { };

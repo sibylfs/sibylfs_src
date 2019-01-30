@@ -3,8 +3,10 @@ let
     pkgs = import <nixpkgs> {};
     stdenv = pkgs.stdenv;
     fetchurl = pkgs.fetchurl;
-    ocaml = pkgs.ocaml;
-    op = pkgs.ocamlPackages;
+    ocaml_old = import ./../ocaml_old {};
+    ocaml = ocaml_old.ocaml;
+    ocamlPackages = ocaml_old.ocamlPackages;
+    op = ocamlPackages;
     findlib = op.findlib;
     dyntype = import ../dyntype { };
     omd = import ../omd { };
@@ -37,7 +39,7 @@ in stdenv.mkDerivation {
 
     camlp4=op.camlp4;
 
-    buildInputs = [ ocaml findlib pkgs.which strace ]; 
+    buildInputs = [ ocaml findlib pkgs.which strace op.camlp4 ]; 
   
     propagatedBuildInputs = [ dyntype omd op.type_conv op.re ulex op.uri op.xmlm op.ezjsonm op.camlp4 cstruct ];
 
