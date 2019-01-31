@@ -1,0 +1,57 @@
+
+* ocaml 4.02.3 can install sibylfs-lem and sibylfs
+
+sibylfs fails because lem can't find lib
+
+config.sh.in has this:
+
+   # path to the lem executable; must be an absolute path
+   lem=/nix/store/25fb9v3c69lv0l4ymcc0k52n86kj7m6l-lem/lem/lem
+
+   # path to lem's library (lots of .lem files); must be an absolute path
+   LEMLIB=/nix/store/25fb9v3c69lv0l4ymcc0k52n86kj7m6l-lem/lem/library
+
+   # path to lem's ocaml library; must be an absolute path; we expect to
+   # find EXTRACTDIR, with extract.cm[x]a
+   EXTRACTDIR=/nix/store/25fb9v3c69lv0l4ymcc0k52n86kj7m6l-lem/lem/ocaml-lib/_build
+
+
+lem should be available already
+
+and the following is sibylfs installing after setting env vars
+
+not clear whether the new opam might prevent this, because it builds
+in a sandbox (which might nuke the env vars)
+
+-- 
+
+$ .tr61 $ export lem=lem
+
+# (h:pc1156) (p:/tmp/l/github/sibylfs_src/.tr61) (d:/dev/sda2)  [2019-01-31_wip_fixing_build x?]
+$ .tr61 $ lem
+
+# (h:pc1156) (p:/tmp/l/github/sibylfs_src/.tr61) (d:/dev/sda2)  [2019-01-31_wip_fixing_build x?]
+$ .tr61 $ export LEMLIB= /home/tr61/.opam/4.02.3/lib/sibylfs-lem/library
+bash: export: `/home/tr61/.opam/4.02.3/lib/sibylfs-lem/library': not a valid identifier
+
+# (h:pc1156) (p:/tmp/l/github/sibylfs_src/.tr61) (d:/dev/sda2)  [2019-01-31_wip_fixing_build x?]
+$ .tr61 $ export LEMLIB=/home/tr61/.opam/4.02.3/lib/sibylfs-lem/library
+
+# (h:pc1156) (p:/tmp/l/github/sibylfs_src/.tr61) (d:/dev/sda2)  [2019-01-31_wip_fixing_build x?]
+$ .tr61 $ export EXTRACTDIR=/home/tr61/.opam/4.02.3/lib/sibylfs-lem
+
+# (h:pc1156) (p:/tmp/l/github/sibylfs_src/.tr61) (d:/dev/sda2)  [2019-01-31_wip_fixing_build x?]
+$ .tr61 $ opam install sibylfs
+The following actions will be performed:
+  ∗ install sibylfs 0.5.0
+
+<><> Gathering sources ><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+[sibylfs.0.5.0] found in cache
+
+<><> Processing actions <><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+∗ installed sibylfs.0.5.0
+Done.
+* possible options for upgrading sibylfs to build with recent opam and ocaml
+
+- update sibylfs-lem
+- update sibylfs (and fix the fact that lem can't find its library)
