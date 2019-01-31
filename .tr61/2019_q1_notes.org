@@ -31,10 +31,6 @@ $ .tr61 $ export lem=lem
 $ .tr61 $ lem
 
 # (h:pc1156) (p:/tmp/l/github/sibylfs_src/.tr61) (d:/dev/sda2)  [2019-01-31_wip_fixing_build x?]
-$ .tr61 $ export LEMLIB= /home/tr61/.opam/4.02.3/lib/sibylfs-lem/library
-bash: export: `/home/tr61/.opam/4.02.3/lib/sibylfs-lem/library': not a valid identifier
-
-# (h:pc1156) (p:/tmp/l/github/sibylfs_src/.tr61) (d:/dev/sda2)  [2019-01-31_wip_fixing_build x?]
 $ .tr61 $ export LEMLIB=/home/tr61/.opam/4.02.3/lib/sibylfs-lem/library
 
 # (h:pc1156) (p:/tmp/l/github/sibylfs_src/.tr61) (d:/dev/sda2)  [2019-01-31_wip_fixing_build x?]
