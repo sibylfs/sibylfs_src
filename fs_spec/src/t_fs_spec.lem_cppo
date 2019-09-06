@@ -4218,7 +4218,7 @@ But this is surely not POSIX, and violates the invariant that a call that return
         | Dir_ref_entry _ -> fsm_special Impossible "error raised before" (* coverage:impossible *)
         | File_ref_entry i0_ref -> (
             match (len = 0) with
-            | true -> (fsm_return (RV_num 0))  (* Gidon Ernst: a write beyond the size of the file is a no-op - it does not extend the file *)
+            | true -> (fsm_return (RV_num 0))  (* Gidon Ernst: a write of 0 bytes beyond the size of the file is a no-op - it does not extend the file *)
             | false -> (
                 let (s1, res) = ops.fops_read s0 i0_ref in
                 let bs' = dest_RV_bytes res in
