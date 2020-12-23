@@ -68,3 +68,5 @@ fs_spec/build/t_fs_spec_properties_perms.ml
 fs_spec/build/t_list_array.lem
 fs_spec/build/t_list_array.ml
 fs_spec/build/t_list_arrayAuxiliary.ml
+
+*.x
